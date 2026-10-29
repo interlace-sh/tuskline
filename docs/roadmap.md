@@ -60,7 +60,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [x] M2.2 `core/collector`: scheduler with per-target query budget, jitter, timeouts and back-off under load. Unit tests cover budget enforcement.
 - [x] M2.3 `core/sqlpack`: statements (`pg_stat_statements`, with deltas and counter-reset handling), database, tables, IO (`pg_stat_io` on 16+), WAL (`pg_stat_wal`), checkpointer (17+) / bgwriter. Integration-tested on 14–18.
 - [x] M2.4 `core/store`: SQLite metadata store with migrations, including the collection cursor used to resume counter deltas. Pure-Go driver, no cgo.
-- [ ] M2.4b `core/store`: Parquet segment writer and reader, retention and compaction, per [ADR 0013](adr/0013-metrics-storage.md).
+- [x] M2.4b `core/store`: Parquet segment writer and reader, retention and compaction, per [ADR 0013](adr/0013-metrics-storage.md).
 - [ ] M2.5 `tl snapshot` / `tl diff`: workload snapshots to a file, and the delta between two.
 - [ ] M2.6 `core/analyser`: first health checks with evidence and a fix. Covers missing `pg_stat_statements`, cache hit ratio, idle in transaction, wraparound age, unused or duplicate indexes, bloat estimate and replication lag.
 - [ ] M2.7 `tl diagnose <ref>`: runs all checks and writes text, JSON or Markdown.

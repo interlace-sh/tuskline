@@ -130,7 +130,7 @@ flowchart LR
 ## Storage
 
 - **Metadata:** embedded SQLite through `github.com/ncruces/go-sqlite3` (pure Go, no cgo) in a volume or the user's config directory. `core/store` migrates it and keeps the collection cursor used to resume counter deltas. Teams that need HA can use an external PostgreSQL.
-- **Metrics history:** Parquet segments on disk, written and read from `core` with a pure-Go library, with downsampling and the retention defaults in [ADR 0013](adr/0013-metrics-storage.md). The desktop app may also query the files with DuckDB (M8). Remote write is an export, not the store. Exploring DuckLake for the archive is on the R3 list.
+- **Metrics history:** Parquet segments on disk (`core/store.Segments`), written and read from `core` with a pure-Go library. A closed bucket is rolled up when it passes its retention, then deleted: 1 s for 1 hour, 1 min for 14 days, 1 h for 13 months ([ADR 0013](adr/0013-metrics-storage.md)). The desktop app may also query the files with DuckDB (M8). Remote write is an export, not the store. Exploring DuckLake for the archive is on the R3 list.
 
 ## Deployment modes
 
