@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Package store implements the embedded metadata store (SQLite via a pure-Go driver, so the server stays cgo-free), with optional external PostgreSQL. Milestone M1.
+// Package store is the embedded metadata database: SQLite through a pure-Go
+// driver, so the server stays free of cgo. Metrics history is not stored
+// here; that is the Parquet segments in ADR 0013 (roadmap M2.4b).
 package store
