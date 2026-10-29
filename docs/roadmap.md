@@ -19,7 +19,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [x] M0.4 Push to `github.com/interlace-sh/tuskline` and make the first CI run green. Fix anything that only fails on the runners (first run of `moon ci` and the integration matrix included).
 - [ ] M0.4a Optional: enable moon remote caching or `.protolock` once CI timings justify it; record the decision in ADR 0012.
 - [x] M0.5 CI licence-boundary check: a script that fails if `core`, `cli` or `agent` import `server`, or if any `.go` file lacks the SPDX header for its directory. (`scripts/check-licence-boundary.sh`, self-tested; `moon run scripts:check`.)
-- [ ] M0.6 Dependency licence check for the Apache modules (for example `go-licenses check` with an allow-list).
+- [x] M0.6 Dependency licence check for the Apache modules (for example `go-licenses check` with an allow-list). (`moon run :licences`, `.moon/tasks/apache.yml`.)
 - [ ] M0.7 Repository hygiene: issue and PR templates (PR template includes the definition-of-done checklist), `CODEOWNERS`, Dependabot for Go modules, npm and actions (or Renovate, which can also bump `.prototools`), branch protection notes in CONTRIBUTING.
 - [ ] M0.8 Release skeleton: GoReleaser config producing `tl` and `tuskline` for linux/darwin/windows × amd64/arm64 with checksums and an SBOM (no publishing yet).
 - [ ] M0.9 Container image: multi-stage Dockerfile (web build → Go build → distroless), `tuskline serve` on :8080, non-root.

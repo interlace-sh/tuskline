@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/tasks.json
+#
+# Tasks for the Apache-2.0 modules only (core, cli, agent; tagged 'apache').
+# Their shipped dependencies must be permissive (LICENSING.md rule 4), so an
+# AGPL or GPL library can never reach a `tl` binary or a core consumer.
+
+inheritedBy:
+  tags: ['apache']
+
+tasks:
+  licences:
+    description: 'Fail if a shipped dependency is not on the permissive allow-list (go-licenses)'
+    # Pinned and checksum-verified through the Go module proxy. Only the
+    # packages linked into the module's binaries and libraries are checked;
+    # test-only dependencies (testcontainers) never ship.
+    command: 'go run github.com/google/go-licenses/v2@v2.0.1 check ./... --allowed_licenses=$ALLOWED_LICENCES'
+    env:
+      # Keep in step with LICENSING.md rule 4.
+      ALLOWED_LICENCES: 'Apache-2.0,MIT,BSD-2-Clause,BSD-3-Clause,ISC,MPL-2.0'
+    inputs:
+      - 'go.mod'
+      - 'go.sum'
+      - '**/*.go'
+      - '/go.work'
+    tags: ['licence']
+
+  check:
+    deps: ['~:licences']
