@@ -44,7 +44,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
   - `--output json`.
 - [x] M1.6 `tl ls`: inventory as a table (environment colour, version, provider, last probe), `--output json`.
 - [x] M1.7 `core/sqlpack`: first pack, for activity, waits, locks and blocking chains. Version-aware, documented, integration-tested on 14–18.
-- [ ] M1.8 `tl top <env/cluster>`: Bubble Tea TUI with live sessions, waits, locks and blocking tree, refreshing every 1 s. Keys: `q` quit, `/` filter, `s` sort. No actions. Has a `--once` text mode for CI and tests.
+- [x] M1.8 `tl top <env/cluster>`: Bubble Tea TUI with live sessions, waits, locks and blocking tree, refreshing every 1 s. Keys: `q` quit, `/` filter, `s` sort. No actions. Has a `--once` text mode for CI and tests.
 - [ ] M1.9 `tl version` and `tl serve` polish: helpful message when `tuskline` is not on `PATH`; signals forwarded to the child.
 - [ ] M1.10 Docs: `docs/cli.md` updated for every flag; README quickstart switched from placeholders to commands that work.
 

@@ -16,7 +16,7 @@ Conventions:
 | `tl version` | Prints `tl <version> (commit <sha>, built <date>)` |
 | `tl connect` | Probes a server and adds it to the inventory, or probes an inventory entry again; see [below](#tl-connect) |
 | `tl ls` | Lists the inventory; see [below](#tl-ls) |
-| `tl top <ref>` | Stub that exits 1 with "not implemented yet (roadmap M1)" |
+| `tl top <ref>` | Live sessions, waits, locks and blocking chains; see [below](#tl-top) |
 
 Global flag: `--inventory <file>` overrides the inventory location (default `$TUSKLINE_INVENTORY`, else `$XDG_CONFIG_HOME/tuskline/inventory.yaml`).
 
@@ -53,6 +53,38 @@ team-a (dev)  -
 ```
 
 One row per cluster, from the last successful `tl connect` probe; it does not connect. An environment without clusters gets a `-` row. The kind is shown in brackets when it differs from the environment's name. On a terminal the environment is coloured by kind (prod red, staging amber, dev green, local grey, as in [design](design.md)); `NO_COLOR` or a pipe turns colour off. `--output json` gives `{inventory, environments, clusters}`, with each environment's policy and no passwords.
+
+### `tl top`
+
+```text
+tl top prod/orders · PostgreSQL 17.6 · 12:00:01 UTC · 5 sessions, 2 active · sort: query age
+waits: not waiting 3 · Lock/relation 1
+blocking:
+  100  app  idle in transaction  xact 1m15s  LOCK TABLE t IN ACCESS EXCLUSIVE MODE
+  └─ 101  app  active  SELECT count(*) FROM t
+lock waits:
+  101 waits AccessShareLock relation on t for 3.0s
+
+PID  USER    DATABASE  APP  STATE                WAIT           XACT   QUERY AGE  BLOCKED BY  QUERY
+102  report  orders         active                                     12m00s                 SELECT * FROM big
+...
+```
+
+A full-screen view of one inventory entry. It is read-only and has no actions: it runs the activity pack (`core/sqlpack/activity.go`) in a session with the environment's policy, and never runs a refresh while the previous one is still going. Refreshes slow down to at least four times the last refresh's duration, and double after each failure, up to 30 s. A failed refresh keeps the last snapshot on screen with the error, and a broken connection is reopened.
+
+| Key | Action |
+|---|---|
+| `q`, `ctrl+c` | Quit |
+| `/` | Filter (pid, user, database, application, state, wait or query text); `enter` keeps it, `esc` clears it |
+| `s` | Sort: query age, transaction age, pid, state (idle sessions always last) |
+
+| Flag | Meaning |
+|---|---|
+| `--once` | Print one snapshot and exit; works without a terminal (CI, scripts) |
+| `--output json`, `-o` | With `--once`: `{ref, server_version_num, snapshot, blocking}` |
+| `--interval <d>` | Refresh interval, default `1s`, minimum `500ms` |
+
+A role without `pg_monitor` sees other users' sessions with query text and waits hidden by the server. Query text is shown live and never saved.
 | `tl serve [args]` | Runs the separate AGPL `tuskline serve` binary from `PATH` ([ADR 0010](adr/0010-licence-boundary.md)) |
 | `tl agent --server <url>` | Stub; token from `TUSKLINE_AGENT_TOKEN` (M9) |
 

@@ -201,40 +201,24 @@ func (a *app) connectExisting(c *cobra.Command, ref inventory.Ref, o connectOpts
 	if o.kind != "" || o.passwordEnv != "" {
 		return errors.New("--kind and --password-env only apply with --dsn")
 	}
-	path, err := a.inventoryFile()
+	sc, err := a.loadCluster(c, ref)
 	if err != nil {
 		return err
 	}
-	inv, err := inventory.Load(path)
-	if err != nil {
-		return err
-	}
-	cl, ok := inv.Cluster(ref)
-	if !ok {
-		return fmt.Errorf("%s is not in the inventory (%s); add it with: tl connect --dsn <url> %s", ref, path, ref)
-	}
-	env, _ := inv.Environment(ref.Env)
-	p, err := withPassword(c, cl.Profile, cl.Password)
-	if err != nil {
-		return err
-	}
-	if p, err = conn.ResolveService(conn.ServicefilePaths(), p); err != nil {
-		return err
-	}
-	warnTLS(c, p)
+	cl, env, p := sc.cluster, sc.env, sc.profile
 	info, err := conn.ProbeSession(c.Context(), p, env.Policy.Session())
 	if err != nil {
 		return err
 	}
 	cl.Provider = string(info.Provider)
 	cl.LastProbe = inventory.RecordProbe(info, a.now())
-	if err := inv.PutCluster(cl); err != nil {
+	if err := sc.inv.PutCluster(cl); err != nil {
 		return err
 	}
-	if err := inv.Save(path); err != nil {
+	if err := sc.inv.Save(sc.path); err != nil {
 		return err
 	}
-	res := connectResult{Ref: ref.String(), Saved: true, Inventory: path, EnvKind: string(env.Kind), Profile: cl.Profile, Server: info, Missing: info.MissingExtensions(), TLSWarning: p.TLSMode().Warning()}
+	res := connectResult{Ref: ref.String(), Saved: true, Inventory: sc.path, EnvKind: string(env.Kind), Profile: cl.Profile, Server: info, Missing: info.MissingExtensions(), TLSWarning: p.TLSMode().Warning()}
 	if cl.Password != nil {
 		res.PasswordRef = cl.Password.String()
 	}

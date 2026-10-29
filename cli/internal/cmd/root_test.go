@@ -60,11 +60,3 @@ func TestConnectRejectsBadRef(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
-
-func TestStubsSayNotYet(t *testing.T) {
-	for _, args := range [][]string{{"top", "prod/orders"}} {
-		if _, err := run(t, args...); err == nil || !strings.Contains(err.Error(), "not implemented yet") {
-			t.Errorf("%v: got %v", args, err)
-		}
-	}
-}

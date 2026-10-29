@@ -19,16 +19,12 @@ import (
 	"github.com/interlace-sh/tuskline/core/version"
 )
 
-// errNotYet marks commands that are specified but not built.
-func errNotYet(milestone string) error {
-	return fmt.Errorf("not implemented yet (roadmap %s, see docs/roadmap.md)", milestone)
-}
-
 // app holds what commands need from the outside world, so tests can
 // replace it.
 type app struct {
 	in          io.Reader
 	interactive bool             // stdin is a terminal, so prompts are allowed
+	stdoutTTY   bool             // stdout is a terminal, so the TUI can run
 	colour      bool             // stdout is a terminal and the no-colour variable is unset
 	now         func() time.Time // for last-probe timestamps
 	// inventoryPath is set by --inventory; empty means inventory.DefaultPath.
@@ -48,6 +44,7 @@ func NewRoot(out, errOut io.Writer) *cobra.Command {
 	return newRoot(out, errOut, &app{
 		in:          os.Stdin,
 		interactive: isTerminal(os.Stdin),
+		stdoutTTY:   isTerminal(out),
 		colour:      !noColour && isTerminal(out),
 		now:         time.Now,
 	})
@@ -86,12 +83,7 @@ func newRoot(out, errOut io.Writer, a *app) *cobra.Command {
 	root.AddCommand(newConnectCmd(a))
 
 	root.AddCommand(newLsCmd(a))
-	root.AddCommand(&cobra.Command{
-		Use:   "top <env/cluster>",
-		Short: "Live activity, waits and locks (TUI)",
-		Args:  cobra.ExactArgs(1),
-		RunE:  func(*cobra.Command, []string) error { return errNotYet("M1") },
-	})
+	root.AddCommand(newTopCmd(a))
 
 	root.AddCommand(&cobra.Command{
 		Use:                "serve",
