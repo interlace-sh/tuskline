@@ -9,14 +9,16 @@ Conventions:
 - Commands that change anything print a preview and need `--yes` or a typed confirmation in prod.
 - Credentials are never printed.
 
-## Implemented in the scaffold
+## Implemented
 
 | Command | Status |
 |---|---|
-| `tl version` | Prints `tl <version> (commit <sha>, built <date>)` |
+| `tl version` | Prints `tl <version> (commit <sha>, built <date>)`; `--output json` gives `{version, commit, date, go, os, arch}` |
 | `tl connect` | Probes a server and adds it to the inventory, or probes an inventory entry again; see [below](#tl-connect) |
 | `tl ls` | Lists the inventory; see [below](#tl-ls) |
 | `tl top <ref>` | Live sessions, waits, locks and blocking chains; see [below](#tl-top) |
+| `tl serve [args]` | Runs the separate `tuskline serve`; see [below](#tl-serve) |
+| `tl agent --server <url>` | Stub; token from `TUSKLINE_AGENT_TOKEN` (M9) |
 
 Global flag: `--inventory <file>` overrides the inventory location (default `$TUSKLINE_INVENTORY`, else `$XDG_CONFIG_HOME/tuskline/inventory.yaml`).
 
@@ -85,8 +87,10 @@ A full-screen view of one inventory entry. It is read-only and has no actions: i
 | `--interval <d>` | Refresh interval, default `1s`, minimum `500ms` |
 
 A role without `pg_monitor` sees other users' sessions with query text and waits hidden by the server. Query text is shown live and never saved.
-| `tl serve [args]` | Runs the separate AGPL `tuskline serve` binary from `PATH` ([ADR 0010](adr/0010-licence-boundary.md)) |
-| `tl agent --server <url>` | Stub; token from `TUSKLINE_AGENT_TOKEN` (M9) |
+
+### `tl serve`
+
+`tl serve [args]` runs `tuskline serve [args]`, the separate AGPL server binary ([ADR 0010](adr/0010-licence-boundary.md)); `tl` never links it. It looks for `tuskline` on `PATH`, then next to the `tl` executable. If neither has it, it exits 1 with install hints: a release binary, `moon run server:bin`, or building and running the container image. While the server runs, `SIGINT`, `SIGTERM` and `SIGHUP` sent to `tl` are passed on to it (`os.Interrupt` on Windows), and `tl` exits with the server's exit code.
 
 ## Target command set
 

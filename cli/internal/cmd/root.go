@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -71,35 +71,11 @@ func newRoot(out, errOut io.Writer, a *app) *cobra.Command {
 	root.SetIn(a.in)
 	root.PersistentFlags().StringVar(&a.inventoryPath, "inventory", "", "inventory file (default $TUSKLINE_INVENTORY or $XDG_CONFIG_HOME/tuskline/inventory.yaml)")
 
-	root.AddCommand(&cobra.Command{
-		Use:   "version",
-		Short: "Print the version",
-		Args:  cobra.NoArgs,
-		Run: func(c *cobra.Command, _ []string) {
-			fmt.Fprintf(c.OutOrStdout(), "tl %s\n", version.String())
-		},
-	})
-
+	root.AddCommand(newVersionCmd())
 	root.AddCommand(newConnectCmd(a))
-
 	root.AddCommand(newLsCmd(a))
 	root.AddCommand(newTopCmd(a))
-
-	root.AddCommand(&cobra.Command{
-		Use:                "serve",
-		Short:              "Start the web UI and API (runs the separate tuskline server binary)",
-		DisableFlagParsing: true,
-		RunE: func(c *cobra.Command, args []string) error {
-			bin, err := exec.LookPath("tuskline")
-			if err != nil {
-				return errors.New("the tuskline server binary was not found on PATH; install it or run the Docker image")
-			}
-			// A child process rather than exec(2) so this works on Windows too.
-			p := exec.CommandContext(c.Context(), bin, append([]string{"serve"}, args...)...)
-			p.Stdin, p.Stdout, p.Stderr = os.Stdin, c.OutOrStdout(), c.ErrOrStderr()
-			return p.Run()
-		},
-	})
+	root.AddCommand(newServeCmd())
 
 	var server string
 	ag := &cobra.Command{
@@ -118,9 +94,44 @@ func newRoot(out, errOut io.Writer, a *app) *cobra.Command {
 // Execute runs the CLI and returns the process exit code.
 func Execute() int {
 	root := NewRoot(os.Stdout, os.Stderr)
-	if err := root.ExecuteContext(context.Background()); err != nil {
-		fmt.Fprintln(os.Stderr, "tl:", err)
+	return exitCode(root.ExecuteContext(context.Background()), os.Stderr)
+}
+
+// exitCode maps an error to the process exit code, printing it unless it
+// only carries a child's exit status.
+func exitCode(err error, errOut io.Writer) int {
+	var ec exitCodeError
+	switch {
+	case err == nil:
+		return 0
+	case errors.As(err, &ec):
+		return ec.code
+	default:
+		fmt.Fprintln(errOut, "tl:", err)
 		return 1
 	}
-	return 0
+}
+
+func newVersionCmd() *cobra.Command {
+	var output string
+	c := &cobra.Command{
+		Use:   "version",
+		Short: "Print the version",
+		Args:  cobra.NoArgs,
+		RunE: func(c *cobra.Command, _ []string) error {
+			if err := checkOutput(output); err != nil {
+				return err
+			}
+			if output == outputJSON {
+				return writeJSON(c.OutOrStdout(), map[string]string{
+					"version": version.Version, "commit": version.Commit, "date": version.Date,
+					"go": runtime.Version(), "os": runtime.GOOS, "arch": runtime.GOARCH,
+				})
+			}
+			_, err := fmt.Fprintf(c.OutOrStdout(), "tl %s\n", version.String())
+			return err
+		},
+	}
+	addOutputFlag(c, &output)
+	return c
 }
