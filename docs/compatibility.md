@@ -19,6 +19,22 @@
 - Tier 1 is tested in CI from release 1: containers for community PostgreSQL 14–18, plus a nightly run against low-cost managed instances once M2 lands.
 - Tier 2 arrives in release 2, with gaps documented here.
 
+## Provider detection
+
+`conn.Probe` (SQL in `core/sqlpack/probe.go`) classifies a server from fingerprints that managed services create and self-managed servers normally lack. More specific services win, because Aurora also has `rds_superuser`. These are heuristics, and the inventory can override the result.
+
+| Provider | Fingerprints, checked in this order |
+|---|---|
+| Aurora | function `aurora_version()` |
+| RDS | role `rds_superuser`, or setting `rds.extensions` |
+| AlloyDB | role `alloydbsuperuser`, or setting `alloydb.iam_authentication` |
+| Cloud SQL | role `cloudsqlsuperuser`, or setting `cloudsql.iam_authentication` |
+| Azure Flexible Server | role `azure_pg_admin`, or setting `azure.extensions` |
+| Neon | setting `neon.timeline_id`, or `neon` in `shared_preload_libraries` |
+| Community | none of the above |
+
+The probe also records `shared_preload_libraries` (readable only with `pg_read_all_settings`, which `pg_monitor` includes; otherwise reported as unknown), the installed and available extensions, and the login role's attributes and memberships (`pg_monitor`, `pg_read_all_settings`, `pg_read_all_stats`, `pg_signal_backend`).
+
 ## Version-specific features SQL packs rely on
 
 | Feature | Available from |

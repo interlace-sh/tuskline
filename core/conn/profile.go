@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5"
 )
 
 // TLSMode is a libpq sslmode. Tuskline defaults to TLSVerifyFull, unlike
@@ -306,19 +306,19 @@ func quote(v string) string {
 	return "'" + strings.NewReplacer(`\`, `\\`, `'`, `\'`).Replace(v) + "'"
 }
 
-// Config builds a pgconn configuration from p, applying the TLS default. It
-// does not resolve services or look up passwords; callers do that first so
-// the steps stay explicit and testable. Environment variables such as
-// PGSSLMODE never override the profile, because every field is passed
-// explicitly. Errors never contain the password.
-func (p Profile) Config() (*pgconn.Config, error) {
+// Config builds a pgx connection configuration from p, applying the TLS
+// default. It does not resolve services or look up passwords; callers do
+// that first so the steps stay explicit and testable. Environment variables
+// such as PGSSLMODE never override the profile, because every field is
+// passed explicitly. Errors never contain the password.
+func (p Profile) Config() (*pgx.ConnConfig, error) {
 	if p.Service != "" {
 		return nil, fmt.Errorf("profile %s: service %q not resolved; call ResolveService first", p, p.Service)
 	}
 	if err := p.Validate(); err != nil {
 		return nil, fmt.Errorf("profile %s: %w", p, err)
 	}
-	cfg, err := pgconn.ParseConfig(p.connString(false))
+	cfg, err := pgx.ParseConfig(p.connString(false))
 	if err != nil {
 		return nil, fmt.Errorf("profile %s: %w", p, err)
 	}

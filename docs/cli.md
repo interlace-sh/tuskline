@@ -14,7 +14,7 @@ Conventions:
 | Command | Status |
 |---|---|
 | `tl version` | Prints `tl <version> (commit <sha>, built <date>)` |
-| `tl connect --dsn <url>` | Probes the server: version, read-only status. Refuses PostgreSQL < 14 |
+| `tl connect --dsn <url>` | Probes the server: version, provider, read-only status. Refuses PostgreSQL < 14. Resolves `service=` from `pg_service.conf` and the password from `~/.pgpass`; warns on stderr when `sslmode` is weaker than the `verify-full` default |
 | `tl connect <env/cluster>` | Validates the reference; inventory lookup is M1 |
 | `tl ls`, `tl top <ref>` | Stubs that exit 1 with "not implemented yet (roadmap M1)" |
 | `tl serve [args]` | Runs the separate AGPL `tuskline serve` binary from `PATH` ([ADR 0010](adr/0010-licence-boundary.md)) |

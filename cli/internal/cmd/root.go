@@ -51,14 +51,28 @@ func NewRoot(out, errOut io.Writer) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			if dsn != "" {
-				info, err := conn.Probe(c.Context(), dsn)
+				p, err := conn.ParseDSN(dsn)
 				if err != nil {
 					return err
 				}
-				if err := conn.CheckSupported(info.VersionNum); err != nil {
+				if p, err = conn.ResolveService(conn.ServicefilePaths(), p); err != nil {
 					return err
 				}
-				fmt.Fprintf(c.OutOrStdout(), "connected: PostgreSQL %d (read-only=%v)\n%s\n", info.Major(), info.ReadOnly, info.Version)
+				if !p.HasPassword() {
+					pw, err := conn.LookupPassword(conn.PassfilePath(), p)
+					if err != nil {
+						fmt.Fprintln(c.ErrOrStderr(), "warning:", err)
+					}
+					p = p.WithPassword(pw)
+				}
+				if w := p.TLSMode().Warning(); w != "" {
+					fmt.Fprintln(c.ErrOrStderr(), "warning:", w)
+				}
+				info, err := conn.Probe(c.Context(), p)
+				if err != nil {
+					return err
+				}
+				fmt.Fprintf(c.OutOrStdout(), "connected: PostgreSQL %d on %s (read-only=%v)\n%s\n", info.Major(), info.Provider, info.ReadOnly, info.Version)
 				return nil
 			}
 			if len(args) == 1 {
