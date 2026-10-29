@@ -25,7 +25,7 @@ Fixed decisions (do not relitigate without a new ADR; see `docs/decisions.md`):
 |---|---|
 | Core, server, CLI, agent | **Go** (1.25+, `go.work` workspace), `pgx/v5`, `pg_query_go` (from M7), Cobra (+ Bubble Tea for TUI) |
 | Metadata | **Embedded SQLite** (pure-Go driver, no cgo in server); optional external PostgreSQL for team HA |
-| Metrics history | Embedded columnar segments / Parquet (decided in M2 ADR); no external TSDB required |
+| Metrics history | Parquet segments via pure Go ([0013](docs/adr/0013-metrics-storage.md)); no external TSDB required |
 | Targets | **PostgreSQL 14–18**, tier 1 managed services |
 | Web UI | **SvelteKit** (`adapter-static`, SPA, `ssr = false`), **Svelte 5 runes**, **Tailwind CSS 4**, **shadcn-svelte** (Bits UI), TanStack Table/Virtual, CodeMirror 6, uPlot, `@lucide/svelte` |
 | Desktop | **Wails v3**: Go host, core in-process, same web build (M8) |

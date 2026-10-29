@@ -16,5 +16,6 @@ The eight product decisions below were recorded on 28 Oct 2026. Each one, and ea
 | [0010](adr/0010-licence-boundary.md) | Licence boundary in practice | Separate binaries, import rules, CC BY docs, DCO | Accepted |
 | [0011](adr/0011-frontend-sveltekit-spa.md) | Web stack | SvelteKit SPA + Svelte 5 + Tailwind + shadcn-svelte; React prototype is the spec | Accepted |
 | [0012](adr/0012-proto-and-moon.md) | Toolchain and tasks | proto pins Go, Node.js, npm, moon and golangci-lint; moon runs and caches every task; Makefile is a thin alias | Accepted |
+| [0013](adr/0013-metrics-storage.md) | Metrics history | Parquet segments in `core` (no cgo); 1 s for 1 h, 1 min for 14 days, 1 h for 13 months | Accepted |
 
 Template: [adr/0000-template.md](adr/0000-template.md).

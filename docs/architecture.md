@@ -130,7 +130,7 @@ flowchart LR
 ## Storage
 
 - **Metadata:** embedded SQLite (pure-Go driver) in a volume or the user's config directory. Teams that need HA can use an external PostgreSQL.
-- **Metrics history:** embedded columnar segments with downsampling (for example Parquet, queried through DuckDB in the desktop app), or remote write. The exact format is decided by ADR in M2. Exploring DuckLake for the archive is on the R3 list.
+- **Metrics history:** Parquet segments on disk, written and read from `core` with a pure-Go library, with downsampling and the retention defaults in [ADR 0013](adr/0013-metrics-storage.md). The desktop app may also query the files with DuckDB (M8). Remote write is an export, not the store. Exploring DuckLake for the archive is on the R3 list.
 
 ## Deployment modes
 
