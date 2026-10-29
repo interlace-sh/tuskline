@@ -331,7 +331,9 @@
 								class="size-1.5 rounded-full bg-current"
 							></span>{/if}
 						<span class="text-[11px] tracking-wide uppercase">{shell.env}</span>
-						<span class="max-w-28 truncate font-mono text-[11.5px] font-normal opacity-80">{shell.cluster.name}</span>
+						<span class="max-w-28 truncate font-mono text-[11.5px] font-normal opacity-80"
+							>{shell.cluster.name}</span
+						>
 						<ChevronDown size={13} />
 					</button>
 					{#if shell.envMenuOpen}
