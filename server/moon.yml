@@ -16,8 +16,13 @@ dependsOn:
 
 # Go-only tasks look at core's sources, not web's: a UI change re-runs
 # server:build (it embeds the UI) but not server:test, vet or golangci-lint.
+# They still wait for embed-web, which rewrites internal/webui/dist: compiling
+# the go:embed directory while it is being copied fails with "no such file".
 tasks:
   test:
+    deps:
+      - target: '~:embed-web'
+        cacheStrategy: 'outputs'
     inputs:
       - '@group(sources)'
       - 'project://core?group=sources'
@@ -25,6 +30,9 @@ tasks:
       mergeInputs: 'replace'
 
   vet:
+    deps:
+      - target: '~:embed-web'
+        cacheStrategy: 'outputs'
     inputs:
       - '@group(sources)'
       - 'project://core?group=sources'
@@ -32,6 +40,9 @@ tasks:
       mergeInputs: 'replace'
 
   golangci:
+    deps:
+      - target: '~:embed-web'
+        cacheStrategy: 'outputs'
     inputs:
       - '@group(sources)'
       - 'project://core?group=sources'
