@@ -15,6 +15,7 @@ The design reference is the frozen React prototype in [`../prototype/`](../proto
 | Staging | `#F5A524` | Staging rail (`bg-env-staging`) |
 | Dev | `#30A46C` | Development rail (`bg-env-dev`) |
 | Local | `#8B8D98` | Local or unclassified (`bg-env-local`) |
+| Chart series | `--c1` … `--c6` | Wait and metric colours, light and dark, in `layout.css` |
 
 - Neutral greys carry most of the UI. Colour is reserved for environment identity, status and data.
 - **Type:**
