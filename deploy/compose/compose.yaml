@@ -1,0 +1,55 @@
+# Development and test databases: PostgreSQL 14-18 side by side.
+# Not for production. Credentials are throwaway dev values.
+#
+#   docker compose -f deploy/compose/compose.yaml up -d
+#   tl connect --dsn "postgres://tuskline:tuskline@localhost:5417/tuskline?sslmode=disable"
+#
+# Ports: 54<major> -> pg14 on 5414 ... pg18 on 5418.
+# Each server preloads pg_stat_statements and auto_explain, so collectors
+# have something to read. initdb/ creates the least-privilege monitor role.
+
+x-pg: &pg
+  environment:
+    POSTGRES_USER: tuskline
+    POSTGRES_PASSWORD: tuskline
+    POSTGRES_DB: tuskline
+  command:
+    - postgres
+    - -c
+    - shared_preload_libraries=pg_stat_statements,auto_explain
+    - -c
+    - pg_stat_statements.track=top
+    - -c
+    - track_io_timing=on
+    - -c
+    - auto_explain.log_min_duration=500ms
+  volumes:
+    - ./initdb:/docker-entrypoint-initdb.d:ro
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U tuskline -d tuskline"]
+    interval: 5s
+    timeout: 3s
+    retries: 20
+
+services:
+  pg14:
+    <<: *pg
+    image: postgres:14-alpine
+    ports: ["5414:5432"]
+  pg15:
+    <<: *pg
+    image: postgres:15-alpine
+    ports: ["5415:5432"]
+  pg16:
+    <<: *pg
+    image: postgres:16-alpine
+    ports: ["5416:5432"]
+  pg17:
+    <<: *pg
+    image: postgres:17-alpine
+    ports: ["5417:5432"]
+  pg18:
+    <<: *pg
+    image: postgres:18-alpine
+    ports: ["5418:5432"]
+    # PostgreSQL 18 images keep data under /var/lib/postgresql/18/docker.

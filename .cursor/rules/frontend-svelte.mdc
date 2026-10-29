@@ -1,0 +1,33 @@
+---
+description: SvelteKit, Svelte 5, Tailwind and shadcn-svelte conventions for the web UI, and how to port screens from the React prototype
+globs: web/**/*.svelte,web/**/*.ts,web/**/*.css,web/**/*.js,web/package.json,prototype/**
+alwaysApply: false
+---
+
+# Frontend: SvelteKit + Svelte 5 + shadcn-svelte
+
+- **SPA only:** `src/routes/+layout.ts` sets `ssr = false` and `prerender = false`, with `adapter-static` and `fallback: 'index.html'`. Do not add `+page.server.ts`, `+server.ts` or form actions; there is no Node server. The Go server and Wails serve the static build.
+- **Svelte 5 runes:** `$props()`, `$state`, `$derived`, `$effect` (sparingly), and snippets instead of slots. Shared state goes in `src/lib/state/*.svelte.ts`. No legacy `export let`, `$:` or new `svelte/store` stores.
+- **Components:**
+  - shadcn-svelte primitives live in `src/lib/components/ui/*` (`npx shadcn-svelte@latest add <name>`; leave them close to upstream).
+  - Composites live in `src/lib/components/*`.
+  - Screens live in `src/routes/**/+page.svelte`.
+  - Icons come from `@lucide/svelte`.
+- **Imports:** use `#lib/...` with an explicit `.js` suffix or `/index.js`, for example `import { Button } from '#lib/components/ui/button/index.js'`.
+- **Styling:**
+  - Use Tailwind 4 utilities and the tokens in `src/routes/layout.css`.
+  - Brand: `--primary` is Accent `#3E63DD`, dark background is Ink `#0E1116`, light background is Paper `#FAFAF9`.
+  - Environment colours: `bg-env-prod|staging|dev|local`.
+  - No raw hex values in components.
+  - Use tabular numerals for metrics; code uses `font-mono` (JetBrains Mono).
+- **Environment identity** is always visible: a coloured rail and breadcrumb on every cluster-scoped screen. Prod never looks like dev (`docs/design.md` principle 3).
+- **Data:** only through a typed client in `src/lib/api/` calling `/api/v1/...`. No private endpoints, and no direct database access. Show loading, empty and error states for every fetch.
+- **Performance:** virtualise long lists and grids (TanStack Virtual); use uPlot for time series. Interactions should respond in under 100 ms.
+- **Accessibility:** every control is keyboard reachable with a visible focus ring, has a label, respects `prefers-reduced-motion`, and works in light and dark themes.
+- **Porting from `prototype/`:**
+  1. Read the React screen and its screenshot in `prototype/screenshots/`.
+  2. Port primitives first, then screens in roadmap order.
+  3. Move `src/data.ts` and `src/setup-data.ts` types into `src/lib/fixtures/` for demo mode and tests.
+  4. Convert the React context store to runes.
+  5. Accept a screen only when its Playwright smoke checks pass and it matches the screenshot.
+- Before committing: `npm run format && npm run check && npm run lint && npm test && npm run build`. Requires Node.js 22.17+.

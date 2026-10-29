@@ -1,0 +1,45 @@
+---
+description: Non-negotiable production-safety, credential and privacy rules for any code that touches databases, secrets, actions or provisioning
+globs:
+alwaysApply: true
+---
+
+# Security and production safety (always applies)
+
+1. **Prod is read-only by default.**
+   - `core/inventory.DefaultPolicy(EnvProd)` sets: ReadOnly, a 30 s statement timeout, a 2 s lock timeout, a RowLimit of 1,000, typed confirmation, and maximum elevation of 15 min.
+   - Sessions apply these defaults with `SET default_transaction_read_only = on` and the timeouts when they connect.
+   - Never weaken a default without an accepted ADR. Tests (`TestProdIsReadOnlyByDefault`) must keep passing.
+2. **Every mutating action needs four things:**
+   - A preview of the exact SQL or command.
+   - Pre-flight checks.
+   - A typed confirmation (the cluster name) when the environment is prod.
+   - An audit record containing who, what, when, the reason and the result.
+
+   No silent writes, and no auto-retry of writes.
+3. **Elevation** is explicit, scoped to one environment, time-limited, carries a reason and is audited. It drops back to read-only automatically.
+4. **Collectors** are strictly read-only.
+   - They connect as the `tuskline_monitor` role (`pg_monitor`), with statement, lock and idle timeouts.
+   - Each target has a query-time budget, and collection backs off under load.
+   - Never take locks stronger than `AccessShareLock`.
+5. **Credentials:**
+   - Never log, print, return in errors or API responses, or store in plaintext: DSNs with passwords, tokens or keys.
+   - Store a secret reference (Vault/OpenBao, cloud secret managers, the OS keychain) or envelope-encrypt it.
+   - Redact DSNs before showing them.
+   - Tests use throwaway container credentials only.
+6. **Transport:** TLS defaults to `verify-full`. Downgrading needs an explicit per-profile setting and shows a warning. Agent-to-server traffic uses mTLS and goes outbound only.
+7. **Privacy:**
+   - Do not persist query parameters or result rows unless a policy allows it.
+   - Redact literals in captured plans.
+   - No telemetry or phone-home by default.
+8. **SQL injection:** values go in as parameters; identifiers go through `pgx.Identifier`. Generated DDL is built from parsed or validated identifiers and shown before it runs.
+9. **Provisioning:**
+   - Plan, then apply, with a full diff.
+   - Refuse non-empty data directories.
+   - Write secrets only to the chosen secret store.
+   - Compose topologies are labelled non-production.
+10. **AI and MCP features** are read-only by default and never auto-execute writes or DDL. Rows and parameters are never sent to a model without a policy allowing it.
+11. **When an agent runs commands itself:**
+    - Connect only to local disposable containers (testcontainers, `make dev-db`).
+    - Never run anything against remote or shared databases.
+    - Never push, tag, release, publish images or change GitHub settings unless explicitly asked.

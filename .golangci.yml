@@ -1,0 +1,25 @@
+# golangci-lint v2 configuration. Run per module: `make lint-go`.
+version: "2"
+run:
+  build-tags: [integration]
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - errorlint
+    - misspell
+    - noctx
+    - unconvert
+  settings:
+    errcheck:
+      # Writing CLI output to a terminal: a failed write has no useful recovery.
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+    misspell:
+      locale: UK
+formatters:
+  enable:
+    - gofmt
+    - goimports

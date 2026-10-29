@@ -1,0 +1,28 @@
+---
+description: Documentation rules (British English, where things are documented, ADRs, roadmap upkeep)
+globs: docs/**/*.md,*.md,**/README.md
+alwaysApply: false
+---
+
+# Documentation
+
+- **British English**, plain and concise. Write "licence" for the noun and "license" for the verb, plus colour, organisation, behaviour, catalogue and analyse. Code identifiers keep their API spelling (`color` in CSS).
+- Docs are CC BY 4.0 (`docs/LICENSE`).
+- **Where things go:**
+  - Commands: `docs/cli.md`.
+  - Screens and tokens: `docs/design.md`.
+  - Components and data flow: `docs/architecture.md` (Mermaid diagrams).
+  - Safety and auth: `docs/security.md`.
+  - Supported systems: `docs/compatibility.md`.
+  - Onboarding and provisioning: `docs/onboarding-and-deploy.md`.
+- **Decisions:**
+  - Record them as ADRs in `docs/adr/NNNN-kebab-title.md`, copied from `0000-template.md`, with status Proposed → Accepted → Superseded.
+  - Add a row to `docs/decisions.md`.
+  - Never edit an accepted ADR's decision; supersede it with a new one.
+- **Roadmap** (`docs/roadmap.md`):
+  - Tick the checkbox in the same PR that completes a task.
+  - Add discovered work as new unchecked tasks under the right milestone.
+  - Keep acceptance criteria testable.
+- Update docs in the same change as the behaviour. A command or flag missing from `docs/cli.md` means the work is not done.
+- Never invent numbers (benchmarks, prices, dates). Say "to be measured" or cite the source and date.
+- Use Mermaid for diagrams, so they render on GitHub. Keep tables narrow.

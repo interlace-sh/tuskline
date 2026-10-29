@@ -1,0 +1,24 @@
+---
+description: Go conventions for the core, CLI, agent and server modules (layout, errors, context, SQL packs, licence headers)
+globs: core/**/*.go,cli/**/*.go,agent/**/*.go,server/**/*.go,go.work,**/go.mod
+alwaysApply: false
+---
+
+# Go: core, CLI, agent and server
+
+- The workspace is `go.work` with modules `core`, `agent`, `cli` and `server`. Run Go commands inside a module or use `make build|test|lint-go`; `go build ./...` from the root fails.
+- First line of every file: `// SPDX-License-Identifier: Apache-2.0` in `core/`, `cli/` and `agent/`; `// SPDX-License-Identifier: AGPL-3.0-only` in `server/`.
+- **Import direction:** `cli`, `agent` and `server` → `core`. `core` imports none of them. `cli` and `agent` never import `server`. `tl serve` execs the `tuskline` binary.
+- `core` packages are libraries: no `os.Exit`, no global state, no flag parsing, and no printing to stdout. Return values and errors; the surfaces render them.
+- `ctx context.Context` comes first on every I/O function. Wrap database calls with `context.WithTimeout`; probes use 10 s.
+- Errors: `fmt.Errorf("verb object: %w", err)`, sentinels like `ErrNotImplemented`, and checks with `errors.Is` / `errors.As`. No `panic` outside `main`.
+- Logging is `log/slog`. Never log DSNs, passwords, tokens, query parameters or rows. Redact with `conn.Redact` (add it if missing).
+- **SQL:**
+  - Queries live in `core/sqlpack`, one file per area, each query documented with its source view, minimum version and the extension it needs.
+  - Choose the variant by `server_version_num` (for example `pg_stat_checkpointer` on 17+, `pg_stat_bgwriter` before).
+  - Values always go in as `$n` parameters; identifiers go through `pgx.Identifier{...}.Sanitize()`.
+- Minimum server: `conn.MinServerVersionNum = 140000`. Refuse older servers with a clear message.
+- No cgo outside `desktop/`. Use the pure-Go SQLite driver for `core/store`.
+- New dependency? It must be permissively licensed for Apache modules. Justify it in the PR and run `make tidy`.
+- Exported identifiers need doc comments; each package needs a `doc.go` naming its roadmap milestone.
+- CLI: Cobra commands live in `cli/internal/cmd`, one file per command group. Write output to `cmd.OutOrStdout()` so tests can capture it. Give every command `--output text|json` once it returns data. Errors exit 1, with a message on stderr.

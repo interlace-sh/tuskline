@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root, .dark {
+  --bg: #0A0C10; --elev: #111419; --subtle: #161A21; --hover: #1C212A;
+  --line: #20252F; --line2: #2C3240;
+  --fg: #E7E9EE; --fg2: #A3A9B6; --fg3: #6B7280;
+  --accent: #7B96FF; --accent-fg: #FFFFFF; --brand: #3E63DD;
+  --prod: #F2555A; --staging: #F5A524; --dev: #3DD68C;
+  --ok: #3DD68C; --warn: #F5A524; --crit: #F2555A;
+  --c1: #7B96FF; --c2: #F5A524; --c3: #3CC8E0; --c4: #B07CFF; --c5: #F2555A; --c6: #8B93A7;
+  --grid: #1A1E26;
+  --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.35);
+  color-scheme: dark;
+}
+.light {
+  --bg: #F7F7F5; --elev: #FFFFFF; --subtle: #F1F2F4; --hover: #EBECEF;
+  --line: #E4E6EA; --line2: #D3D6DC;
+  --fg: #0E1116; --fg2: #4B5260; --fg3: #8A909C;
+  --accent: #3E63DD; --accent-fg: #FFFFFF; --brand: #3E63DD;
+  --prod: #DC3E42; --staging: #D98A00; --dev: #1F9D5C;
+  --ok: #1F9D5C; --warn: #D98A00; --crit: #DC3E42;
+  --c1: #3E63DD; --c2: #E09A00; --c3: #0FA3BF; --c4: #8E4EC6; --c5: #DC3E42; --c6: #9AA1AE;
+  --grid: #EEF0F3;
+  --shadow: 0 1px 2px rgba(16,24,40,.04), 0 8px 24px rgba(16,24,40,.06);
+  color-scheme: light;
+}
+
+html, body, #root { height: 100%; }
+body {
+  @apply bg-bg text-fg font-sans antialiased;
+  font-size: 13px;
+  font-feature-settings: "cv11", "ss01", "tnum";
+}
+.mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-variant-ligatures: none; }
+.tnum { font-variant-numeric: tabular-nums; }
+* { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
+::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+.card { @apply bg-elev border border-line rounded-xl; }
+.btn { @apply inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[12.5px] font-medium border border-line bg-elev text-fg hover:bg-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap; }
+.btn-primary { background: var(--brand); color: #fff; border-color: transparent; }
+.btn-primary:hover { background: color-mix(in srgb, var(--brand) 88%, white); }
+.btn-danger { background: var(--crit); color: white; border-color: transparent; }
+.btn-danger:hover { background: color-mix(in srgb, var(--crit) 88%, black); }
+.btn-ghost { @apply border-transparent bg-transparent text-fg2 hover:text-fg hover:bg-hover; }
+.input { @apply h-7 px-2.5 rounded-md bg-subtle border border-line text-fg placeholder:text-fg3 outline-none focus:border-accent transition-colors; }
+.kbd { @apply inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded border border-line2 bg-subtle text-fg2 text-[10.5px] mono leading-none; }
+.label { @apply text-2xs uppercase tracking-[0.06em] text-fg3 font-medium; }
+.focus-ring:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.flow-line { stroke-dasharray: 4 6; animation: flow 1.2s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -20; } }
+.pulse-dot { animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+
+.recharts-cartesian-grid line { stroke: var(--grid); }
+.recharts-text { fill: var(--fg3); font-size: 11px; }
+.recharts-tooltip-cursor { fill: var(--hover); }
+
+.spin { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.code { @apply mono text-[11.5px] leading-[1.6] bg-subtle border border-line rounded-lg p-3 overflow-auto whitespace-pre; }
+.splash-out { animation: splashOut .35s ease-in forwards; }
+@keyframes splashOut { to { opacity: 0; visibility: hidden; } }
+.draw-arc { stroke-dasharray: 160; stroke-dashoffset: 160; animation: draw 0.9s cubic-bezier(.6,.1,.2,1) forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.log-line { animation: fadeIn .2s ease-out; }
+@keyframes grow { from { width: 0 } to { width: 100% } }

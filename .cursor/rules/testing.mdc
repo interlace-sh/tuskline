@@ -1,0 +1,28 @@
+---
+description: How to write and run unit, integration (testcontainers, PostgreSQL 14-18) and web tests
+globs: **/*_test.go,web/**/*.test.ts,web/**/*.spec.ts,Makefile,.github/workflows/**
+alwaysApply: false
+---
+
+# Testing
+
+- **Unit tests** (`make test`): no Docker, no network, fast. Table-driven, with `t.Parallel()` where safe, using the standard `testing` package (no assertion frameworks unless already used).
+- **Integration tests** (`make test-integration`):
+  - Files start with `//go:build integration` and end in `_integration_test.go`.
+  - Use testcontainers-go `modules/postgres` with `postgres:<major>-alpine` and iterate `pgVersions(t)` (default 14–18; `PG_VERSIONS="17"` or `"14,18"` narrows the run).
+  - Wait for readiness with the module's wait strategy (the log line occurs twice).
+  - Terminate containers with `t.Cleanup`.
+  - Use `t.Run(fmt.Sprintf("pg%d", v), ...)` so the failing version is obvious.
+- Every query in `core/sqlpack` needs an integration test on every supported major, including the branch for older versions. Use `shared_preload_libraries=pg_stat_statements` when a test needs it.
+- Test the safety invariants explicitly: prod read-only, timeouts applied, a write rejected in a read-only session, and secrets redacted in errors and logs.
+- Never sleep to wait; poll with a deadline. Never depend on test order or wall-clock time zones (use UTC).
+- **CLI tests:**
+  - Build the root with `cmd.NewRoot(out, errOut)`, call `SetArgs`, and assert on the output and the error.
+  - Assert the exit codes from `Execute`.
+- **Server tests:** `httptest` against `httpapi.New(...)`. Assert status codes, headers (security headers) and JSON bodies.
+- **Web:**
+  - vitest for logic in `src/lib/**/*.test.ts`.
+  - Playwright smoke checks (ported from `prototype/scripts/smoke.mjs`) for screens.
+  - Use fixtures from `src/lib/fixtures`, never a live database.
+- A bug fix starts with a failing regression test.
+- CI (`.github/workflows/ci.yml`) runs gofmt, vet, unit tests, cross-compiles, golangci-lint per module, integration per PostgreSQL major, and web check/lint/test/build. Keep it green, and add new jobs there when you add a new kind of test.
