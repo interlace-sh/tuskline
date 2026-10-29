@@ -55,6 +55,10 @@ moon run cli:bin server:bin     # ./bin/tl and ./bin/tuskline, with the UI embed
 ./bin/tuskline serve  # http://127.0.0.1:8080
 make dev-db           # PostgreSQL 14-18 on ports 5414-5418
 ./bin/tl connect --dsn "postgres://tuskline:tuskline@localhost:5417/tuskline?sslmode=disable"
+
+# Container image (distroless, non-root, `tuskline serve` on :8080)
+docker build -t tuskline .
+docker run --rm -p 8080:8080 -v tuskline:/data tuskline
 ```
 
 ## Repository map

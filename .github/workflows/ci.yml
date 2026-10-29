@@ -44,6 +44,22 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  image:
+    name: container image (build and smoke test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The smoke script stamps the image with `git describe`.
+          fetch-depth: 0
+          filter: blob:none
+      - uses: moonrepo/setup-toolchain@v0
+        with:
+          auto-install: true
+      # Builds the Dockerfile and checks /api/v1/health, the UI and the
+      # non-root user. Nothing is pushed.
+      - run: moon run scripts:image-smoke
+
   integration:
     name: integration (PostgreSQL ${{ matrix.pg }})
     runs-on: ubuntu-latest

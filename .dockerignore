@@ -1,0 +1,20 @@
+# Only the sources the Dockerfile copies; never local state or secrets.
+.git/
+.moon/cache/
+.moon/docker/
+bin/
+dist/
+**/node_modules/
+web/build/
+web/.svelte-kit/
+server/internal/webui/dist/*
+!server/internal/webui/dist/placeholder.html
+prototype/
+docs/
+brand/
+desktop/
+deploy/
+.env
+.env.*
+*.sqlite
+*.db

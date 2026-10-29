@@ -59,6 +59,16 @@ tasks:
       cache: false
       runInCI: false
 
+  image-smoke:
+    description: 'Build the Docker image and check health, the embedded UI and the non-root user (needs Docker)'
+    command: 'bash image-smoke.sh'
+    tags: ['docker']
+    options:
+      # Talks to Docker, so never trust a cached pass. CI runs it in its own
+      # job (ci.yml); `false` would also block that explicit `moon run`.
+      cache: false
+      runInCI: 'always'
+
   check:
     description: 'Everything a pull request must pass for repository-wide checks'
     command: 'noop'

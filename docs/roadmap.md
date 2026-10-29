@@ -24,7 +24,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [ ] M0.7a Maintainer: apply the `main` ruleset described in CONTRIBUTING.md (required checks, code-owner review, DCO app) once CI is green; this needs repository admin rights.
 - [x] M0.8 Release skeleton: GoReleaser config producing `tl` and `tuskline` for linux/darwin/windows × amd64/arm64 with checksums and an SBOM (no publishing yet). (`moon run scripts:release-snapshot`.)
 - [ ] M0.8a Release workflow: tag-triggered GoReleaser job with keyless signing (cosign) of checksums and SBOMs. Needs explicit approval before anything is published.
-- [ ] M0.9 Container image: multi-stage Dockerfile (web build → Go build → distroless), `tuskline serve` on :8080, non-root.
+- [x] M0.9 Container image: multi-stage Dockerfile (web build → Go build → distroless), `tuskline serve` on :8080, non-root.
 
 **Acceptance:**
 - A fresh clone passes `proto install`, `moon run :check` and `moon run cli:bin server:bin`.

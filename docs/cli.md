@@ -46,3 +46,5 @@ Conventions:
 |---|---|
 | `tuskline serve [-addr 127.0.0.1:8080]` | HTTP server: `/api/v1/health`, `/api/v1/version`, and the embedded SPA. `TUSKLINE_ADDR` overrides the address |
 | `tuskline version` | Build info |
+
+The container image (`Dockerfile`) runs `tuskline serve` as the distroless `nonroot` user, with `TUSKLINE_ADDR=:8080` so the port can be published, and a `/data` volume for the metadata store. `moon run scripts:image-smoke` builds it and checks `/api/v1/health`.
