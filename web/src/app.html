@@ -7,10 +7,7 @@
 		<script>
 			try {
 				var theme = localStorage.getItem('tl-theme');
-				var density = localStorage.getItem('tl-density');
 				if (theme === 'light') document.documentElement.classList.remove('dark');
-				if (density === 'compact' || density === 'comfortable')
-					document.documentElement.dataset.density = density;
 			} catch (e) {
 				/* private mode */
 			}

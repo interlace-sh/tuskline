@@ -1,5 +1,16 @@
-// App shell state. Demo clusters stand in until M3.2 moves the prototype fixtures.
+// App shell state. An empty inventory stays on the prototype fixtures (demo mode).
+import { listClusters } from '#lib/api.js';
 import { defaultReadOnly, ENV_LABEL, type EnvKind } from '#lib/env.js';
+import {
+	clusterFromAPI,
+	demoForced,
+	fixtureClusters,
+	selectClusters,
+	type Health,
+	type ShellCluster
+} from '#lib/fixtures/clusters.js';
+
+export type { Health, ShellCluster };
 
 export type Screen =
 	| 'fleet'
@@ -15,20 +26,7 @@ export type Screen =
 	| 'deploy'
 	| 'deployments';
 
-export type Density = 'comfortable' | 'compact';
 export type Theme = 'dark' | 'light';
-export type Health = 'ok' | 'warn' | 'crit';
-
-export interface DemoCluster {
-	id: string;
-	name: string;
-	env: EnvKind;
-	health: Health;
-	version: string;
-	ha: string;
-	region: string;
-	database: string;
-}
 
 export const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'] as const;
 export type Range = (typeof RANGES)[number];
@@ -51,49 +49,6 @@ export const SCREEN_LABEL: Record<Screen, string> = {
 	deployments: 'Deployments'
 };
 
-export const DEMO_CLUSTERS: DemoCluster[] = [
-	{
-		id: 'prod-eu-west',
-		name: 'prod-eu-west',
-		env: 'prod',
-		health: 'warn',
-		version: '17.2',
-		ha: 'Patroni',
-		region: 'eu-west-2',
-		database: 'orders'
-	},
-	{
-		id: 'prod-eu-central',
-		name: 'prod-eu-central-ledger',
-		env: 'prod',
-		health: 'crit',
-		version: '16.6',
-		ha: 'Patroni',
-		region: 'europe-west3',
-		database: 'ledger'
-	},
-	{
-		id: 'staging-eu-west',
-		name: 'staging-eu-west',
-		env: 'staging',
-		health: 'ok',
-		version: '17.2',
-		ha: 'Patroni',
-		region: 'eu-west-2',
-		database: 'orders'
-	},
-	{
-		id: 'dev-shared',
-		name: 'dev-shared',
-		env: 'dev',
-		health: 'ok',
-		version: '17.2',
-		ha: 'Standalone',
-		region: 'uksouth',
-		database: 'orders'
-	}
-];
-
 export interface Command {
 	id: string;
 	group: string;
@@ -108,7 +63,7 @@ export function prodSwitchNeedsConfirm(from: EnvKind, to: EnvKind): boolean {
 	return to === 'prod' && from !== 'prod';
 }
 
-export function filterCommands(commands: Command[], query: string): Command[] {
+export function filterCommands<T extends Command>(commands: T[], query: string): T[] {
 	const q = query.trim().toLowerCase();
 	if (!q) return commands.filter((c) => c.group !== 'Queries');
 	const terms = q.split(/\s+/);
@@ -123,16 +78,14 @@ export function stepRange(range: Range, direction: -1 | 1): Range {
 	return RANGES[next];
 }
 
-function clusterById(id: string): DemoCluster {
-	return DEMO_CLUSTERS.find((c) => c.id === id) ?? DEMO_CLUSTERS[0];
-}
-
 class Shell {
 	theme = $state<Theme>('dark');
-	density = $state<Density>('comfortable');
 	screen = $state<Screen>('fleet');
 	env = $state<EnvKind>('prod');
 	clusterId = $state('prod-eu-west');
+	/** True while the shell is showing prototype fixtures rather than the inventory. */
+	demo = $state(true);
+	clusters = $state<ShellCluster[]>(fixtureClusters());
 	paletteOpen = $state(false);
 	envMenuOpen = $state(false);
 	helpOpen = $state(false);
@@ -140,9 +93,13 @@ class Shell {
 	/** Set when a production switch is waiting for confirmation. */
 	pendingProd = $state(false);
 
-	cluster = $derived(clusterById(this.clusterId));
-	clustersInEnv = $derived(DEMO_CLUSTERS.filter((c) => c.env === this.env));
-	unhealthy = $derived(DEMO_CLUSTERS.filter((c) => c.health !== 'ok').length);
+	cluster = $derived(
+		this.clusters.find((c) => c.id === this.clusterId) ?? this.clusters[0] ?? fixtureClusters()[0]
+	);
+	clustersInEnv = $derived(this.clusters.filter((c) => c.env === this.env));
+	unhealthy = $derived(
+		this.clusters.filter((c) => c.health === 'warn' || c.health === 'crit').length
+	);
 	readOnly = $derived(defaultReadOnly(this.env));
 
 	go(screen: Screen) {
@@ -171,17 +128,37 @@ class Shell {
 	private applyEnv(env: EnvKind) {
 		this.env = env;
 		if (this.cluster.env !== env) {
-			const next = DEMO_CLUSTERS.find((c) => c.env === env);
+			const next = this.clusters.find((c) => c.env === env);
 			if (next) this.clusterId = next.id;
 		}
 	}
 
 	setCluster(id: string) {
-		const cluster = clusterById(id);
+		const cluster = this.clusters.find((c) => c.id === id) ?? this.clusters[0];
 		this.clusterId = cluster.id;
 		this.env = cluster.env;
 		this.envMenuOpen = false;
 		this.pendingProd = false;
+	}
+
+	/** Load the inventory. An empty list, a failed request, or ?demo=1 stays on fixtures. */
+	async refresh(fetchImpl: typeof fetch = fetch) {
+		const force = demoForced(typeof location === 'undefined' ? '' : location.search);
+		let live: ShellCluster[] = [];
+		if (!force) {
+			try {
+				live = (await listClusters(fetchImpl)).map(clusterFromAPI);
+			} catch {
+				live = [];
+			}
+		}
+		const next = selectClusters(live, force);
+		this.demo = next.demo;
+		this.clusters = next.clusters;
+		if (!this.clusters.some((c) => c.id === this.clusterId)) {
+			this.clusterId = this.clusters[0].id;
+			this.env = this.clusters[0].env;
+		}
 	}
 
 	toggleTheme() {
@@ -189,22 +166,15 @@ class Shell {
 		this.persist();
 	}
 
-	toggleDensity() {
-		this.density = this.density === 'comfortable' ? 'compact' : 'comfortable';
-		this.persist();
-	}
-
 	stepRange(direction: -1 | 1) {
 		this.range = stepRange(this.range, direction);
 	}
 
-	/** Apply the saved theme and density onto the document. */
+	/** Apply the saved theme onto the document. */
 	hydrate() {
 		try {
 			const theme = localStorage.getItem('tl-theme');
-			const density = localStorage.getItem('tl-density');
 			if (theme === 'light' || theme === 'dark') this.theme = theme;
-			if (density === 'compact' || density === 'comfortable') this.density = density;
 		} catch {
 			/* private mode */
 		}
@@ -215,7 +185,6 @@ class Shell {
 		this.applyDocument();
 		try {
 			localStorage.setItem('tl-theme', this.theme);
-			localStorage.setItem('tl-density', this.density);
 		} catch {
 			/* private mode */
 		}
@@ -223,7 +192,6 @@ class Shell {
 
 	applyDocument() {
 		document.documentElement.classList.toggle('dark', this.theme === 'dark');
-		document.documentElement.dataset.density = this.density;
 	}
 }
 

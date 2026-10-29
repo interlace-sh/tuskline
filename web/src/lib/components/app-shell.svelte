@@ -1,11 +1,12 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import Activity from '@lucide/svelte/icons/activity';
 	import Archive from '@lucide/svelte/icons/archive';
 	import Bell from '@lucide/svelte/icons/bell';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import Check from '@lucide/svelte/icons/check';
+	import Command from '@lucide/svelte/icons/command';
 	import GitPullRequestArrow from '@lucide/svelte/icons/git-pull-request-arrow';
 	import History from '@lucide/svelte/icons/history';
 	import Info from '@lucide/svelte/icons/info';
@@ -25,14 +26,9 @@
 	import Zap from '@lucide/svelte/icons/zap';
 	import iconDark from '#lib/assets/tusk-arc-icon-dark.svg';
 	import iconLight from '#lib/assets/tusk-arc-icon-light.svg';
-	import { ENV_LABEL, envRailClass, envTextClass, type EnvKind } from '#lib/env.js';
-	import {
-		DEMO_CLUSTERS,
-		GLOBAL_SCREENS,
-		SCREEN_LABEL,
-		shell,
-		type Screen
-	} from '#lib/shell.svelte.js';
+	import { ENV_LABEL, envPillClass, envRailClass, envTextClass, type EnvKind } from '#lib/env.js';
+	import { healthDotClass } from '#lib/fixtures/clusters.js';
+	import { GLOBAL_SCREENS, SCREEN_LABEL, shell, type Screen } from '#lib/shell.svelte.js';
 	import CommandPalette from '#lib/components/command-palette.svelte';
 
 	let { children }: { children: Snippet } = $props();
@@ -60,10 +56,12 @@
 	const rail = $derived(
 		global ? 'bg-linear-to-r from-env-dev via-env-staging to-env-prod' : envRailClass(shell.env)
 	);
-	const pad = $derived(shell.density === 'compact' ? 'p-4' : 'p-6');
-
 	$effect(() => {
 		shell.hydrate();
+	});
+
+	onMount(() => {
+		void shell.refresh();
 	});
 
 	function onKey(event: KeyboardEvent) {
@@ -158,10 +156,16 @@
 			class="flex w-[232px] shrink-0 flex-col overflow-y-auto border-r border-tl-line bg-tl-elev/40"
 		>
 			<div class="flex h-12 items-center gap-2.5 border-b border-tl-line px-4">
-				<img src={shell.theme === 'dark' ? iconDark : iconLight} alt="" class="size-6" />
+				<img
+					src={shell.theme === 'dark' ? iconDark : iconLight}
+					alt=""
+					class="size-6 shrink-0 rounded-[6px] ring-1 ring-tl-line2"
+				/>
 				<div class="min-w-0 leading-none">
 					<div class="text-sm font-semibold tracking-tight">Tuskline</div>
-					<div class="mt-1 text-[10.5px] text-tl-fg3">Acme Retail · demo</div>
+					<div class="mt-1 text-[10.5px] text-tl-fg3">
+						{shell.demo ? 'Acme Retail · demo' : 'Inventory'}
+					</div>
 				</div>
 			</div>
 			<nav class="space-y-0.5 p-2" aria-label="Primary">
@@ -215,13 +219,7 @@
 				<div
 					class="mb-1 flex items-center gap-2 rounded-md border border-tl-line bg-tl-subtle px-2.5 py-2"
 				>
-					<span
-						class="size-1.5 rounded-full {shell.cluster.health === 'ok'
-							? 'bg-env-dev'
-							: shell.cluster.health === 'warn'
-								? 'bg-env-staging'
-								: 'bg-env-prod'}"
-					></span>
+					<span class="size-1.5 rounded-full {healthDotClass(shell.cluster.health)}"></span>
 					<div class="min-w-0 flex-1">
 						<div class="truncate font-mono text-[12px]">{shell.cluster.name}</div>
 						<div class="truncate text-[10.5px] text-tl-fg3">
@@ -256,19 +254,13 @@
 					>
 				</div>
 				<div class="flex items-center gap-1">
-					<button class="nav flex-1" onclick={() => shell.go('fleet')}
+					<button class="nav min-w-0 flex-1" onclick={() => shell.go('fleet')}
 						><Settings size={14} /> Settings</button
 					>
-					<button class="nav px-2" title="About Tuskline" onclick={() => (shell.helpOpen = true)}
+					<button class="nav icon" title="About Tuskline" onclick={() => (shell.helpOpen = true)}
 						><Info size={14} /></button
 					>
-					<button
-						class="nav px-2"
-						aria-label="Toggle density ({shell.density})"
-						title="Toggle density"
-						onclick={() => shell.toggleDensity()}>{shell.density === 'compact' ? 'C' : 'D'}</button
-					>
-					<button class="nav px-2" title="Toggle theme (t)" onclick={() => shell.toggleTheme()}>
+					<button class="nav icon" title="Toggle theme (t)" onclick={() => shell.toggleTheme()}>
 						{#if shell.theme === 'dark'}<Sun size={14} />{:else}<Moon size={14} />{/if}
 					</button>
 				</div>
@@ -306,7 +298,9 @@
 				>
 					<Search size={13} />
 					<span class="flex-1 text-left text-[12.5px]">Search clusters, queries, actions…</span>
-					<kbd>⌘</kbd><kbd>K</kbd>
+					<span class="flex gap-0.5"
+						><kbd class="kbd"><Command size={10} /></kbd><kbd class="kbd">K</kbd></span
+					>
 				</button>
 				<label class="sr-only" for="range">Time range</label>
 				<select
@@ -321,9 +315,9 @@
 				</select>
 				<div class="relative">
 					<button
-						class="flex h-7 items-center gap-2 rounded-md pr-1.5 pl-2 text-[12.5px] font-medium {envRailClass(
+						class="flex h-7 shrink-0 items-center gap-2 rounded-md pr-1.5 pl-2 text-[12.5px] font-medium {envPillClass(
 							shell.env
-						)} text-tl-bg"
+						)}"
 						title="Switch environment (e)"
 						onclick={() => (shell.envMenuOpen = !shell.envMenuOpen)}
 					>
@@ -331,19 +325,20 @@
 								class="size-1.5 rounded-full bg-current"
 							></span>{/if}
 						<span class="text-[11px] tracking-wide uppercase">{shell.env}</span>
-						<span class="max-w-28 truncate font-mono text-[11.5px] font-normal opacity-80"
+						<span class="max-w-28 truncate font-mono text-[11.5px] font-normal text-tl-fg2"
 							>{shell.cluster.name}</span
 						>
 						<ChevronDown size={13} />
 					</button>
 					{#if shell.envMenuOpen}
 						<div
-							class="absolute top-9 right-0 z-40 w-[330px] rounded-xl border border-tl-line bg-tl-elev p-1.5 shadow-lg"
+							class="absolute top-9 right-0 z-40 w-[330px] rounded-xl border border-tl-line bg-tl-elev p-1.5"
+							style="box-shadow: var(--tl-shadow)"
 						>
 							<div
 								class="flex items-center justify-between px-2 py-1.5 text-[10.5px] tracking-wider text-tl-fg3 uppercase"
 							>
-								Switch environment <kbd>e</kbd>
+								Switch environment <kbd class="kbd">e</kbd>
 							</div>
 							{#each kinds as kind (kind)}
 								<button
@@ -360,7 +355,7 @@
 								</button>
 								{#if shell.env === kind}
 									<div class="space-y-0.5 pr-1 pb-1 pl-5">
-										{#each DEMO_CLUSTERS.filter((c) => c.env === kind) as cluster (cluster.id)}
+										{#each shell.clusters.filter((c) => c.env === kind) as cluster (cluster.id)}
 											<button
 												class="flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12px] hover:bg-tl-hover {cluster.id ===
 												shell.clusterId
@@ -368,13 +363,7 @@
 													: 'text-tl-fg2'}"
 												onclick={() => shell.setCluster(cluster.id)}
 											>
-												<span
-													class="size-1.5 rounded-full {cluster.health === 'ok'
-														? 'bg-env-dev'
-														: cluster.health === 'warn'
-															? 'bg-env-staging'
-															: 'bg-env-prod'}"
-												></span>
+												<span class="size-1.5 rounded-full {healthDotClass(cluster.health)}"></span>
 												<span class="flex-1 text-left font-mono">{cluster.name}</span>
 												<span class="text-[11px] text-tl-fg3">{cluster.region}</span>
 											</button>
@@ -401,18 +390,10 @@
 						</div>
 					{/if}
 				</div>
-				<button class="nav px-2" title="Toggle theme (t)" onclick={() => shell.toggleTheme()}>
-					{#if shell.theme === 'dark'}<Sun size={14} />{:else}<Moon size={14} />{/if}
-				</button>
-				<div
-					class="grid size-7 place-items-center rounded-full bg-tl-accent text-[11px] font-semibold text-white"
-					title="Signed-in user"
-				>
-					TL
-				</div>
+				<div class="avatar" title="Account">TL</div>
 			</header>
 			<main class="flex-1 overflow-auto">
-				<div class="mx-auto max-w-[1600px] {pad}">
+				<div class="mx-auto max-w-[1600px] p-6">
 					{@render children()}
 				</div>
 			</main>
@@ -464,6 +445,12 @@
 	.nav.active {
 		background: var(--tl-hover);
 		color: var(--tl-fg);
+	}
+	.nav.icon {
+		width: auto;
+		flex: none;
+		justify-content: center;
+		padding-inline: 0.5rem;
 	}
 	.nav :global(svg) {
 		flex-shrink: 0;

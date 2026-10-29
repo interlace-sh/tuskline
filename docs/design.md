@@ -23,7 +23,8 @@ The design reference is the frozen React prototype in [`../prototype/`](../proto
 - **Themes:**
   - Dark and light are designed together from tokens, in 12-step scales in the style of Radix Colors.
   - A high-contrast mode is planned.
-  - A density switch offers comfortable or compact.
+  - The shell uses a single comfortable density.
+  - Scrollbars are thin everywhere: a `--tl-line2` thumb on a transparent track.
 - Tokens are implemented in `web/src/routes/layout.css` (shadcn-svelte CSS variables plus `--env-*` and `--brand`). Components must not use raw hex values.
 
 ## Information architecture
@@ -67,7 +68,7 @@ The design reference is the frozen React prototype in [`../prototype/`](../proto
 ## Porting the prototype
 
 1. Use the frozen React prototype as the spec. Its screenshots and smoke checks carry over unchanged, because they check visible text and behaviour.
-2. Move the data: `src/data.ts` and `src/setup-data.ts` types become `web/src/lib/fixtures`. The React context store becomes `store.svelte.ts` with `$state` and `$derived`.
+2. Move the data: `prototype/src/data.ts` now lives in `web/src/lib/fixtures` (M3.2). `setup-data.ts` moves with the setup screens. Demo mode is the empty-inventory path; `?demo=1` forces the fixtures. The React context store becomes `store.svelte.ts` with `$state` and `$derived`.
 3. Port primitives first: buttons, badges, cards, dialogs, tabs and the command palette, onto shadcn-svelte and Bits UI. `lucide-react` becomes `@lucide/svelte`.
 4. Port screens in the order above. Recharts becomes uPlot for time series, and plain SVG components replace the small charts.
 5. AI agents do the mechanical JSX-to-Svelte conversion. Each screen is accepted only when its smoke checks pass and its screenshot matches.

@@ -74,8 +74,8 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 
 ## M3: web UI shell and SQL editor (about 5 weeks)
 
-- [x] M3.1 Web foundation: app shell from the prototype. Includes the top bar with environment switcher, left rail, breadcrumb, command palette (`Cmd/Ctrl K`), dark and light themes, density switch, and the environment colour rail.
-- [ ] M3.2 Typed API client (`src/lib/api`), fixtures moved from `prototype/src/data.ts`, and a demo mode.
+- [x] M3.1 Web foundation: app shell from the prototype. Includes the top bar with environment switcher, left rail, breadcrumb, command palette (`Cmd/Ctrl K`), dark and light themes (toggled from the sidebar), and the environment colour rail.
+- [x] M3.2 Typed API client (`src/lib/api`), fixtures moved from `prototype/src/data.ts`, and a demo mode. An empty inventory, a failed cluster list, or `?demo=1` keeps the prototype fixtures. A non-empty inventory replaces them. `setup-data.ts` moves with the setup screens (M4).
 - [ ] M3.3 Port screens: Fleet, Cluster health, Query insights (from the M2 APIs).
 - [ ] M3.4 SQL editor:
   - CodeMirror 6 with PostgreSQL highlighting and schema completion.

@@ -23,6 +23,13 @@ const TEXT: Record<EnvKind, string> = {
 	prod: 'text-env-prod'
 };
 
+const PILL: Record<EnvKind, string> = {
+	local: 'bg-env-local/15 text-env-local ring-1 ring-env-local/30 ring-inset',
+	dev: 'bg-env-dev/15 text-env-dev ring-1 ring-env-dev/30 ring-inset',
+	staging: 'bg-env-staging/15 text-env-staging ring-1 ring-env-staging/30 ring-inset',
+	prod: 'bg-env-prod/15 text-env-prod ring-1 ring-env-prod/30 ring-inset'
+};
+
 /** Tailwind background class for the environment colour rail. */
 export function envRailClass(kind: EnvKind): string {
 	return RAIL[kind];
@@ -31,6 +38,11 @@ export function envRailClass(kind: EnvKind): string {
 /** Tailwind text class for the environment colour. */
 export function envTextClass(kind: EnvKind): string {
 	return TEXT[kind];
+}
+
+/** Tinted environment chip, text in the environment colour. */
+export function envPillClass(kind: EnvKind): string {
+	return PILL[kind];
 }
 
 /** Production is read-only by default (safety invariant, see docs/security.md). */
