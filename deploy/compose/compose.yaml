@@ -2,7 +2,8 @@
 # Not for production. Credentials are throwaway dev values.
 #
 #   docker compose -f deploy/compose/compose.yaml up -d
-#   tl connect --dsn "postgres://tuskline:tuskline@localhost:5417/tuskline?sslmode=disable"
+#   export TUSKLINE_PASSWORD=tuskline
+#   tl connect --dsn "postgres://tuskline@localhost:5417/tuskline?sslmode=disable" --env dev --name pg17 --password-env TUSKLINE_PASSWORD
 #
 # Ports: 54<major> -> pg14 on 5414 ... pg18 on 5418.
 # Each server preloads pg_stat_statements and auto_explain, so collectors

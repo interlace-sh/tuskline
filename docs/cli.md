@@ -4,8 +4,8 @@
 
 Conventions:
 
-- Every data command takes `--output text|json` (the default is `text`).
-- Errors go to stderr with exit code 1. Usage errors exit with 2 once Cobra's handling is customised.
+- Every data command takes `--output text|json` (`-o`; the default is `text`).
+- Errors go to stderr with exit code 1. `tl serve` exits with the server's status and does not print it again. Usage errors exit with 2 once Cobra's handling is customised.
 - Commands that change anything print a preview and need `--yes` or a typed confirmation in prod.
 - Credentials are never printed.
 
@@ -13,14 +13,20 @@ Conventions:
 
 | Command | Status |
 |---|---|
-| `tl version` | Prints `tl <version> (commit <sha>, built <date>)`; `--output json` gives `{version, commit, date, go, os, arch}` |
+| `tl version` | Prints `tl <version> (commit <sha>, built <date>)`; see [below](#tl-version) |
 | `tl connect` | Probes a server and adds it to the inventory, or probes an inventory entry again; see [below](#tl-connect) |
 | `tl ls` | Lists the inventory; see [below](#tl-ls) |
 | `tl top <ref>` | Live sessions, waits, locks and blocking chains; see [below](#tl-top) |
 | `tl serve [args]` | Runs the separate `tuskline serve`; see [below](#tl-serve) |
-| `tl agent --server <url>` | Stub; token from `TUSKLINE_AGENT_TOKEN` (M9) |
+| `tl agent` | Stub; see [below](#tl-agent) |
 
-Global flag: `--inventory <file>` overrides the inventory location (default `$TUSKLINE_INVENTORY`, else `$XDG_CONFIG_HOME/tuskline/inventory.yaml`).
+Global flag: `--inventory <file>` (connect, ls and top) overrides the inventory location (default `$TUSKLINE_INVENTORY`, else `$XDG_CONFIG_HOME/tuskline/inventory.yaml`).
+
+### `tl version`
+
+| Flag | Meaning |
+|---|---|
+| `--output text\|json`, `-o` | Text is one line, `tl <version> (commit <sha>, built <date>)`. JSON is `{version, commit, date, go, os, arch}`. |
 
 ### `tl connect`
 
@@ -54,7 +60,7 @@ prod          orders   db.example.com:6432/orders  17.6     rds       standby  1
 team-a (dev)  -
 ```
 
-One row per cluster, from the last successful `tl connect` probe; it does not connect. An environment without clusters gets a `-` row. The kind is shown in brackets when it differs from the environment's name. On a terminal the environment is coloured by kind (prod red, staging amber, dev green, local grey, as in [design](design.md)); `NO_COLOR` or a pipe turns colour off. `--output json` gives `{inventory, environments, clusters}`, with each environment's policy and no passwords.
+One row per cluster, from the last successful `tl connect` probe; it does not connect. An environment without clusters gets a `-` row. The kind is shown in brackets when it differs from the environment's name. On a terminal the environment is coloured by kind (prod red, staging amber, dev green, local grey, as in [design](design.md)); `NO_COLOR` or a pipe turns colour off. `--output json` (`-o json`) gives `{inventory, environments, clusters}`, with each environment's policy and no passwords.
 
 ### `tl top`
 
@@ -90,7 +96,17 @@ A role without `pg_monitor` sees other users' sessions with query text and waits
 
 ### `tl serve`
 
-`tl serve [args]` runs `tuskline serve [args]`, the separate AGPL server binary ([ADR 0010](adr/0010-licence-boundary.md)); `tl` never links it. It looks for `tuskline` on `PATH`, then next to the `tl` executable. If neither has it, it exits 1 with install hints: a release binary, `moon run server:bin`, or building and running the container image. While the server runs, `SIGINT`, `SIGTERM` and `SIGHUP` sent to `tl` are passed on to it (`os.Interrupt` on Windows), and `tl` exits with the server's exit code.
+`tl serve [args]` runs `tuskline serve [args]`, the separate AGPL server binary ([ADR 0010](adr/0010-licence-boundary.md)); `tl` never links it. It looks for `tuskline` on `PATH`, then next to the `tl` executable, so `./bin/tl serve` finds `./bin/tuskline`. If neither has it, it exits 1 with install hints: a release binary, `moon run server:bin`, or building and running the container image.
+
+Arguments after `serve` are the server's. `tl serve -h` prints this help; `tl serve -addr :8080` is passed through (`TUSKLINE_ADDR` also sets the listen address; the server default is `127.0.0.1:8080`). While the server runs, `SIGINT`, `SIGTERM` and `SIGHUP` sent to `tl` are passed on to it (`os.Interrupt` on Windows), and `tl` exits with the server's exit code.
+
+### `tl agent`
+
+| Flag | Meaning |
+|---|---|
+| `--server <url>` | Tuskline server or Cloud URL. Required. |
+
+The enrolment token is read from `TUSKLINE_AGENT_TOKEN` and never printed. The command then exits 1: the agent is not built yet (M9).
 
 ## Target command set
 

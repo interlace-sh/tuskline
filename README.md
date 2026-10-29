@@ -7,7 +7,7 @@
 
 <p align="center"><strong>The calm, trustworthy cockpit for every PostgreSQL you run, from a laptop container to a multi-cloud fleet.</strong></p>
 
-> **Status: pre-alpha.** This repository holds a scaffold, the plan and a design prototype. Nothing here is ready to point at a database you care about yet. Follow progress in [docs/roadmap.md](docs/roadmap.md).
+> **Status: pre-alpha.** `tl connect`, `tl ls` and `tl top` work against a local PostgreSQL, and `tl serve` serves the web UI. Do not point it at a database you care about yet. Follow progress in [docs/roadmap.md](docs/roadmap.md).
 
 Tuskline is an open-source PostgreSQL workbench and control plane. It is one Go core with four surfaces: a desktop app, a web UI, the `tl` CLI/TUI and an agent. It brings together the jobs that today need a dozen tools: SQL IDE, monitoring, query insights, config advice, HA and backups, migrations and guided deployment.
 
@@ -31,35 +31,30 @@ See [LICENSING.md](LICENSING.md) for why the line is drawn there and what it mea
 
 ## Quickstart
 
-> Placeholder: none of this works end to end yet. The commands are the target UX.
-
-```sh
-# Developer door (target): single binary
-brew install tuskline            # not published yet
-tl connect "postgres://me@localhost:5432/app"
-tl top local/app
-
-# Team server (target)
-docker run -p 8080:8080 -v tuskline:/data ghcr.io/interlace-sh/tuskline   # not published yet
-```
-
-### Build from source (works today)
-
-Requirements: [proto](https://moonrepo.dev/proto), which installs the pinned Go, Node.js, npm, [moon](https://moonrepo.dev/moon) and golangci-lint from [`.prototools`](.prototools), and Docker if you want to run the integration tests.
+Requirements: [proto](https://moonrepo.dev/proto), which installs the pinned Go, Node.js, npm, [moon](https://moonrepo.dev/moon) and golangci-lint from [`.prototools`](.prototools), and Docker for the dev databases, the integration tests and the container image. `brew install` and the published image are not available yet.
 
 ```sh
 proto trust && proto install    # once per clone
-moon run :check                 # build, test and lint every project
-moon run cli:bin server:bin     # ./bin/tl and ./bin/tuskline, with the UI embedded
+moon run cli:bin                # ./bin/tl
 ./bin/tl version
-./bin/tuskline serve  # http://127.0.0.1:8080
-make dev-db           # PostgreSQL 14-18 on ports 5414-5418
-./bin/tl connect --dsn "postgres://tuskline:tuskline@localhost:5417/tuskline?sslmode=disable"
+
+make dev-db                     # PostgreSQL 14-18 on ports 5414-5418 (not for production)
+# Throwaway dev-db credentials. The password is referenced, never written to the inventory.
+# Local dev-db has no TLS, so connect and top warn about sslmode=disable.
+export TUSKLINE_PASSWORD=tuskline
+./bin/tl connect --dsn "postgres://tuskline@127.0.0.1:5417/tuskline?sslmode=disable" --env dev --name pg17 --password-env TUSKLINE_PASSWORD
+./bin/tl ls
+./bin/tl top dev/pg17 --once
+
+moon run server:bin             # ./bin/tuskline, with the UI embedded
+./bin/tl serve                  # http://127.0.0.1:8080  (finds ./bin/tuskline beside itself)
 
 # Container image (distroless, non-root, `tuskline serve` on :8080)
 docker build -t tuskline .
 docker run --rm -p 8080:8080 -v tuskline:/data tuskline
 ```
+
+`moon run :check` builds, tests and lints every project. Command flags are in [docs/cli.md](docs/cli.md).
 
 ## Repository map
 
