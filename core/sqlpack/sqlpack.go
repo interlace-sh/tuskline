@@ -58,5 +58,12 @@ func All() []Query {
 		ProbeServer, ProbeExtensions, ProbeRole,
 		SessionReadOnly, SessionStatementTimeout, SessionLockTimeout, SessionVerify,
 		ActivitySessions, ActivityLocks,
+		StatsDatabase,
+		StatsTables14, StatsTables16, StatsTables18,
+		StatsWAL14, StatsWAL18,
+		StatsBgwriter14, StatsBgwriter17,
+		StatsCheckpointer17, StatsCheckpointer18,
+		StatsIO16, StatsIO18,
+		StatsStatements14, StatsStatements15, StatsStatements17,
 	}
 }

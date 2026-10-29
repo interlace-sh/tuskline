@@ -4,6 +4,7 @@ package sqlpack
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -28,6 +29,46 @@ func TestPick(t *testing.T) {
 	}
 	if _, err := Pick(130000, old, cur); !errors.Is(err, ErrNoVariant) {
 		t.Errorf("Pick(130000) err = %v, want ErrNoVariant", err)
+	}
+}
+
+func TestStatsPickFollowsTheViewChanges(t *testing.T) {
+	t.Parallel()
+	statements := []Query{StatsStatements14, StatsStatements15, StatsStatements17}
+	tables := []Query{StatsTables14, StatsTables16, StatsTables18}
+	for _, tc := range []struct {
+		v    int
+		sql  string
+		pack []Query
+	}{
+		{PG14, "blk_read_time AS shared_blk_read_time", statements},
+		{PG15, "temp_blk_read_time", statements},
+		{160004, "temp_blk_read_time", statements},
+		{PG17, "\tshared_blk_read_time,", statements},
+		{180001, "\tshared_blk_read_time,", statements},
+		{PG14, "seq_scan,\n\tseq_tup_read", tables},
+		{PG16, "n_tup_newpage_upd", tables},
+		{PG18, "total_vacuum_time", tables},
+	} {
+		got, err := Pick(tc.v, tc.pack...)
+		if err != nil || !strings.Contains(got.SQL, tc.sql) {
+			t.Errorf("Pick(%d) err %v, sql has %q? %.80s", tc.v, err, tc.sql, got.SQL)
+		}
+		if tc.v < PG15 && strings.Contains(got.SQL, "temp_blk_read_time") {
+			t.Errorf("Pick(%d) included temporary block time", tc.v)
+		}
+		if tc.v < PG17 && strings.Contains(got.SQL, "\tshared_blk_read_time,") {
+			t.Errorf("Pick(%d) used the PostgreSQL 17 column names", tc.v)
+		}
+	}
+	if _, err := Pick(PG14, StatsIO16, StatsIO18); !errors.Is(err, ErrNoVariant) {
+		t.Errorf("io on 14: %v", err)
+	}
+	if _, err := Pick(PG14, StatsCheckpointer17, StatsCheckpointer18); !errors.Is(err, ErrNoVariant) {
+		t.Errorf("checkpointer on 14: %v", err)
+	}
+	if q, err := Pick(PG18, StatsWAL14, StatsWAL18); err != nil || strings.Contains(q.SQL, "wal_write") {
+		t.Errorf("wal 18 = %v %.40q", err, q.SQL)
 	}
 }
 
