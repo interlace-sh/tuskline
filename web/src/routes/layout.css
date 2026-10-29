@@ -15,6 +15,17 @@
 	--env-staging: #f5a524;
 	--env-dev: #30a46c;
 	--env-local: #8b8d98;
+	/* Shell surfaces, light. Hex lives only in this file. */
+	--tl-bg: #f7f7f5;
+	--tl-elev: #ffffff;
+	--tl-subtle: #f1f2f4;
+	--tl-hover: #ebecef;
+	--tl-line: #e4e6ea;
+	--tl-line2: #d3d6dc;
+	--tl-fg: #0e1116;
+	--tl-fg2: #4b5260;
+	--tl-fg3: #8a909c;
+	--tl-accent: #3e63dd;
 	--background: #fafaf9;
 	--foreground: oklch(0.145 0 0);
 	--card: oklch(1 0 0);
@@ -50,6 +61,16 @@
 }
 
 .dark {
+	--tl-bg: #0a0c10;
+	--tl-elev: #111419;
+	--tl-subtle: #161a21;
+	--tl-hover: #1c212a;
+	--tl-line: #20252f;
+	--tl-line2: #2c3240;
+	--tl-fg: #e7e9ee;
+	--tl-fg2: #a3a9b6;
+	--tl-fg3: #6b7280;
+	--tl-accent: #7b96ff;
 	--background: #0e1116;
 	--foreground: oklch(0.985 0 0);
 	--card: oklch(0.205 0 0);
@@ -90,6 +111,16 @@
 	--color-env-staging: var(--env-staging);
 	--color-env-dev: var(--env-dev);
 	--color-env-local: var(--env-local);
+	--color-tl-bg: var(--tl-bg);
+	--color-tl-elev: var(--tl-elev);
+	--color-tl-subtle: var(--tl-subtle);
+	--color-tl-hover: var(--tl-hover);
+	--color-tl-line: var(--tl-line);
+	--color-tl-line2: var(--tl-line2);
+	--color-tl-fg: var(--tl-fg);
+	--color-tl-fg2: var(--tl-fg2);
+	--color-tl-fg3: var(--tl-fg3);
+	--color-tl-accent: var(--tl-accent);
 	--font-sans: 'Inter Variable', sans-serif;
 	--color-sidebar-ring: var(--sidebar-ring);
 	--color-sidebar-border: var(--sidebar-border);
@@ -141,5 +172,8 @@
 	}
 	html {
 		@apply font-sans;
+	}
+	html[data-density='compact'] {
+		font-size: 12.5px;
 	}
 }

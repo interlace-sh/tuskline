@@ -4,6 +4,17 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
+		<script>
+			try {
+				var theme = localStorage.getItem('tl-theme');
+				var density = localStorage.getItem('tl-density');
+				if (theme === 'light') document.documentElement.classList.remove('dark');
+				if (density === 'compact' || density === 'comfortable')
+					document.documentElement.dataset.density = density;
+			} catch (e) {
+				/* private mode */
+			}
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

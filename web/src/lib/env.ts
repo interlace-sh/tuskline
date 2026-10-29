@@ -16,9 +16,21 @@ const RAIL: Record<EnvKind, string> = {
 	prod: 'bg-env-prod'
 };
 
+const TEXT: Record<EnvKind, string> = {
+	local: 'text-env-local',
+	dev: 'text-env-dev',
+	staging: 'text-env-staging',
+	prod: 'text-env-prod'
+};
+
 /** Tailwind background class for the environment colour rail. */
 export function envRailClass(kind: EnvKind): string {
 	return RAIL[kind];
+}
+
+/** Tailwind text class for the environment colour. */
+export function envTextClass(kind: EnvKind): string {
+	return TEXT[kind];
 }
 
 /** Production is read-only by default (safety invariant, see docs/security.md). */
