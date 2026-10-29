@@ -30,7 +30,7 @@ Weakening any prod default needs an ADR. `TestProdIsReadOnlyByDefault` and `Test
 
 ## Monitoring role
 
-Collectors use `tuskline_monitor`. It has `pg_monitor`, is limited to 5 connections, defaults to read-only transactions, and has timeouts of 5 s (statement), 1 s (lock) and 10 s (idle in transaction). Actions such as cancelling or terminating sessions need a separate, optional `tuskline_operator` role with `pg_signal_backend`. See [onboarding-and-deploy.md](onboarding-and-deploy.md).
+Collectors use `tuskline_monitor`. It has `pg_monitor`, is limited to 5 connections, defaults to read-only transactions, and has timeouts of 5 s (statement), 1 s (lock) and 10 s (idle in transaction). `core/collector` adds a query-time budget on top of that: a pass stops once the budget is spent, and a timeout or an overloaded target doubles the wait before the next pass (up to five minutes). Actions such as cancelling or terminating sessions need a separate, optional `tuskline_operator` role with `pg_signal_backend`. See [onboarding-and-deploy.md](onboarding-and-deploy.md).
 
 ## Threats we design against
 

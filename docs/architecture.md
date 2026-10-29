@@ -123,7 +123,7 @@ flowchart LR
   AN --> OUT[UI, CLI, alerts,<br/>/metrics, OTLP]
 ```
 
-- Agentless by default, using the least-privilege `tuskline_monitor` role (`pg_monitor`). Collectors respect a per-target query-time budget and back off under load.
+- Agentless by default, using the least-privilege `tuskline_monitor` role (`pg_monitor`). `core/collector` runs each pass immediately the first time, then on an interval (10 s and a 2 s query budget for statistics). A pass stops when the budget is spent. A timeout or an overloaded target doubles the interval, up to five minutes, and a healthy pass steps it back. Up to 10% jitter keeps targets from lining up.
 - SQL packs are versioned per PostgreSQL major. Each metric is documented with its source view. They degrade gracefully when an extension is missing, and say what installing it would add.
 - **Retention defaults:** raw 1 s activity for 1 hour, 1 min rollups for 14 days, 1 h rollups for 13 months.
 
