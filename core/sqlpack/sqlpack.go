@@ -57,5 +57,6 @@ func All() []Query {
 	return []Query{
 		ProbeServer, ProbeExtensions, ProbeRole,
 		SessionReadOnly, SessionStatementTimeout, SessionLockTimeout, SessionVerify,
+		ActivitySessions, ActivityLocks,
 	}
 }

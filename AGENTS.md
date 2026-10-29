@@ -37,7 +37,7 @@ Fixed decisions (do not relitigate without a new ADR; see `docs/decisions.md`):
 
 ```
 core/      Apache-2.0  Go module github.com/interlace-sh/tuskline/core   (engine; no I/O surfaces)
-  version/ inventory/ conn/ collector/ sqlpack/ analyser/ advisor/ lint/ provision/ store/
+  version/ inventory/ conn/ activity/ collector/ sqlpack/ analyser/ advisor/ lint/ provision/ store/ pgtest/
 cli/       Apache-2.0  module …/cli    cmd/tl (main), internal/cmd (Cobra commands)
 agent/     Apache-2.0  module …/agent  outbound collector (`tl agent`)
 server/    AGPL-3.0    module …/server cmd/tuskline, internal/httpapi, internal/webui (go:embed)
