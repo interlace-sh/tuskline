@@ -64,6 +64,11 @@ func DefaultPolicy(k EnvKind) Policy {
 	}
 }
 
+// Session returns the session defaults conn.Connect applies for p.
+func (p Policy) Session() conn.SessionSettings {
+	return conn.SessionSettings{ReadOnly: p.ReadOnly, StatementTimeout: p.StatementTimeout, LockTimeout: p.LockTimeout}
+}
+
 // Environment groups clusters that share a policy.
 type Environment struct {
 	Name string  `json:"name" yaml:"name"`

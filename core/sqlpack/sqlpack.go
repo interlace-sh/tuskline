@@ -54,5 +54,8 @@ const PG14 = 140000
 
 // All returns every query in every pack, for documentation and tests.
 func All() []Query {
-	return []Query{ProbeServer, ProbeExtensions, ProbeRole}
+	return []Query{
+		ProbeServer, ProbeExtensions, ProbeRole,
+		SessionReadOnly, SessionStatementTimeout, SessionLockTimeout, SessionVerify,
+	}
 }

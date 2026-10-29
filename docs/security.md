@@ -24,7 +24,9 @@ Tuskline will hold production credentials and run statements against production.
 | staging | no | 60 s | 5 s | 5,000 | yes | 1 h |
 | dev, local | no | none | none | 10,000 | no | n/a |
 
-Weakening any prod default needs an ADR. `TestProdIsReadOnlyByDefault` guards the defaults.
+Weakening any prod default needs an ADR. `TestProdIsReadOnlyByDefault` and `TestProdSessionIsReadOnlyWithTimeouts` guard the defaults.
+
+`conn.Connect` applies the policy (`Policy.Session()`) before it returns a connection: `set_config` for `default_transaction_read_only` and the two timeouts, then it reads them back from `pg_settings`. If a setting did not take, for example behind a pooler that resets session state, it closes the connection and returns `ErrSessionNotApplied`, so it fails closed. A policy never loosens a setting, so a dev session for a role that is read-only by default stays read-only. `default_transaction_read_only` is only a default: a client that sends `BEGIN READ WRITE` can still write. Tuskline's own surfaces must not do that without elevation; server-side enforcement of elevation is M3.6. Integration tests on 14–18 check that a write fails in a prod session and succeeds in dev, and that both timeouts fire.
 
 ## Monitoring role
 

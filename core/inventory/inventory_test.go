@@ -2,7 +2,10 @@
 
 package inventory
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestProdIsReadOnlyByDefault(t *testing.T) {
 	p := DefaultPolicy(EnvProd)
@@ -11,6 +14,16 @@ func TestProdIsReadOnlyByDefault(t *testing.T) {
 	}
 	if !p.RequireTypedConfirmation {
 		t.Fatal("prod must require typed confirmation")
+	}
+}
+
+func TestProdSessionIsReadOnlyWithTimeouts(t *testing.T) {
+	s := DefaultPolicy(EnvProd).Session()
+	if !s.ReadOnly || s.StatementTimeout != 30*time.Second || s.LockTimeout != 2*time.Second {
+		t.Fatalf("prod session = %+v, want read-only with 30 s and 2 s timeouts (safety invariant)", s)
+	}
+	if d := DefaultPolicy(EnvDev).Session(); d.ReadOnly || d.StatementTimeout != 0 || d.LockTimeout != 0 {
+		t.Fatalf("dev session = %+v, want nothing imposed", d)
 	}
 }
 
