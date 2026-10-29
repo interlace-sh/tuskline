@@ -35,6 +35,17 @@ You also need Docker for integration tests and `make dev-db`. `make` targets sti
 - The [pull request template](.github/PULL_REQUEST_TEMPLATE.md) carries the definition-of-done checklist from AGENTS.md section 8. Issues use the forms in `.github/ISSUE_TEMPLATE/`; security reports go through [SECURITY.md](SECURITY.md).
 - Dependabot opens weekly, grouped updates for the Go modules, `web/` and GitHub Actions. Tool pins in `.prototools` are bumped by hand.
 
+## Releases
+
+[`.goreleaser.yaml`](.goreleaser.yaml) builds `tl` and `tuskline` (web UI embedded) for Linux, macOS and Windows on amd64 and arm64. Each binary ships in its own archive with its own licence, plus `checksums.txt` (SHA-256) and an SPDX SBOM per archive. Publishing is disabled until a release is approved.
+
+```sh
+moon run scripts:release-check      # validate the config (part of :check)
+moon run scripts:release-snapshot   # dry run into dist/; publishes nothing
+```
+
+GoReleaser and syft are fetched at pinned versions with `go run`, so they need no separate install.
+
 ## Branch protection (maintainers)
 
 Protect `main` with a ruleset (Settings → Rules → Rulesets) so it stays green:

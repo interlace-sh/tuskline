@@ -22,7 +22,8 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [x] M0.6 Dependency licence check for the Apache modules (for example `go-licenses check` with an allow-list). (`moon run :licences`, `.moon/tasks/apache.yml`.)
 - [x] M0.7 Repository hygiene: issue and PR templates (PR template includes the definition-of-done checklist), `CODEOWNERS`, Dependabot for Go modules, npm and actions (or Renovate, which can also bump `.prototools`), branch protection notes in CONTRIBUTING.
 - [ ] M0.7a Maintainer: apply the `main` ruleset described in CONTRIBUTING.md (required checks, code-owner review, DCO app) once CI is green; this needs repository admin rights.
-- [ ] M0.8 Release skeleton: GoReleaser config producing `tl` and `tuskline` for linux/darwin/windows × amd64/arm64 with checksums and an SBOM (no publishing yet).
+- [x] M0.8 Release skeleton: GoReleaser config producing `tl` and `tuskline` for linux/darwin/windows × amd64/arm64 with checksums and an SBOM (no publishing yet). (`moon run scripts:release-snapshot`.)
+- [ ] M0.8a Release workflow: tag-triggered GoReleaser job with keyless signing (cosign) of checksums and SBOMs. Needs explicit approval before anything is published.
 - [ ] M0.9 Container image: multi-stage Dockerfile (web build → Go build → distroless), `tuskline serve` on :8080, non-root.
 
 **Acceptance:**

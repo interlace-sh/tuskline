@@ -41,8 +41,26 @@ tasks:
       - 'check-licence-boundary.test.sh'
     tags: ['licence']
 
+  release-check:
+    description: 'Validate .goreleaser.yaml'
+    command: 'go run github.com/goreleaser/goreleaser/v2@v2.19.0 check'
+    inputs:
+      - '/.goreleaser.yaml'
+    tags: ['release']
+    options:
+      runFromWorkspaceRoot: true
+
+  release-snapshot:
+    description: 'Local release dry run into dist/: tl and tuskline archives, checksums and SBOMs; publishes nothing'
+    command: 'go run github.com/goreleaser/goreleaser/v2@v2.19.0 release --snapshot --clean'
+    tags: ['release']
+    options:
+      runFromWorkspaceRoot: true
+      cache: false
+      runInCI: false
+
   check:
     description: 'Everything a pull request must pass for repository-wide checks'
     command: 'noop'
-    deps: ['~:licence-boundary', '~:test']
+    deps: ['~:licence-boundary', '~:test', '~:release-check']
     tags: ['repo']
