@@ -5,6 +5,8 @@
 package httpapi
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -16,6 +18,7 @@ import (
 	"github.com/interlace-sh/tuskline/core/inventory"
 	"github.com/interlace-sh/tuskline/core/pgtest"
 	"github.com/interlace-sh/tuskline/core/snapshot"
+	"github.com/interlace-sh/tuskline/core/store"
 )
 
 func TestClusterAPIAgainstPostgres(t *testing.T) {
@@ -29,16 +32,23 @@ func TestClusterAPIAgainstPostgres(t *testing.T) {
 			if _, err := inv.PutEnvironment("dev", inventory.EnvDev); err != nil {
 				t.Fatal(err)
 			}
-			if err := inv.PutCluster(inventory.Cluster{
-				Name: "pg", Environment: "dev", Profile: srv.Profile.WithPassword(""),
-				Password: &inventory.SecretRef{Env: "TL_TEST_PASSWORD"},
-			}); err != nil {
+			if _, err := inv.PutEnvironment("prod", inventory.EnvProd); err != nil {
 				t.Fatal(err)
 			}
+			for _, env := range []string{"dev", "prod"} {
+				if err := inv.PutCluster(inventory.Cluster{
+					Name: "pg", Environment: env, Profile: srv.Profile.WithPassword(""),
+					Password: &inventory.SecretRef{Env: "TL_TEST_PASSWORD"},
+				}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			pgtest.Exec(t, srv.Profile, "CREATE TABLE tl_editor (n int)", "INSERT INTO tl_editor VALUES (1)")
 			if err := inv.Save(path); err != nil {
 				t.Fatal(err)
 			}
-			h := newHandler(&api{inventoryPath: path, previous: map[string]snapshot.Snapshot{}})
+			storePath := filepath.Join(t.TempDir(), "meta.db")
+			h := newHandler(&api{inventoryPath: path, storePath: storePath, previous: map[string]snapshot.Snapshot{}})
 			get := func(url string) *httptest.ResponseRecorder {
 				t.Helper()
 				rr := httptest.NewRecorder()
@@ -76,6 +86,44 @@ func TestClusterAPIAgainstPostgres(t *testing.T) {
 			}
 			if rr := get("/api/v1/clusters/dev/pg/health"); rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"findings"`) {
 				t.Fatalf("health: %d %s", rr.Code, rr.Body)
+			}
+			post := func(url, sql string) *httptest.ResponseRecorder {
+				t.Helper()
+				payload, err := json.Marshal(map[string]string{"sql": sql})
+				if err != nil {
+					t.Fatal(err)
+				}
+				rr := httptest.NewRecorder()
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, url, bytes.NewReader(payload))
+				h.ServeHTTP(rr, req)
+				if strings.Contains(rr.Body.String(), pgtest.Password) {
+					t.Fatalf("%s leaked the password", url)
+				}
+				return rr
+			}
+			selected := post("/api/v1/clusters/dev/pg/query", "SELECT n FROM tl_editor")
+			if selected.Code != http.StatusOK || !strings.Contains(selected.Body.String(), `"rows":[[1]]`) {
+				t.Fatalf("select: %d %s", selected.Code, selected.Body)
+			}
+			if stacked := post("/api/v1/clusters/dev/pg/query", "SELECT 1; SELECT 2"); stacked.Code != http.StatusBadRequest {
+				t.Fatalf("stacked statement: %d %s", stacked.Code, stacked.Body)
+			}
+			updated := post("/api/v1/clusters/prod/pg/query", "UPDATE tl_editor SET n = 2")
+			if updated.Code == http.StatusOK {
+				t.Fatalf("prod write succeeded: %s", updated.Body)
+			}
+			again := post("/api/v1/clusters/dev/pg/query", "SELECT n FROM tl_editor")
+			if !strings.Contains(again.Body.String(), `"rows":[[1]]`) {
+				t.Fatalf("prod write changed the row: %s", again.Body)
+			}
+			meta, err := store.Open(context.Background(), storePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = meta.Close() })
+			count, err := meta.QueryAuditCount(context.Background())
+			if err != nil || count != 1 {
+				t.Fatalf("prod audit count %d, %v", count, err)
 			}
 		})
 	}

@@ -18,6 +18,18 @@ var migrations = []string{
 		sampled_at TEXT NOT NULL,
 		PRIMARY KEY (target, metric)
 	)`,
+	// query_audit records production statements the editor ran. Result rows
+	// are not stored.
+	`CREATE TABLE query_audit (
+		id INTEGER PRIMARY KEY,
+		at TEXT NOT NULL,
+		actor TEXT NOT NULL,
+		environment TEXT NOT NULL,
+		cluster TEXT NOT NULL,
+		sql TEXT NOT NULL,
+		row_count INTEGER,
+		error TEXT NOT NULL
+	)`,
 }
 
 func migrate(ctx context.Context, db *sql.DB) error {

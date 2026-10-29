@@ -199,3 +199,40 @@ export function clusterHealth(
 ): Promise<HealthResponse> {
 	return getJSON(clusterPath(env, name, 'health'), fetchImpl);
 }
+
+export interface QueryResult {
+	columns: string[];
+	rows: unknown[][];
+	truncated: boolean;
+	duration_ms: number;
+}
+
+/** Run one statement. The server applies the environment policy and row limit. */
+export async function runQuery(
+	env: string,
+	name: string,
+	sql: string,
+	fetchImpl: typeof fetch = fetch,
+	signal?: AbortSignal
+): Promise<QueryResult> {
+	const response = await fetchImpl(clusterPath(env, name, 'query'), {
+		method: 'POST',
+		headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+		body: JSON.stringify({ sql }),
+		signal
+	});
+	let body: unknown = null;
+	try {
+		body = await response.json();
+	} catch {
+		/* non-JSON */
+	}
+	if (!response.ok) {
+		const message =
+			body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
+				? body.error
+				: response.statusText;
+		throw new ApiError(response.status, message);
+	}
+	return body as QueryResult;
+}

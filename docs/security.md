@@ -10,7 +10,7 @@ Tuskline will hold production credentials and run statements against production.
 | Secrets | Envelope-encrypted at rest. Pluggable providers: HashiCorp Vault / OpenBao, AWS Secrets Manager, GCP Secret Manager, Azure Key Vault, 1Password, Kubernetes secrets; OS keychain on desktop |
 | Identity | Local users and OIDC (Google, Entra, Okta, Keycloak) in the open-source server; SAML and SCIM in Enterprise |
 | RBAC | Roles scoped to project and environment: **viewer, analyst, operator, admin**. Just-in-time elevation with expiry and a reason |
-| Prod safety | Read-only sessions, statement and lock timeouts, row limits on grids, typed confirmation for destructive actions, SQL preview of every action |
+| Prod safety | Read-only sessions, statement and lock timeouts, row limits on grids, typed confirmation for destructive actions, SQL preview of every action. The editor sends one statement; production rejects writes and records the statement text (not the rows) as actor `local` |
 | Privacy | Query parameters and result data are never stored unless a policy allows it; PII redacted in captured plans; **no telemetry by default** |
 | Audit | Append-only log of logins, prod queries, actions and elevations; export to SIEM |
 | Agent | Outbound only, mTLS, one-time enrolment token; credentials never leave the customer network |

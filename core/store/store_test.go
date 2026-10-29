@@ -20,7 +20,7 @@ func TestOpenMigratesAndRemembersTheCursor(t *testing.T) {
 		t.Fatal(err)
 	}
 	v, err := s.Version(ctx)
-	if err != nil || v != 1 {
+	if err != nil || v != 2 {
 		t.Fatalf("version %d, %v", v, err)
 	}
 	if _, ok, err := s.Cursor(ctx, "prod/orders", "stats.database"); err != nil || ok {
@@ -51,7 +51,7 @@ func TestOpenMigratesAndRemembersTheCursor(t *testing.T) {
 	if err != nil || !got.Equal(later) {
 		t.Fatalf("updated cursor %v err %v", got, err)
 	}
-	if v, err = s.Version(ctx); err != nil || v != 1 {
+	if v, err = s.Version(ctx); err != nil || v != 2 {
 		t.Fatalf("version after reopen %d, %v", v, err)
 	}
 }

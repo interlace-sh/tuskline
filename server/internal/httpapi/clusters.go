@@ -27,8 +27,11 @@ const clusterCallTimeout = 30 * time.Second
 // api serves the cluster routes. previous remembers the last statement
 // sample per cluster so the next /queries response can carry deltas. It
 // lives in memory only: query text is not written to the metadata store.
+// storePath is the SQLite file for the production query audit. Empty uses
+// store.DefaultPath.
 type api struct {
 	inventoryPath string
+	storePath     string
 	mu            sync.Mutex
 	previous      map[string]snapshot.Snapshot
 }
@@ -38,6 +41,7 @@ func (a *api) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/queries", a.clusterQueries)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/activity", a.clusterActivity)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/health", a.clusterHealth)
+	mux.HandleFunc("POST /api/v1/clusters/{env}/{name}/query", a.clusterQuery)
 }
 
 type clusterView struct {
