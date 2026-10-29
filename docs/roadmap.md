@@ -17,7 +17,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [x] M0.2a Toolchain pins in `.prototools` (Go, Node.js, npm, moon, golangci-lint) installed by proto; moon workspace, per-project `moon.yml` and inherited Go tasks with inputs and outputs for caching.
 - [x] M0.3 CI workflow: `moonrepo/setup-toolchain` + `moon ci` (gofmt, vet, unit tests, cross-compile, golangci-lint per module, web typecheck/lint/test/build), plus integration per PostgreSQL 14–18.
 - [x] M0.4 Push to `github.com/interlace-sh/tuskline` and make the first CI run green. Fix anything that only fails on the runners (first run of `moon ci` and the integration matrix included).
-- [ ] M0.4a Optional: enable moon remote caching or `.protolock` once CI timings justify it; record the decision in ADR 0012.
+- [x] M0.4a Optional: enable moon remote caching or `.protolock` once CI timings justify it; record the decision in ADR 0012. Decision (2026-10-29): not yet; a warm `moon run :check` is already a few seconds.
 - [x] M0.5 CI licence-boundary check: a script that fails if `core`, `cli` or `agent` import `server`, or if any `.go` file lacks the SPDX header for its directory. (`scripts/check-licence-boundary.sh`, self-tested; `moon run scripts:check`.)
 - [x] M0.6 Dependency licence check for the Apache modules (for example `go-licenses check` with an allow-list). (`moon run :licences`, `.moon/tasks/apache.yml`.)
 - [x] M0.7 Repository hygiene: issue and PR templates (PR template includes the definition-of-done checklist), `CODEOWNERS`, Dependabot for Go modules, npm and actions (or Renovate, which can also bump `.prototools`), branch protection notes in CONTRIBUTING.

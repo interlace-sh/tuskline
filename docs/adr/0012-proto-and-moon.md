@@ -36,3 +36,4 @@ Tuskline is a Go workspace (`core`, `agent`, `cli`, `server`) plus a SvelteKit a
 ## Notes
 
 - 2026-10-29 (M0.4): on a runner, `runInCI: false` also stops an explicit `moon run`, so the first integration matrix reported "No tasks found". `core:integration` now uses `runInCI: 'always'`, and the moon job runs `moon ci :check :cross` so the Docker tests stay out of it. A task that needs Docker therefore uses `runInCI: 'always'` and is left out of the `moon ci` targets.
+- 2026-10-29 (M0.4a): moon remote caching and `.protolock` stay off. A local `moon run :check` finishes in a few seconds once the cache is warm, which does not justify a remote cache service or checksums for every platform. Revisit when a CI run is slow enough that the cache misses cost more than the service.
