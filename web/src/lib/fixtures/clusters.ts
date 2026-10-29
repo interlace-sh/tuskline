@@ -79,3 +79,11 @@ export function healthDotClass(health: Health): string {
 	if (health === 'unknown') return 'bg-tl-fg3';
 	return 'bg-env-dev';
 }
+
+/** CSS colour for a health mark. Uses the environment tokens, not a new palette. */
+export function healthColor(health: Health): string {
+	if (health === 'warn') return 'var(--env-staging)';
+	if (health === 'crit') return 'var(--env-prod)';
+	if (health === 'unknown') return 'var(--tl-fg3)';
+	return 'var(--env-dev)';
+}

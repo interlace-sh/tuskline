@@ -84,6 +84,14 @@
 		if (event.key === 't') shell.toggleTheme();
 		if (event.key === 'e') shell.envMenuOpen = !shell.envMenuOpen;
 		if (event.key === '?') shell.helpOpen = !shell.helpOpen;
+		if (event.key === '/') {
+			const field = document.querySelector<HTMLInputElement>('[data-filter]');
+			if (field) {
+				event.preventDefault();
+				field.focus();
+			}
+			return;
+		}
 		if (event.key === '[') shell.stepRange(-1);
 		if (event.key === ']') shell.stepRange(1);
 		if (event.key === 'n') shell.go('connect');

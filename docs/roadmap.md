@@ -76,7 +76,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 
 - [x] M3.1 Web foundation: app shell from the prototype. Includes the top bar with environment switcher, left rail, breadcrumb, command palette (`Cmd/Ctrl K`), dark and light themes (toggled from the sidebar), and the environment colour rail.
 - [x] M3.2 Typed API client (`src/lib/api`), fixtures moved from `prototype/src/data.ts`, and a demo mode. An empty inventory, a failed cluster list, or `?demo=1` keeps the prototype fixtures. A non-empty inventory replaces them. `setup-data.ts` moves with the setup screens (M4).
-- [ ] M3.3a Fleet screen: health lanes, cluster cards and filter. Demo mode uses the prototype fixtures. A live inventory shows its clusters without invented metrics.
+- [x] M3.3a Fleet screen: health lanes, cluster cards and filter. Demo mode uses the prototype fixtures. A live inventory shows its clusters without invented metrics.
 - [ ] M3.3b Cluster health from `/health` and `/activity`, with the prototype fixtures in demo mode.
 - [ ] M3.3c Query insights from `/queries`, with the prototype fixtures in demo mode.
 - [ ] M3.4 SQL editor:
