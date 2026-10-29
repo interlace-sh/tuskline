@@ -89,3 +89,10 @@ tasks:
       - '@group(sources)'
       - 'project://core?group=sources'
     tags: ['go']
+
+  dev:
+    description: 'API on 127.0.0.1:8080. `moon run :dev` starts this beside the Vite server'
+    command: 'go run ./cmd/tuskline serve'
+    env:
+      TUSKLINE_ADDR: '127.0.0.1:8080'
+    preset: 'server'

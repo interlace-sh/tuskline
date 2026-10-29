@@ -73,7 +73,7 @@ tasks:
       runInCI: false
 
   dev:
-    description: 'Vite dev server on :8090 (proxies /api to :8080)'
+    description: 'Vite dev server on :8090 (proxies /api to the API on :8080)'
     command: 'npm run dev'
     preset: 'server'
 

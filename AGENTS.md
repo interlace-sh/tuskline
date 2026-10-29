@@ -142,7 +142,7 @@ moon run :lint --affected        # only projects touched by uncommitted changes
 moon run core:integration        # Docker + PostgreSQL 14-18
 moon run cli:bin server:bin      # ./bin/tl and ./bin/tuskline (web UI built and embedded)
 ./bin/tuskline serve
-moon run web:dev                 # UI dev server on :8090, proxies /api to :8080
+moon run :dev                    # Vite on :8090 and `tuskline serve` on :8080
 moon query tasks                 # list every task; `make help` lists the aliases
 ```
 

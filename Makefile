@@ -51,8 +51,8 @@ web: ## Build the web UI and copy it into the server's embed directory
 web-install: ## Install web dependencies (moon also does this on demand)
 	cd web && npm ci
 
-dev: ## Vite dev server on :8090 (proxies /api to :8080)
-	$(MOON) run web:dev
+dev: ## Vite on :8090 and the API on :8080 (moon run :dev)
+	$(MOON) run :dev
 
 dev-db: ## Start PostgreSQL 14-18 on ports 5414-5418 (Docker)
 	docker compose -f deploy/compose/compose.yaml up -d --wait
