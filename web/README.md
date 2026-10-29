@@ -4,7 +4,7 @@ The Tuskline web UI: SvelteKit (static SPA via `adapter-static`), Svelte 5 runes
 
 ```sh
 npm install
-npm run dev      # http://localhost:5173 (proxies /api to tuskline serve on :8080)
+npm run dev      # http://localhost:8090 (proxies /api to tuskline serve on :8080)
 npm run check    # svelte-check
 npm run lint     # prettier + eslint
 npm test         # vitest

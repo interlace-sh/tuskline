@@ -5,7 +5,13 @@ import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
 	// `npm run dev` proxies the API to a local `tuskline serve`.
-	server: { proxy: { '/api': 'http://127.0.0.1:8080' } },
+	// 8090, not Vite's 5173: other projects already occupy the 517x block,
+	// and strictPort keeps a busy port from sliding into that range.
+	server: {
+		port: 8090,
+		strictPort: true,
+		proxy: { '/api': 'http://127.0.0.1:8080' }
+	},
 	plugins: [
 		tailwindcss(),
 		sveltekit({
