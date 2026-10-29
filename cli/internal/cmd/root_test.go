@@ -4,8 +4,10 @@ package cmd
 
 import (
 	"bytes"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func run(t *testing.T, args ...string) (string, error) {
@@ -15,6 +17,32 @@ func run(t *testing.T, args ...string) (string, error) {
 	root.SetArgs(args)
 	err := root.Execute()
 	return out.String(), err
+}
+
+// runApp runs tl with a test app, a fresh inventory file and no libpq
+// files from the developer's home. It returns stdout and stderr apart.
+func runApp(t *testing.T, a *app, args ...string) (stdout, stderr string, err error) {
+	t.Helper()
+	isolatePGFiles(t)
+	if a.now == nil {
+		a.now = func() time.Time { return time.Date(2026, 10, 29, 12, 0, 0, 0, time.UTC) }
+	}
+	if a.in == nil {
+		a.in = strings.NewReader("")
+	}
+	var out, errOut bytes.Buffer
+	root := newRoot(&out, &errOut, a)
+	root.SetArgs(args)
+	err = root.Execute()
+	return out.String(), errOut.String(), err
+}
+
+func isolatePGFiles(t *testing.T) {
+	t.Helper()
+	dir := t.TempDir()
+	t.Setenv("PGPASSFILE", filepath.Join(dir, "pgpass"))
+	t.Setenv("PGSERVICEFILE", filepath.Join(dir, "pg_service.conf"))
+	t.Setenv("PGSYSCONFDIR", "")
 }
 
 func TestVersion(t *testing.T) {
@@ -34,7 +62,7 @@ func TestConnectRejectsBadRef(t *testing.T) {
 }
 
 func TestStubsSayNotYet(t *testing.T) {
-	for _, args := range [][]string{{"ls"}, {"top", "prod/orders"}, {"connect", "prod/orders"}} {
+	for _, args := range [][]string{{"ls"}, {"top", "prod/orders"}} {
 		if _, err := run(t, args...); err == nil || !strings.Contains(err.Error(), "not implemented yet") {
 			t.Errorf("%v: got %v", args, err)
 		}

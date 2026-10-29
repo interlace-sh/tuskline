@@ -14,9 +14,34 @@ Conventions:
 | Command | Status |
 |---|---|
 | `tl version` | Prints `tl <version> (commit <sha>, built <date>)` |
-| `tl connect --dsn <url>` | Probes the server: version, provider, read-only status. Refuses PostgreSQL < 14. Resolves `service=` from `pg_service.conf` and the password from `~/.pgpass`; warns on stderr when `sslmode` is weaker than the `verify-full` default |
-| `tl connect <env/cluster>` | Validates the reference; inventory lookup is M1 |
+| `tl connect` | Probes a server and adds it to the inventory, or probes an inventory entry again; see [below](#tl-connect) |
 | `tl ls`, `tl top <ref>` | Stubs that exit 1 with "not implemented yet (roadmap M1)" |
+
+Global flag: `--inventory <file>` overrides the inventory location (default `$TUSKLINE_INVENTORY`, else `$XDG_CONFIG_HOME/tuskline/inventory.yaml`).
+
+### `tl connect`
+
+```sh
+tl connect --dsn "postgres://app@db.example.com/orders" prod/orders   # probe and save
+tl connect --dsn "$DSN" --env dev --name pg17                          # the same, for scripts
+tl connect --dsn "$DSN"                                                # probe only (asks on a terminal)
+tl connect prod/orders --output json                                   # probe a saved entry
+```
+
+| Flag | Meaning |
+|---|---|
+| `--dsn <url>` | libpq URL or keyword/value string. `service=` is resolved from `pg_service.conf`. |
+| `--env`, `--name` | Target environment and cluster name; the same as the `env/cluster` argument. |
+| `--kind local\|dev\|staging\|prod` | Kind of a new environment. Defaults to the environment name when that is a kind; asked for on a terminal. An existing environment's kind is never changed by `connect`. |
+| `--password-env <VAR>` | Save a reference to an environment variable holding the password. |
+| `--output text\|json`, `-o` | Summary format. JSON holds the profile (no password), the server probe and the missing extensions. |
+
+Behaviour:
+
+- **Probe.** It prints the version, provider, primary or standby, session read-only status, TLS mode, login-role privileges, `shared_preload_libraries`, and recommended extensions that are missing with what each unlocks. It refuses PostgreSQL older than 14. With a target environment, the probe runs under that environment's policy, so a prod probe is a read-only session with prod timeouts.
+- **Save.** With `--dsn` and a target, it adds or updates the entry and records the probe. Nothing is saved if the probe fails. On a terminal, missing values are asked for on stderr; leave them blank to only probe. When stdin is not a terminal, it never prompts.
+- **Passwords** are never stored or printed. The password is taken from the DSN, then the saved `--password-env` reference, then `~/.pgpass` (ignored if group- or world-readable). A DSN password is used for that probe only, with a note on stderr.
+- **TLS.** A `sslmode` weaker than `verify-full` gives a warning on stderr.
 | `tl serve [args]` | Runs the separate AGPL `tuskline serve` binary from `PATH` ([ADR 0010](adr/0010-licence-boundary.md)) |
 | `tl agent --server <url>` | Stub; token from `TUSKLINE_AGENT_TOKEN` (M9) |
 
@@ -25,7 +50,7 @@ Conventions:
 | Command | What it does | Milestone |
 |---|---|---|
 | `tl serve` | Start the web UI and API (what the Docker image runs, via `tuskline serve`) | M0/M3 |
-| `tl connect prod/orders` | Add or open a connection; psql-style shell through the inventory, with tunnels and IAM handled | M1 |
+| `tl connect prod/orders` | Add or probe a connection (M1); psql-style shell through the inventory, with tunnels and IAM handled (later) | M1 |
 | `tl ls` | List the inventory with environment, version, provider and last probe | M1 |
 | `tl top prod/orders` | Live activity, waits and locks TUI (`--once` for a text snapshot) | M1 |
 | `tl diagnose prod/orders` | Run all health checks; text, JSON or Markdown report | M2 |

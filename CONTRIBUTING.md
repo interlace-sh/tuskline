@@ -19,7 +19,7 @@ Tool versions are pinned in [`.prototools`](.prototools) and installed by [proto
 proto trust              # once: allows the vendored golangci-lint plugin in .prototools
 proto install            # Go, Node.js, npm, moon and golangci-lint at the pinned versions
 moon run :check          # build, test and lint everything (installs web deps on first run)
-moon run core:integration   # needs Docker; PostgreSQL 14-18
+moon run core:integration cli:integration   # needs Docker; PostgreSQL 14-18
 ```
 
 You also need Docker for integration tests and `make dev-db`. `make` targets still work as short aliases for the moon commands (`make help`).

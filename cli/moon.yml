@@ -35,3 +35,17 @@ tasks:
       - '@group(sources)'
       - 'project://^?group=sources'
     tags: ['go']
+
+  integration:
+    description: 'tl commands against real PostgreSQL 14-18 via testcontainers (needs Docker)'
+    command: 'go test -tags integration -count 1 -timeout 15m ./...'
+    inputs:
+      - '@group(sources)'
+      - 'project://^?group=sources'
+    env:
+      PG_VERSIONS: '14 15 16 17 18'
+    tags: ['integration', 'docker']
+    options:
+      # Same as core:integration: never cached, run explicitly per version in CI.
+      cache: false
+      runInCI: 'always'

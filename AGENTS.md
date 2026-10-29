@@ -89,7 +89,7 @@ Dependency direction (enforced by `moon run scripts:licence-boundary` and in rev
 Tasks run through [moon](https://moonrepo.dev/moon) (`.moon/`, each project's `moon.yml`); tool versions come from `.prototools` via [proto](https://moonrepo.dev/proto). `make <target>` is a thin alias for the same moon command.
 
 - `moon run :test`: unit tests for every Go module (race detector) and the web vitest suite. Must be fast and need no Docker.
-- `moon run core:integration` (tags `integration`, `docker`): files tagged `//go:build integration`. These start **PostgreSQL 14, 15, 16, 17 and 18** with testcontainers-go (`postgres:<v>-alpine`); `PG_VERSIONS=17 moon run core:integration` narrows the run. It is never cached and `moon ci` skips it; CI runs each version as a separate job. Every SQL pack query and every version-specific branch needs an integration test across the matrix.
+- `moon run core:integration cli:integration` (tags `integration`, `docker`): files tagged `//go:build integration`. These start **PostgreSQL 14, 15, 16, 17 and 18** with testcontainers-go (`postgres:<v>-alpine`, via `core/pgtest`); `PG_VERSIONS=17 moon run core:integration` narrows the run. It is never cached and `moon ci` skips it; CI runs each version as a separate job. Every SQL pack query and every version-specific branch needs an integration test across the matrix.
 - `moon run web:test`: vitest for pure TypeScript logic. UI screens are accepted by Playwright smoke checks ported from `prototype/scripts/smoke.mjs` plus a screenshot comparison.
 - Table-driven tests; `t.Parallel()` where safe; no sleeps (poll with a deadline).
 - Bug fix ⇒ regression test first.

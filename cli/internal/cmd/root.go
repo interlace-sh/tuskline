@@ -10,11 +10,11 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/interlace-sh/tuskline/agent"
-	"github.com/interlace-sh/tuskline/core/conn"
 	"github.com/interlace-sh/tuskline/core/inventory"
 	"github.com/interlace-sh/tuskline/core/version"
 )
@@ -24,8 +24,34 @@ func errNotYet(milestone string) error {
 	return fmt.Errorf("not implemented yet (roadmap %s, see docs/roadmap.md)", milestone)
 }
 
+// app holds what commands need from the outside world, so tests can
+// replace it.
+type app struct {
+	in          io.Reader
+	interactive bool             // stdin is a terminal, so prompts are allowed
+	now         func() time.Time // for last-probe timestamps
+	// inventoryPath is set by --inventory; empty means inventory.DefaultPath.
+	inventoryPath string
+}
+
+func (a *app) inventoryFile() (string, error) {
+	if a.inventoryPath != "" {
+		return a.inventoryPath, nil
+	}
+	return inventory.DefaultPath()
+}
+
 // NewRoot builds the command tree. out/errOut are injectable for tests.
 func NewRoot(out, errOut io.Writer) *cobra.Command {
+	return newRoot(out, errOut, &app{in: os.Stdin, interactive: stdinIsTerminal(), now: time.Now})
+}
+
+func stdinIsTerminal() bool {
+	st, err := os.Stdin.Stat()
+	return err == nil && st.Mode()&os.ModeCharDevice != 0
+}
+
+func newRoot(out, errOut io.Writer, a *app) *cobra.Command {
 	root := &cobra.Command{
 		Use:           "tl",
 		Short:         "Tuskline: a keyboard-first PostgreSQL workbench",
@@ -34,6 +60,8 @@ func NewRoot(out, errOut io.Writer) *cobra.Command {
 	}
 	root.SetOut(out)
 	root.SetErr(errOut)
+	root.SetIn(a.in)
+	root.PersistentFlags().StringVar(&a.inventoryPath, "inventory", "", "inventory file (default $TUSKLINE_INVENTORY or $XDG_CONFIG_HOME/tuskline/inventory.yaml)")
 
 	root.AddCommand(&cobra.Command{
 		Use:   "version",
@@ -44,47 +72,7 @@ func NewRoot(out, errOut io.Writer) *cobra.Command {
 		},
 	})
 
-	var dsn string
-	connect := &cobra.Command{
-		Use:   "connect <env/cluster>",
-		Short: "Open a psql-style session through the inventory (tunnels and IAM handled)",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(c *cobra.Command, args []string) error {
-			if dsn != "" {
-				p, err := conn.ParseDSN(dsn)
-				if err != nil {
-					return err
-				}
-				if p, err = conn.ResolveService(conn.ServicefilePaths(), p); err != nil {
-					return err
-				}
-				if !p.HasPassword() {
-					pw, err := conn.LookupPassword(conn.PassfilePath(), p)
-					if err != nil {
-						fmt.Fprintln(c.ErrOrStderr(), "warning:", err)
-					}
-					p = p.WithPassword(pw)
-				}
-				if w := p.TLSMode().Warning(); w != "" {
-					fmt.Fprintln(c.ErrOrStderr(), "warning:", w)
-				}
-				info, err := conn.Probe(c.Context(), p)
-				if err != nil {
-					return err
-				}
-				fmt.Fprintf(c.OutOrStdout(), "connected: PostgreSQL %d on %s (read-only=%v)\n%s\n", info.Major(), info.Provider, info.ReadOnly, info.Version)
-				return nil
-			}
-			if len(args) == 1 {
-				if _, err := inventory.ParseRef(args[0]); err != nil {
-					return err
-				}
-			}
-			return errNotYet("M1")
-		},
-	}
-	connect.Flags().StringVar(&dsn, "dsn", "", "probe a libpq URL directly, bypassing the inventory")
-	root.AddCommand(connect)
+	root.AddCommand(newConnectCmd(a))
 
 	root.AddCommand(&cobra.Command{
 		Use:   "ls",
