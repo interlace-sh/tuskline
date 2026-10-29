@@ -1,0 +1,12 @@
+# Code owners are requested for review on every pull request that touches
+# their paths. The last matching pattern wins.
+
+*                               @ma1f
+
+# Licence boundary, safety defaults and supply chain: always the maintainer.
+/LICENSING.md                   @ma1f
+/core/inventory/                @ma1f
+/scripts/                       @ma1f
+/.github/                       @ma1f
+/.moon/                         @ma1f
+/.prototools                    @ma1f

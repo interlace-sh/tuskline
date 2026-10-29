@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest a change or a new capability.
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tuskline follows a strict roadmap (docs/roadmap.md) with a cut list. Check both before asking; features on the cut list need an ADR first.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What you would like Tuskline to do. Commands, screens or API shapes help.
+    validations:
+      required: true
+  - type: input
+    id: roadmap
+    attributes:
+      label: Related roadmap task
+      placeholder: M2.6, or "not on the roadmap"
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Other tools or workarounds you have tried.

@@ -32,6 +32,20 @@ You also need Docker for integration tests and `make dev-db`. `make` targets sti
 - `moon run :check` (or `make check`) must pass locally. CI also runs integration tests against PostgreSQL 14-18.
 - UI changes include a screenshot (dark theme) and follow [docs/design.md](docs/design.md).
 - Respect the licence boundary in [LICENSING.md](LICENSING.md): `core/`, `cli/` and `agent/` never import AGPL code.
+- The [pull request template](.github/PULL_REQUEST_TEMPLATE.md) carries the definition-of-done checklist from AGENTS.md section 8. Issues use the forms in `.github/ISSUE_TEMPLATE/`; security reports go through [SECURITY.md](SECURITY.md).
+- Dependabot opens weekly, grouped updates for the Go modules, `web/` and GitHub Actions. Tool pins in `.prototools` are bumped by hand.
+
+## Branch protection (maintainers)
+
+Protect `main` with a ruleset (Settings → Rules → Rulesets) so it stays green:
+
+- Pull requests required; no direct pushes, force-pushes or deletion.
+- Required status checks: `moon ci (build, lint, test, cross-compile, web)` and `integration (PostgreSQL 14)` to `(PostgreSQL 18)`. Branches must be up to date before merging.
+- One approving review, from a code owner ([CODEOWNERS](.github/CODEOWNERS)); stale approvals are dismissed on new commits.
+- DCO sign-off on every commit, checked by the [DCO app](https://github.com/apps/dco).
+- Linear history (squash or rebase merges).
+
+Change these settings only together with this section.
 
 ## Style
 

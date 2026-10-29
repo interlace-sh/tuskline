@@ -1,0 +1,45 @@
+# Dependabot version updates. Toolchain pins in .prototools (Go, Node.js,
+# npm, moon, golangci-lint) are bumped by hand: Dependabot cannot read them.
+# The frozen prototype/ is deliberately left out.
+version: 2
+updates:
+  - package-ecosystem: 'gomod'
+    directories:
+      - '/core'
+      - '/cli'
+      - '/agent'
+      - '/server'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    commit-message:
+      prefix: 'build'
+      include: 'scope'
+    groups:
+      go-minor-and-patch:
+        update-types: ['minor', 'patch']
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: 'npm'
+    directory: '/web'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    commit-message:
+      prefix: 'build'
+      include: 'scope'
+    groups:
+      web-minor-and-patch:
+        update-types: ['minor', 'patch']
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    commit-message:
+      prefix: 'ci'
+    groups:
+      actions:
+        patterns: ['*']

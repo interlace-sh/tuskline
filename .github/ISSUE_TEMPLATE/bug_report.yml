@@ -1,0 +1,62 @@
+name: Bug report
+description: Something in Tuskline does not work as documented.
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security problems go through private vulnerability reporting, not here (see SECURITY.md).
+        **Never paste passwords, tokens or DSNs that contain them.** Redact them as `postgres://user:***@host/db`.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Commands or clicks, as small as possible.
+      placeholder: |
+        1. tl connect --dsn 'postgres://me@localhost:5432/app' --env dev --name app
+        2. tl ls
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - tl CLI / TUI
+        - Web UI (tuskline serve)
+        - Desktop app
+        - Agent
+        - Container image
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Tuskline version
+      description: Output of `tl version` or the commit.
+    validations:
+      required: true
+  - type: input
+    id: postgres
+    attributes:
+      label: PostgreSQL version and provider
+      placeholder: 17.6, community / RDS / Aurora / Cloud SQL / Azure / Neon …
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Ubuntu 26.04, macOS 26, Windows 11 …
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or output
+      description: Redact credentials and query parameters before pasting.
+      render: text
