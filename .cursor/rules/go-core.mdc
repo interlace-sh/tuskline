@@ -8,7 +8,7 @@ alwaysApply: false
 
 - The workspace is `go.work` with modules `core`, `agent`, `cli` and `server`. Run Go commands inside a module or use moon (`moon run :build`, `moon run cli:test`, `moon run :lint`); `go build ./...` from the root fails.
 - First line of every file: `// SPDX-License-Identifier: Apache-2.0` in `core/`, `cli/` and `agent/`; `// SPDX-License-Identifier: AGPL-3.0-only` in `server/`.
-- **Import direction:** `cli`, `agent` and `server` → `core`. `core` imports none of them. `cli` and `agent` never import `server`. `tl serve` execs the `tuskline` binary.
+- **Import direction:** `cli`, `agent` and `server` → `core`. `core` imports none of them. `cli` and `agent` never import `server`. `tl serve` execs the `tuskline` binary. `moon run scripts:licence-boundary` checks both the headers and the import direction.
 - `core` packages are libraries: no `os.Exit`, no global state, no flag parsing, and no printing to stdout. Return values and errors; the surfaces render them.
 - `ctx context.Context` comes first on every I/O function. Wrap database calls with `context.WithTimeout`; probes use 10 s.
 - Errors: `fmt.Errorf("verb object: %w", err)`, sentinels like `ErrNotImplemented`, and checks with `errors.Is` / `errors.As`. No `panic` outside `main`.

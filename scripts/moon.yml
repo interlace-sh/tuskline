@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
+#
+# Repository-wide checks that span several modules, so they belong to no
+# single Go project. The scripts call `go` from .prototools via proto's shims.
+language: 'bash'
+layer: 'tool'
+stack: 'infrastructure'
+tags: ['repo']
+
+project:
+  title: 'scripts'
+  description: 'Repository checks: licence boundary and SPDX headers (LICENSING.md, ADR 0010).'
+
+toolchains:
+  default: 'system'
+
+fileGroups:
+  gosources:
+    - '/core/**/*.go'
+    - '/cli/**/*.go'
+    - '/agent/**/*.go'
+    - '/server/**/*.go'
+    - '/desktop/**/*.go'
+    - '/*/go.mod'
+    - '/go.work'
+
+tasks:
+  licence-boundary:
+    description: 'Fail on AGPL imports from core, cli or agent, or a missing SPDX header'
+    command: 'bash check-licence-boundary.sh $workspaceRoot'
+    inputs:
+      - 'check-licence-boundary.sh'
+      - '@group(gosources)'
+    tags: ['licence']
+
+  test:
+    description: 'Self-test: the boundary check fails on deliberately bad fixtures'
+    command: 'bash check-licence-boundary.test.sh'
+    inputs:
+      - 'check-licence-boundary.sh'
+      - 'check-licence-boundary.test.sh'
+    tags: ['licence']
+
+  check:
+    description: 'Everything a pull request must pass for repository-wide checks'
+    command: 'noop'
+    deps: ['~:licence-boundary', '~:test']
+    tags: ['repo']

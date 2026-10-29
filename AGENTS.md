@@ -47,12 +47,13 @@ deploy/    dev databases (compose) now; generated templates later
 docs/      CC BY 4.0   vision, architecture, decisions + adr/, roadmap, design, cli, security …
 prototype/ frozen React prototype = UI spec; port to web/, then delete
 brand/     Tusk Arc SVG/PNG/ICO
+scripts/   repository-wide checks (licence boundary and SPDX headers) as the `scripts` moon project
 .prototools  tool pins (proto): go, node, npm, moon, golangci-lint
 .moon/       moon workspace, toolchains and inherited Go tasks (tasks/go.yml)
 */moon.yml   per-project tasks, deps, inputs and outputs
 ```
 
-Dependency direction (enforced in review): `cli, agent, server, desktop → core`. **Never** `core → anything`, and Apache modules never import AGPL modules. `tl serve` execs the `tuskline` binary; it does not import `server`.
+Dependency direction (enforced by `moon run scripts:licence-boundary` and in review): `cli, agent, server, desktop → core`. **Never** `core → anything`, and Apache modules never import AGPL modules. `tl serve` execs the `tuskline` binary; it does not import `server`.
 
 ## 4. How to pick the next task
 

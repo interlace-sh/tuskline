@@ -12,6 +12,8 @@ projects:
   cli: 'cli'
   server: 'server'
   web: 'web'
+  # Repository-wide checks (licence boundary, SPDX headers).
+  scripts: 'scripts'
 
 vcs:
   client: 'git'

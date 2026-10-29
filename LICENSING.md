@@ -21,7 +21,7 @@ The nearest `LICENSE` file up the directory tree applies.
 
 ## Rules that keep the boundary intact
 
-1. Apache modules (`core`, `cli`, `agent`) must **never import** `server`, `web` or `desktop`. CI and review enforce this. AGPL code may import the core, never the reverse.
+1. Apache modules (`core`, `cli`, `agent`) must **never import** `server`, `web` or `desktop`. AGPL code may import the core, never the reverse. `moon run scripts:licence-boundary` enforces this in CI (it is part of `moon run :check`), together with rule 5.
 2. `tl serve` does not link the server: it **executes the separate `tuskline` binary** as a child process (ADR 0010).
 3. Code moves from AGPL to Apache only if the copyright holder relicenses it explicitly. Never copy AGPL code into `core/`, `cli/` or `agent/`.
 4. Third-party dependencies of Apache modules must be permissive (MIT, BSD, Apache-2.0, ISC, MPL-2.0 used as a library). Do not add GPL or AGPL dependencies there.
