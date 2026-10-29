@@ -12,7 +12,7 @@ HA, consensus, pooling and backup engines are mature and trusted, so rewriting t
 | Area | Choice | Reason |
 |---|---|---|
 | Collectors and SQL packs | Build | Overhead control (query budgets, back-off) and one metric model shared by UI, CLI and alerts |
-| Metric definitions | Build | One documented catalogue; Prometheus names exported for compatibility |
+| Metric definitions | Build | One documented catalogue, read by Tuskline's own UI, CLI and alerts |
 | Migration linter | Build on `pg_query_go` | Lock analysis needs table sizes and live activity |
 | Config advisor, plan visualiser, provisioning planner | Build | Core differentiators; small, testable Go packages |
 | SQL parser | Reuse libpg_query (`pg_query_go`) | Rewriting the grammar gains nothing |

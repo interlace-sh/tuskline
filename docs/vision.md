@@ -19,7 +19,7 @@ Tuskline is one open-source product that brings these together around one invent
 |---|---|---|
 | Application developer | Write and tune queries; understand why prod is slow | SQL IDE, plan visualiser, query insights |
 | DBA / DBRE | Keep many clusters healthy; tune, vacuum, index, recover | Fleet, cluster health, advisors, backups |
-| Platform / SRE | Operate HA and backups across clouds and Kubernetes; get paged less | Fleet, HA topology, alerts, Prometheus export |
+| Platform / SRE | Operate HA and backups across clouds and Kubernetes; get paged less | Fleet, HA topology, alerts |
 | Tech lead / reviewer | Ship schema changes safely | Migration review, drift |
 | Consultant / MSP | Diagnose unfamiliar estates fast | `tl diagnose` reports, snapshots, read-only mode |
 | Data analyst | Explore data safely on read replicas | SQL IDE, charts, saved queries |

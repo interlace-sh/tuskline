@@ -38,7 +38,6 @@ flowchart LR
   CORE --> TS
   CORE -- TLS / SSH / IAM --> PG & RDS & GCP & AZ
   CORE --> K8S & PAT & BK
-  CORE -- /metrics, OTLP --> OBS[Prometheus / OpenTelemetry]
 ```
 
 gRPC and the WASM plugin host from the original design are on the cut list ([0008](adr/0008-solo-founder-scope.md)). The API is REST only, with an OpenAPI spec.
@@ -120,7 +119,7 @@ flowchart LR
   SCH{Scheduler<br/>per-target budgets,<br/>jitter, timeouts} --> NORM[Normalise and delta<br/>fingerprints, counter resets]
   NORM --> ST[(Stores<br/>metrics, plans,<br/>snapshots, events)]
   ST --> AN[Analysers<br/>checks, advisors, baselines]
-  AN --> OUT[UI, CLI, alerts,<br/>/metrics, OTLP]
+  AN --> OUT[UI, CLI, alerts]
 ```
 
 - Agentless by default, using the least-privilege `tuskline_monitor` role (`pg_monitor`). `core/collector` runs each pass immediately the first time, then on an interval (10 s and a 2 s query budget for statistics). A pass stops when the budget is spent. A timeout or an overloaded target doubles the interval, up to five minutes, and a healthy pass steps it back. Up to 10% jitter keeps targets from lining up.

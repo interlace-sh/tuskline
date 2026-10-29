@@ -65,7 +65,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [x] M2.6 `core/analyser`: first health checks with evidence and a fix. Covers missing `pg_stat_statements`, cache hit ratio, idle in transaction, wraparound age, unused or duplicate indexes, bloat estimate and replication lag.
 - [x] M2.7 `tl diagnose <ref>`: runs all checks and writes text, JSON or Markdown.
 - [x] M2.8 Server API: `/api/v1/clusters`, `/api/v1/clusters/{env}/{name}/queries` (top queries with deltas), `/activity`, `/health`.
-- [ ] M2.9 `/metrics` Prometheus export of collected metrics *(parallel)*.
+- [x] M2.9 `/metrics` Prometheus export. Decision (2026-10-29): not built. Tuskline is the collector and the history store; a scrape endpoint would make it an exporter as well. An existing Prometheus keeps using its own PostgreSQL exporter.
 
 **Acceptance:**
 - `tl diagnose` on an unfamiliar dev database produces a useful report in under five minutes from install, needing only `pg_stat_statements`.

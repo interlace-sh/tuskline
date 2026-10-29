@@ -39,7 +39,7 @@ Retention is already set in [architecture.md](../architecture.md): 1 s raw for 1
   | 1 h | 13 calendar months |
 
 - Query text, parameters and result rows are not columns in these files. A statement is a numeric identifier here; its text stays on the server or in a workload snapshot the user asked to save (M2.5).
-- Remote write and `/metrics` (M2.9) export the latest sample. They are not the store.
+- Tuskline is the collector and the reader of this store. It does not expose a Prometheus `/metrics` scrape endpoint or remote-write the samples elsewhere (decision 2026-10-29, roadmap M2.9). An existing Prometheus keeps its own PostgreSQL exporter.
 
 ## Consequences
 
