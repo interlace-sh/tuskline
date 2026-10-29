@@ -95,7 +95,9 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 ## M4: onboarding and config advisor (about 3 weeks)
 
 - [ ] M4.1 Connection wizard (web and `tl connect`): connect → classify → detect → fix → verify.
-- [ ] M4.2 Extension detection with generated steps for `pg_stat_statements`, `auto_explain`, `pg_wait_sampling`, `pg_stat_kcache` and `hypopg`. Each step covers what it unlocks, the SQL and conf changes, whether a restart is needed, and the provider route. It merges `shared_preload_libraries` instead of replacing it, and uses `patronictl edit-config` when Patroni manages config.
+- [ ] M4.2 Extension catalog and generated steps. A catalog in `core` covers the five extensions Tuskline uses (`pg_stat_statements`, `auto_explain`, `pg_wait_sampling`, `pg_stat_kcache`, `hypopg`) and the ordinary single-node ones Autobase auto-setup turns on (pgvector, PostGIS, pgRouting, pg_cron, pgaudit, pg_partman, pg_repack). Each entry records what it unlocks, PostgreSQL 14–18 availability, preload and restart, the PGDG package name, and which managed providers allow-list it. Generated steps merge `shared_preload_libraries` instead of replacing it, and use `patronictl edit-config` when Patroni manages config. See [onboarding](onboarding-and-deploy.md).
+- [ ] M4.2a Install plan (preview only; apply is M5). Self-managed targets install the PGDG package, or the Pigsty repository when PGDG does not ship it, then the conf change and `CREATE EXTENSION`. Managed clouds get the provider command, or "not offered here". No compiling from source. The plan shows every package and SQL line before anything runs.
+- [ ] M4.2b Dev database image: `make dev-db` installs `pg_wait_sampling`, `pg_stat_kcache` and `hypopg` from PGDG so a laptop matches the catalog. Integration tests stay on stock `postgres` images.
 - [ ] M4.3 Monitoring-role script generator (`tuskline_monitor`) and managed-cloud snippets: RDS parameter groups, Cloud SQL flags, Azure `az` commands.
 - [ ] M4.4 `core/advisor` and `tl config advise <ref>`: lints `postgresql.conf` and tunes memory, WAL and checkpoints, autovacuum, planner and I/O, and connections. Each recommendation gives its evidence, a diff, and whether it needs a reload or restart.
 - [ ] M4.5 Port the Setup & deploy screens' onboarding parts (Add connection, Config advisor) from the prototype.
@@ -111,7 +113,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [ ] M5.3 Pre-flight checks: ports, disk, Docker version, existing volumes. Refuse non-empty data directories.
 - [ ] M5.4 Hand-over: add the cluster to the inventory with a monitoring role, register the Patroni API and backup repository, and schedule the first restore drill.
 - [ ] M5.5 CloudNativePG target (R3): `Cluster`, `Pooler` and Barman Cloud plugin manifests, server-side apply, status read back.
-- [ ] M5.6 SSH/VM target (R3): Go SSH executor, PGDG packages, systemd units and config templates, idempotent versioned steps. Autobase-playbook mode.
+- [ ] M5.6 SSH/VM target (R3): Go SSH executor, PGDG packages (extension packages from the M4.2 catalog, Pigsty repo only when PGDG lacks the package), systemd units and config templates, idempotent versioned steps. Autobase-playbook mode.
 - [ ] M5.7 Port the Deploy and Deployments screens.
 
 **Acceptance:**
