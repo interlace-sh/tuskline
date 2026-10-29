@@ -25,7 +25,7 @@ test: ## Go and web unit tests (moon run :test)
 	$(MOON) run :test
 
 test-integration: ## Integration tests against PostgreSQL 14-18 (needs Docker)
-	PG_VERSIONS="$(PG_VERSIONS)" $(MOON) run core:integration cli:integration
+	PG_VERSIONS="$(PG_VERSIONS)" $(MOON) run core:integration cli:integration server:integration
 
 test-web: ## Web unit tests only
 	$(MOON) run web:test

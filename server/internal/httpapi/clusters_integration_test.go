@@ -1,0 +1,82 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
+//go:build integration
+
+package httpapi
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/interlace-sh/tuskline/core/inventory"
+	"github.com/interlace-sh/tuskline/core/pgtest"
+	"github.com/interlace-sh/tuskline/core/snapshot"
+)
+
+func TestClusterAPIAgainstPostgres(t *testing.T) {
+	t.Setenv("TL_TEST_PASSWORD", pgtest.Password)
+	for _, major := range pgtest.Versions(t) {
+		t.Run(fmt.Sprintf("pg%d", major), func(t *testing.T) {
+			srv := pgtest.Start(t, major)
+			pgtest.Exec(t, srv.Profile, "CREATE EXTENSION IF NOT EXISTS pg_stat_statements", "SELECT 1")
+			path := filepath.Join(t.TempDir(), "inventory.yaml")
+			inv := &inventory.Inventory{}
+			if _, err := inv.PutEnvironment("dev", inventory.EnvDev); err != nil {
+				t.Fatal(err)
+			}
+			if err := inv.PutCluster(inventory.Cluster{
+				Name: "pg", Environment: "dev", Profile: srv.Profile.WithPassword(""),
+				Password: &inventory.SecretRef{Env: "TL_TEST_PASSWORD"},
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if err := inv.Save(path); err != nil {
+				t.Fatal(err)
+			}
+			h := newHandler(&api{inventoryPath: path, previous: map[string]snapshot.Snapshot{}})
+			get := func(url string) *httptest.ResponseRecorder {
+				t.Helper()
+				rr := httptest.NewRecorder()
+				h.ServeHTTP(rr, httptest.NewRequestWithContext(t.Context(), http.MethodGet, url, nil))
+				if strings.Contains(rr.Body.String(), pgtest.Password) {
+					t.Fatalf("%s leaked the password", url)
+				}
+				return rr
+			}
+			first := get("/api/v1/clusters/dev/pg/queries")
+			if first.Code != http.StatusOK {
+				t.Fatalf("queries: %d %s", first.Code, first.Body)
+			}
+			var once struct {
+				Deltas     []snapshot.Delta `json:"deltas"`
+				Statements []struct {
+					Query string `json:"query"`
+				} `json:"statements"`
+			}
+			if err := json.Unmarshal(first.Body.Bytes(), &once); err != nil {
+				t.Fatal(err)
+			}
+			if once.Deltas != nil || len(once.Statements) == 0 {
+				t.Fatalf("first call: %+v", once)
+			}
+			second := get("/api/v1/clusters/dev/pg/queries")
+			if err := json.Unmarshal(second.Body.Bytes(), &once); err != nil {
+				t.Fatal(err)
+			}
+			if once.Deltas == nil {
+				t.Fatal("second call has no deltas")
+			}
+			if rr := get("/api/v1/clusters/dev/pg/activity"); rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"sessions"`) {
+				t.Fatalf("activity: %d %s", rr.Code, rr.Body)
+			}
+			if rr := get("/api/v1/clusters/dev/pg/health"); rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"findings"`) {
+				t.Fatalf("health: %d %s", rr.Code, rr.Body)
+			}
+		})
+	}
+}

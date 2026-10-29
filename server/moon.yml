@@ -96,3 +96,16 @@ tasks:
     env:
       TUSKLINE_ADDR: '127.0.0.1:8080'
     preset: 'server'
+
+  integration:
+    description: 'Cluster API against real PostgreSQL 14-18 (needs Docker)'
+    command: 'go test -tags integration -count 1 -timeout 15m ./...'
+    inputs:
+      - '@group(sources)'
+      - 'project://core?group=sources'
+    env:
+      PG_VERSIONS: '14 15 16 17 18'
+    tags: ['integration', 'docker']
+    options:
+      cache: false
+      runInCI: 'always'

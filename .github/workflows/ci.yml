@@ -74,6 +74,6 @@ jobs:
           auto-install: true
       # Docker is available on GitHub-hosted Ubuntu runners; testcontainers
       # starts postgres:${{ matrix.pg }}. The env var beats the task default.
-      - run: moon run core:integration cli:integration
+      - run: moon run core:integration cli:integration server:integration
         env:
           PG_VERSIONS: ${{ matrix.pg }}

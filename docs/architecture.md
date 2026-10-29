@@ -145,4 +145,4 @@ flowchart LR
 
 ## Request path (server)
 
-`tuskline serve` → `httpapi.New` → `/api/v1/*` (JSON) plus the embedded SPA (`webui`), with fallback to `index.html`. Security headers are set on every response. Auth, RBAC and audit middleware arrive in M3 and M9. The desktop app mounts the same handler in-process.
+`tuskline serve` → `httpapi.New` → `/api/v1/*` (JSON) plus the embedded SPA (`webui`), with fallback to `index.html`. Cluster routes read the same inventory file as `tl`: `GET /api/v1/clusters`, and `GET /api/v1/clusters/{env}/{name}/queries` (deltas against the previous sample, held in memory), `/activity` and `/health`. Security headers are set on every response. Auth, RBAC and audit middleware arrive in M3 and M9. The desktop app mounts the same handler in-process.

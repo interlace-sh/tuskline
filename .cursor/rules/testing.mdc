@@ -8,7 +8,7 @@ alwaysApply: false
 
 - Run tests through moon so the pinned toolchain (`.prototools`) and caching apply: `moon run :test`, `moon run core:test`, `moon run web:test`. `make test` is an alias.
 - **Unit tests** (`moon run :test`): no Docker, no network, fast. Table-driven, with `t.Parallel()` where safe, using the standard `testing` package (no assertion frameworks unless already used).
-- **Integration tests** (`moon run core:integration cli:integration`, or `make test-integration`; needs Docker; never cached, skipped by `moon ci`):
+- **Integration tests** (`moon run core:integration cli:integration server:integration`, or `make test-integration`; needs Docker; never cached, skipped by `moon ci`):
   - Files start with `//go:build integration` and end in `_integration_test.go`.
   - Start servers with `core/pgtest` (`pgtest.Versions(t)`, `pgtest.Start(t, major)`): testcontainers-go `modules/postgres` with `postgres:<major>-alpine`, default 14–18; `PG_VERSIONS="17"` or `"14,18"` narrows the run. It builds only with the integration tag.
   - Wait for readiness with the module's wait strategy (the log line occurs twice).
@@ -26,5 +26,5 @@ alwaysApply: false
   - Playwright smoke checks (ported from `prototype/scripts/smoke.mjs`) for screens.
   - Use fixtures from `src/lib/fixtures`, never a live database.
 - A bug fix starts with a failing regression test.
-- CI (`.github/workflows/ci.yml`) installs the toolchain with `moonrepo/setup-toolchain` and runs `moon ci :check :cross`: every affected `check` (gofmt, vet, golangci-lint, unit tests, web typecheck/lint/test/build) plus the cross-compiles. A separate matrix runs `core:integration cli:integration` once per PostgreSQL major. Keep it green.
+- CI (`.github/workflows/ci.yml`) installs the toolchain with `moonrepo/setup-toolchain` and runs `moon ci :check :cross`: every affected `check` (gofmt, vet, golangci-lint, unit tests, web typecheck/lint/test/build) plus the cross-compiles. A separate matrix runs `core:integration cli:integration server:integration` once per PostgreSQL major. Keep it green.
 - New kind of test? Add a moon task (in `.moon/tasks/go.yml` for every Go module, or the project's `moon.yml`) with accurate `inputs`, wire it into that project's `check` task, and tag it. Do not add bespoke shell steps to CI. If it needs Docker, keep it out of `check`, set `runInCI: 'always'` (`false` would also block an explicit `moon run` on the runner) and add a CI job that runs the target.

@@ -9,12 +9,22 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/interlace-sh/tuskline/core/snapshot"
 	"github.com/interlace-sh/tuskline/core/version"
 	"github.com/interlace-sh/tuskline/server/internal/webui"
 )
 
-// New returns the root handler.
+// New returns the root handler. The cluster routes read the inventory at
+// inventory.DefaultPath (TUSKLINE_INVENTORY, then the XDG config file).
 func New() http.Handler {
+	return newHandler(&api{previous: map[string]snapshot.Snapshot{}})
+}
+
+// newHandler is New with an injectable inventory path, for tests.
+func newHandler(a *api) http.Handler {
+	if a.previous == nil {
+		a.previous = map[string]snapshot.Snapshot{}
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/health", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -22,6 +32,7 @@ func New() http.Handler {
 	mux.HandleFunc("GET /api/v1/version", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"version": version.Version, "commit": version.Commit})
 	})
+	a.routes(mux)
 	mux.Handle("/", webui.Handler())
 	return securityHeaders(mux)
 }
