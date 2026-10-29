@@ -1,76 +1,65 @@
-# Tuskline developer tasks. Run `make help`.
-# Go modules live in a go.work workspace, so `go build ./...` from the root does
-# not work: every Go target loops over $(MODULES).
+# Thin wrapper over moon (https://moonrepo.dev/moon). moon owns every task,
+# its inputs, outputs and cache; see .moon/ and each project's moon.yml.
+# Nothing here adds behaviour: every target maps to one moon command, so
+# `make check` and `moon run :check` are always the same thing.
+# Toolchain: run `proto install` (reads .prototools) once. ADR 0012.
 
-MODULES   := core agent cli server
-VERSION   ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo 0.0.0-dev)
-COMMIT    ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
-DATE      ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-LDFLAGS   := -s -w \
-  -X github.com/interlace-sh/tuskline/core/version.Version=$(VERSION) \
-  -X github.com/interlace-sh/tuskline/core/version.Commit=$(COMMIT) \
-  -X github.com/interlace-sh/tuskline/core/version.Date=$(DATE)
-BIN       := bin
-WEBDIST   := server/internal/webui/dist
+MOON ?= moon
 PG_VERSIONS ?= 14 15 16 17 18
 
-.PHONY: help build bin test test-integration test-web lint lint-go lint-web fmt tidy web web-install dev-db dev-db-down clean check
+.PHONY: help check build bin test test-integration test-web lint lint-go lint-web fmt tidy web web-install dev dev-db dev-db-down clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
-build: ## Compile every Go module
-	@for m in $(MODULES); do echo "==> build $$m"; (cd $$m && go build ./...) || exit 1; done
+check: ## Build, test and lint every project, Go and web (moon run :check)
+	$(MOON) run :check
 
-bin: ## Build the tl and tuskline binaries into ./bin (run `make web` first to embed the UI)
-	@mkdir -p $(BIN)
-	cd cli && go build -trimpath -ldflags "$(LDFLAGS)" -o ../$(BIN)/tl ./cmd/tl
-	cd server && go build -trimpath -ldflags "$(LDFLAGS)" -o ../$(BIN)/tuskline ./cmd/tuskline
+build: ## Compile every project; server embeds the web build (moon run :build)
+	$(MOON) run :build
 
-test: ## Unit tests for every Go module (race detector on)
-	@for m in $(MODULES); do echo "==> test $$m"; (cd $$m && go test -race -count=1 ./...) || exit 1; done
+bin: ## Build ./bin/tl and ./bin/tuskline (web UI embedded)
+	$(MOON) run cli:bin server:bin
 
-test-integration: ## Integration tests against PostgreSQL 14-18 in Docker (testcontainers)
-	cd core && PG_VERSIONS="$(PG_VERSIONS)" go test -tags integration -count=1 -timeout 15m ./...
+test: ## Go and web unit tests (moon run :test)
+	$(MOON) run :test
 
-test-web: ## Web unit tests (vitest)
-	cd web && npm test
+test-integration: ## Integration tests against PostgreSQL 14-18 (needs Docker)
+	PG_VERSIONS="$(PG_VERSIONS)" $(MOON) run core:integration
 
-lint: lint-go lint-web ## All linters
+test-web: ## Web unit tests only
+	$(MOON) run web:test
 
-lint-go: ## gofmt check, go vet and golangci-lint (if installed)
-	@test -z "$$(gofmt -l $(MODULES))" || (echo "gofmt needed:"; gofmt -l $(MODULES); exit 1)
-	@for m in $(MODULES); do echo "==> vet $$m"; (cd $$m && go vet ./... && go vet -tags integration ./...) || exit 1; done
-	@if command -v golangci-lint >/dev/null; then \
-	  for m in $(MODULES); do echo "==> golangci-lint $$m"; (cd $$m && golangci-lint run --config ../.golangci.yml ./...) || exit 1; done; \
-	else echo "golangci-lint not installed; skipped (CI runs it)"; fi
+lint: ## Every linter (moon run :lint)
+	$(MOON) run :lint
+
+lint-go: ## gofmt check, go vet and golangci-lint for the Go modules
+	$(MOON) run core:lint agent:lint cli:lint server:lint
 
 lint-web: ## svelte-check, prettier and eslint
-	cd web && npm run check && npm run lint
+	$(MOON) run web:typecheck web:lint
 
-fmt: ## Format Go and web code
-	gofmt -w $(MODULES)
-	cd web && npm run format
+fmt: ## Format Go and web code in place
+	$(MOON) run :fmt
 
 tidy: ## go mod tidy in every module
-	@for m in $(MODULES); do echo "==> tidy $$m"; (cd $$m && GOWORK=off go mod tidy) || exit 1; done
-
-web-install: ## npm ci for the web UI
-	cd web && npm ci
+	$(MOON) run :tidy
 
 web: ## Build the web UI and copy it into the server's embed directory
-	cd web && npm run build
-	find $(WEBDIST) -mindepth 1 ! -name placeholder.html -exec rm -rf {} +
-	cp -R web/build/. $(WEBDIST)/
+	$(MOON) run server:embed-web
 
-check: build test lint-go ## Go build, unit tests and lint (web: make lint-web test-web)
+web-install: ## Install web dependencies (moon also does this on demand)
+	cd web && npm ci
 
-dev-db: ## Start PostgreSQL 14-18 on ports 5414-5418
+dev: ## Vite dev server on :5173 (proxies /api to :8080)
+	$(MOON) run web:dev
+
+dev-db: ## Start PostgreSQL 14-18 on ports 5414-5418 (Docker)
 	docker compose -f deploy/compose/compose.yaml up -d --wait
 
 dev-db-down: ## Stop the dev databases and delete their volumes
 	docker compose -f deploy/compose/compose.yaml down -v
 
-clean: ## Remove build output
-	rm -rf $(BIN) web/build web/.svelte-kit
-	find $(WEBDIST) -mindepth 1 ! -name placeholder.html -exec rm -rf {} +
+clean: ## Remove build output and moon's cache
+	rm -rf bin web/build web/.svelte-kit .moon/cache
+	find server/internal/webui/dist -mindepth 1 ! -name placeholder.html -exec rm -rf {} +

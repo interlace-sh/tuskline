@@ -1,0 +1,16 @@
+# Toolchain pins for Tuskline, managed by proto (https://moonrepo.dev/proto).
+# `proto install` installs everything below; moon reads the same pins.
+# See docs/adr/0012-proto-and-moon.md.
+go = "1.27.3"
+node = "26.13.0"
+npm = "11.20.0"
+moon = "2.6.4"
+golangci-lint = "2.15.0"
+
+[plugins.tools]
+# Third-party tool, so proto asks you to trust this config once:
+#   proto trust        (from the repository root)
+golangci-lint = "file://./.proto/plugins/golangci-lint.toml"
+
+[settings]
+telemetry = false

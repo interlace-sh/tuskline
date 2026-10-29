@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/workspace.json
+#
+# moon workspace for Tuskline. Every project is listed explicitly so that the
+# licence boundary (docs/adr/0010-licence-boundary.md) stays visible here too:
+# core, agent and cli are Apache-2.0; server and web are AGPL-3.0-only.
+# See docs/adr/0012-proto-and-moon.md for why moon runs our tasks.
+versionConstraint: '>=2.6.0'
+
+projects:
+  core: 'core'
+  agent: 'agent'
+  cli: 'cli'
+  server: 'server'
+  web: 'web'
+
+vcs:
+  client: 'git'
+  provider: 'github'
+  defaultBranch: 'main'
+
+hasher:
+  # Optional inputs (go.sum in modules without dependencies, go.work.sum) are
+  # listed deliberately; do not warn when they are absent.
+  ignoreMissingPatterns:
+    - '**/go.sum'
+    - '**/go.work.sum'
+    - '**/.env'
+    - '**/.env.*'
+
+telemetry: false

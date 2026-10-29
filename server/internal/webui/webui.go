@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
-// Package webui embeds the static SvelteKit build. "make web" builds web/
-// and copies web/build into dist/. Without a build, a placeholder page is
-// served so the server always compiles and runs.
+// Package webui embeds the static SvelteKit build. The moon task
+// "server:embed-web" builds web/ and copies web/build into dist/. Without a
+// build, a placeholder page is served so the server always compiles and runs.
 package webui
 
 import (

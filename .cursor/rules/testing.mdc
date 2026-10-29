@@ -1,13 +1,14 @@
 ---
 description: How to write and run unit, integration (testcontainers, PostgreSQL 14-18) and web tests
-globs: **/*_test.go,web/**/*.test.ts,web/**/*.spec.ts,Makefile,.github/workflows/**
+globs: **/*_test.go,web/**/*.test.ts,web/**/*.spec.ts,**/moon.yml,.moon/**,.prototools,Makefile,.github/workflows/**
 alwaysApply: false
 ---
 
 # Testing
 
-- **Unit tests** (`make test`): no Docker, no network, fast. Table-driven, with `t.Parallel()` where safe, using the standard `testing` package (no assertion frameworks unless already used).
-- **Integration tests** (`make test-integration`):
+- Run tests through moon so the pinned toolchain (`.prototools`) and caching apply: `moon run :test`, `moon run core:test`, `moon run web:test`. `make test` is an alias.
+- **Unit tests** (`moon run :test`): no Docker, no network, fast. Table-driven, with `t.Parallel()` where safe, using the standard `testing` package (no assertion frameworks unless already used).
+- **Integration tests** (`moon run core:integration`; needs Docker; never cached, skipped by `moon ci`):
   - Files start with `//go:build integration` and end in `_integration_test.go`.
   - Use testcontainers-go `modules/postgres` with `postgres:<major>-alpine` and iterate `pgVersions(t)` (default 14–18; `PG_VERSIONS="17"` or `"14,18"` narrows the run).
   - Wait for readiness with the module's wait strategy (the log line occurs twice).
@@ -25,4 +26,5 @@ alwaysApply: false
   - Playwright smoke checks (ported from `prototype/scripts/smoke.mjs`) for screens.
   - Use fixtures from `src/lib/fixtures`, never a live database.
 - A bug fix starts with a failing regression test.
-- CI (`.github/workflows/ci.yml`) runs gofmt, vet, unit tests, cross-compiles, golangci-lint per module, integration per PostgreSQL major, and web check/lint/test/build. Keep it green, and add new jobs there when you add a new kind of test.
+- CI (`.github/workflows/ci.yml`) installs the toolchain with `moonrepo/setup-toolchain` and runs `moon ci`: every affected task with `runInCI` (gofmt, vet, golangci-lint, unit tests, cross-compiles, web typecheck/lint/test/build). A separate matrix runs `core:integration` once per PostgreSQL major. Keep it green.
+- New kind of test? Add a moon task (in `.moon/tasks/go.yml` for every Go module, or the project's `moon.yml`) with accurate `inputs`, wire it into that project's `check` task, and tag it. Do not add bespoke shell steps to CI; if it needs Docker, set `runInCI: false` and add a CI job that runs the target.

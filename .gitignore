@@ -19,6 +19,10 @@ prototype/dist/
 prototype/dist-single/
 prototype/*.tsbuildinfo
 
+# moon (task cache, generated Docker and hook files)
+.moon/cache/
+.moon/docker/
+
 # Local state and secrets
 .env
 .env.*

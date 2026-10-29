@@ -15,5 +15,6 @@ The eight product decisions below were recorded on 28 Oct 2026. Each one, and ea
 | [0009](adr/0009-desktop-wails-v3.md) | Desktop framework | Wails v3; Tauri v2 as the exit route | Accepted |
 | [0010](adr/0010-licence-boundary.md) | Licence boundary in practice | Separate binaries, import rules, CC BY docs, DCO | Accepted |
 | [0011](adr/0011-frontend-sveltekit-spa.md) | Web stack | SvelteKit SPA + Svelte 5 + Tailwind + shadcn-svelte; React prototype is the spec | Accepted |
+| [0012](adr/0012-proto-and-moon.md) | Toolchain and tasks | proto pins Go, Node.js, npm, moon and golangci-lint; moon runs and caches every task; Makefile is a thin alias | Accepted |
 
 Template: [adr/0000-template.md](adr/0000-template.md).

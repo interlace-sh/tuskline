@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
+language: 'go'
+layer: 'application'
+stack: 'backend'
+tags: ['apache', 'go']
+
+project:
+  title: 'cli'
+  description: 'The `tl` command-line tool (Apache-2.0). Never imports server; `tl serve` execs the tuskline binary.'
+
+dependsOn:
+  - 'core'
+  - 'agent'
+
+tasks:
+  bin:
+    description: 'Build ./bin/tl with version metadata'
+    script: |
+      VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo 0.0.0-dev)}"
+      COMMIT="${COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo none)}"
+      DATE="${DATE:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+      PKG=github.com/interlace-sh/tuskline/core/version
+      go build -trimpath -ldflags "-s -w -X $PKG.Version=$VERSION -X $PKG.Commit=$COMMIT -X $PKG.Date=$DATE" -o "$workspaceRoot/bin/tl" ./cmd/tl
+    outputs:
+      - '/bin/tl'
+    options:
+      # Version metadata comes from git, so always rebuild.
+      cache: false
+      runInCI: false
+
+  cross:
+    description: 'Cross-compile for windows/amd64 and darwin/arm64'
+    script: 'GOOS=windows GOARCH=amd64 go build ./... && GOOS=darwin GOARCH=arm64 go build ./...'
+    inputs:
+      - '@group(sources)'
+      - 'project://^?group=sources'
+    tags: ['go']

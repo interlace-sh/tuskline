@@ -1,5 +1,9 @@
 name: ci
 
+# Toolchain versions come from .prototools (proto); tasks, their inputs and
+# their dependencies come from .moon/ and each project's moon.yml. CI never
+# re-implements a task: if it fails here, `moon run <target>` reproduces it.
+
 on:
   push:
     branches: [main]
@@ -13,44 +17,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  go:
-    name: go (build, vet, test)
+  moon:
+    name: moon ci (build, lint, test, cross-compile, web)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
         with:
-          go-version-file: core/go.mod
-          cache-dependency-path: "**/go.sum"
-      - name: gofmt
-        run: test -z "$(gofmt -l core agent cli server)" || (gofmt -l core agent cli server; exit 1)
-      - run: make build
-      - name: vet
-        run: for m in core agent cli server; do (cd $m && go vet ./... && go vet -tags integration ./...) || exit 1; done
-      - run: make test
-      - name: cross-compile
-        run: |
-          (cd cli && GOOS=windows GOARCH=amd64 go build ./... && GOOS=darwin GOARCH=arm64 go build ./...)
-          (cd server && GOOS=windows GOARCH=amd64 go build ./... && GOOS=darwin GOARCH=arm64 go build ./...)
-
-  golangci:
-    name: golangci-lint (${{ matrix.module }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        module: [core, agent, cli, server]
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+          # moon compares against the merge base to find affected projects,
+          # so it needs history; blobless keeps the clone fast.
+          fetch-depth: 0
+          filter: blob:none
+      - uses: moonrepo/setup-toolchain@v0
         with:
-          go-version-file: core/go.mod
-          cache-dependency-path: "**/go.sum"
-      - uses: golangci/golangci-lint-action@v9
+          # `proto install`: go, node, npm, moon and golangci-lint from .prototools.
+          auto-install: true
+      # Runs every affected task with runInCI enabled (see .moon/tasks/go.yml
+      # and the project moon.yml files). Integration tests are excluded and
+      # run in the matrix below.
+      - run: moon ci
+      - uses: actions/upload-artifact@v7
+        if: always()
         with:
-          version: v2.15
-          working-directory: ${{ matrix.module }}
-          args: --config ../.golangci.yml
+          name: web-build
+          path: web/build
+          if-no-files-found: ignore
+          retention-days: 7
 
   integration:
     name: integration (PostgreSQL ${{ matrix.pg }})
@@ -61,32 +52,11 @@ jobs:
         pg: [14, 15, 16, 17, 18]
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: moonrepo/setup-toolchain@v0
         with:
-          go-version-file: core/go.mod
-          cache-dependency-path: "**/go.sum"
-      - run: make test-integration PG_VERSIONS=${{ matrix.pg }}
-
-  web:
-    name: web (check, lint, test, build)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci
-      - run: npm run check
-      - run: npm run lint
-      - run: npm test
-      - run: npm run build
-      - uses: actions/upload-artifact@v7
-        with:
-          name: web-build
-          path: web/build
-          retention-days: 7
+          auto-install: true
+      # Docker is available on GitHub-hosted Ubuntu runners; testcontainers
+      # starts postgres:${{ matrix.pg }}. The env var beats the task default.
+      - run: moon run core:integration
+        env:
+          PG_VERSIONS: ${{ matrix.pg }}

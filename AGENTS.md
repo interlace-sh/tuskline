@@ -30,6 +30,7 @@ Fixed decisions (do not relitigate without a new ADR; see `docs/decisions.md`):
 | Web UI | **SvelteKit** (`adapter-static`, SPA, `ssr = false`), **Svelte 5 runes**, **Tailwind CSS 4**, **shadcn-svelte** (Bits UI), TanStack Table/Virtual, CodeMirror 6, uPlot, `@lucide/svelte` |
 | Desktop | **Wails v3**: Go host, core in-process, same web build (M8) |
 | Tests | Go `testing` + **testcontainers-go** (PostgreSQL 14–18 in Docker), vitest, Playwright (UI acceptance) |
+| Toolchain and tasks | **proto** pins Go, Node.js, npm, moon and golangci-lint (`.prototools`); **moon** runs and caches every task ([0012](docs/adr/0012-proto-and-moon.md)) |
 | Packaging | `go:embed` UI, distroless image, Homebrew, signed desktop builds |
 
 ## 3. Repository layout
@@ -40,12 +41,15 @@ core/      Apache-2.0  Go module github.com/interlace-sh/tuskline/core   (engine
 cli/       Apache-2.0  module …/cli    cmd/tl (main), internal/cmd (Cobra commands)
 agent/     Apache-2.0  module …/agent  outbound collector (`tl agent`)
 server/    AGPL-3.0    module …/server cmd/tuskline, internal/httpapi, internal/webui (go:embed)
-web/       AGPL-3.0    SvelteKit app; `make web` copies web/build → server/internal/webui/dist
+web/       AGPL-3.0    SvelteKit app; `moon run server:embed-web` copies web/build → server/internal/webui/dist
 desktop/   AGPL-3.0    Wails v3 app (placeholder until M8)
 deploy/    dev databases (compose) now; generated templates later
 docs/      CC BY 4.0   vision, architecture, decisions + adr/, roadmap, design, cli, security …
 prototype/ frozen React prototype = UI spec; port to web/, then delete
 brand/     Tusk Arc SVG/PNG/ICO
+.prototools  tool pins (proto): go, node, npm, moon, golangci-lint
+.moon/       moon workspace, toolchains and inherited Go tasks (tasks/go.yml)
+*/moon.yml   per-project tasks, deps, inputs and outputs
 ```
 
 Dependency direction (enforced in review): `cli, agent, server, desktop → core`. **Never** `core → anything`, and Apache modules never import AGPL modules. `tl serve` execs the `tuskline` binary; it does not import `server`.
@@ -68,7 +72,7 @@ Dependency direction (enforced in review): `cli, agent, server, desktop → core
 - Logging: `log/slog`, structured. **Never log DSNs, passwords, tokens, query parameters or result rows.**
 - SQL lives in `core/sqlpack` as versioned, documented queries, keyed by `server_version_num` range. Always use parameters, never string concatenation of values. Quote identifiers with `pgx.Identifier`.
 - No cgo in `core`, `cli`, `agent` or `server` (pure-Go SQLite driver). cgo is allowed only in `desktop` (for example DuckDB).
-- Add dependencies sparingly. Apache modules need permissive licences. Run `make tidy`.
+- Add dependencies sparingly. Apache modules need permissive licences. Run `moon run :tidy`.
 
 **Web**
 - Svelte 5 runes only (`$state`, `$derived`, `$effect`, `$props`); no legacy `export let` or stores for new code. Shared state in `*.svelte.ts` modules.
@@ -81,12 +85,14 @@ Dependency direction (enforced in review): `cli, agent, server, desktop → core
 
 ## 6. Testing
 
-- `make test`: unit tests for every Go module (race detector). Must be fast and need no Docker.
-- `make test-integration`: files tagged `//go:build integration`. These start **PostgreSQL 14, 15, 16, 17 and 18** with testcontainers-go (`postgres:<v>-alpine`); `PG_VERSIONS=17` narrows the run. Every SQL pack query and every version-specific branch needs an integration test across the matrix. CI runs each version as a separate job.
-- `make test-web`: vitest for pure TypeScript logic. UI screens are accepted by Playwright smoke checks ported from `prototype/scripts/smoke.mjs` plus a screenshot comparison.
+Tasks run through [moon](https://moonrepo.dev/moon) (`.moon/`, each project's `moon.yml`); tool versions come from `.prototools` via [proto](https://moonrepo.dev/proto). `make <target>` is a thin alias for the same moon command.
+
+- `moon run :test`: unit tests for every Go module (race detector) and the web vitest suite. Must be fast and need no Docker.
+- `moon run core:integration` (tags `integration`, `docker`): files tagged `//go:build integration`. These start **PostgreSQL 14, 15, 16, 17 and 18** with testcontainers-go (`postgres:<v>-alpine`); `PG_VERSIONS=17 moon run core:integration` narrows the run. It is never cached and `moon ci` skips it; CI runs each version as a separate job. Every SQL pack query and every version-specific branch needs an integration test across the matrix.
+- `moon run web:test`: vitest for pure TypeScript logic. UI screens are accepted by Playwright smoke checks ported from `prototype/scripts/smoke.mjs` plus a screenshot comparison.
 - Table-driven tests; `t.Parallel()` where safe; no sleeps (poll with a deadline).
 - Bug fix ⇒ regression test first.
-- `make dev-db` starts PostgreSQL 14–18 on ports 5414–5418 for manual testing.
+- `make dev-db` (Docker Compose, not a moon task) starts PostgreSQL 14–18 on ports 5414–5418 for manual testing.
 
 ## 7. Safety rules (non-negotiable)
 
@@ -111,7 +117,7 @@ A task is done when **all** of these are true:
 
 - [ ] Code meets section 5 and the relevant `.cursor/rules`; SPDX headers are present; the licence boundary holds.
 - [ ] Unit tests added or updated. Integration tests added for anything that touches PostgreSQL, passing on 14–18 (CI).
-- [ ] `make check` passes (Go build, test, lint), and so does `make lint-web test-web` if `web/` changed.
+- [ ] `moon run :check` passes (every Go module: build, test, gofmt, vet, golangci-lint; web: svelte-check, prettier, eslint, vitest, build).
 - [ ] User-visible behaviour is documented: `docs/cli.md` for commands, `docs/design.md` for screens, an ADR for decisions.
 - [ ] The roadmap checkbox is ticked in the same PR; follow-ups are added as new unchecked tasks.
 - [ ] No secrets, no generated artefacts (`web/build`, `server/internal/webui/dist/*` except the placeholder, `bin/`) committed.
@@ -128,12 +134,15 @@ A task is done when **all** of these are true:
 ## 10. Useful commands
 
 ```sh
-make help              # list targets
-make build test lint   # Go
-make test-integration  # Docker + PostgreSQL 14-18
-make web-install web   # build UI into the server
-make bin && ./bin/tuskline serve
-cd web && npm run dev  # UI dev server on :5173, proxies /api to :8080
+proto install                    # once: Go, Node, npm, moon, golangci-lint from .prototools
+moon run :check                  # everything a PR must pass (no Docker)
+moon run cli:test                # one task in one project
+moon run :lint --affected        # only projects touched by uncommitted changes
+moon run core:integration        # Docker + PostgreSQL 14-18
+moon run cli:bin server:bin      # ./bin/tl and ./bin/tuskline (web UI built and embedded)
+./bin/tuskline serve
+moon run web:dev                 # UI dev server on :5173, proxies /api to :8080
+moon query tasks                 # list every task; `make help` lists the aliases
 ```
 
-Node.js 22.17 or newer is required for `web/`. In a workspace (`go.work`), run Go commands per module or through `make`; `go build ./...` from the repository root does not work.
+Do not call `go`, `npm` or `golangci-lint` with versions other than the `.prototools` pins; proto's shims pick the pinned ones automatically. In the Go workspace (`go.work`), Go commands must run inside a module, which moon does for you; `go build ./...` from the repository root does not work. Task dependencies are declared, not implied: `server:build` and `server:bin` depend on `web:build` (embedding), and `cli`/`server` depend on `core`, so `moon run server:bin` always embeds a fresh UI. Change tasks in `.moon/tasks/go.yml` (all Go modules) or the project's `moon.yml`, never only in CI.

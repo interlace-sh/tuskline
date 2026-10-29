@@ -8,8 +8,8 @@ npm run dev      # http://localhost:5173 (proxies /api to tuskline serve on :808
 npm run check    # svelte-check
 npm run lint     # prettier + eslint
 npm test         # vitest
-npm run build    # writes build/; `make web` copies it into server/internal/webui/dist
+npm run build    # writes build/; `moon run server:embed-web` copies it into server/internal/webui/dist
 ```
 
-Needs Node.js 22.17 or newer. Add components with `npx shadcn-svelte@latest add <name>`.
+Needs Node.js 22.17 or newer; `proto install` at the repository root installs the pinned Node.js and npm, and `moon run web:check` runs everything CI runs. Add components with `npx shadcn-svelte@latest add <name>`.
 The React prototype in `../prototype/` is the design reference; see `../docs/design.md`.

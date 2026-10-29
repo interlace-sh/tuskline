@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
+language: 'go'
+layer: 'library'
+stack: 'backend'
+tags: ['apache', 'go']
+
+project:
+  title: 'core'
+  description: 'Shared Go library: connections, inventory and policy, collectors, analysers, advisor, provisioning (Apache-2.0).'
+
+tasks:
+  integration:
+    description: 'Integration tests against real PostgreSQL 14-18 via testcontainers (needs Docker)'
+    command: 'go test -tags integration -count 1 -timeout 15m ./...'
+    inputs:
+      - '@group(sources)'
+    env:
+      # Space or comma separated; CI runs one version per matrix job.
+      PG_VERSIONS: '14 15 16 17 18'
+    tags: ['integration', 'docker']
+    options:
+      # Talks to Docker, so never trust a cached pass.
+      cache: false
+      # CI runs this explicitly per PostgreSQL version (see ci.yml), not via `moon ci`.
+      runInCI: false

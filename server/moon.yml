@@ -1,0 +1,80 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
+language: 'go'
+layer: 'application'
+stack: 'backend'
+tags: ['agpl', 'go']
+
+project:
+  title: 'server'
+  description: 'The `tuskline` server: HTTP API, scheduler and the embedded web UI (AGPL-3.0-only).'
+
+dependsOn:
+  - 'core'
+  # Build-time only: the SvelteKit output is embedded with go:embed.
+  - id: 'web'
+    scope: 'build'
+
+# Go-only tasks look at core's sources, not web's: a UI change re-runs
+# server:build (it embeds the UI) but not server:test, vet or golangci-lint.
+tasks:
+  test:
+    inputs:
+      - '@group(sources)'
+      - 'project://core?group=sources'
+    options:
+      mergeInputs: 'replace'
+
+  vet:
+    inputs:
+      - '@group(sources)'
+      - 'project://core?group=sources'
+    options:
+      mergeInputs: 'replace'
+
+  golangci:
+    inputs:
+      - '@group(sources)'
+      - 'project://core?group=sources'
+      - '/.golangci.yml'
+    options:
+      mergeInputs: 'replace'
+      mutex: 'golangci-lint'
+
+  embed-web:
+    description: 'Copy web/build into internal/webui/dist for go:embed (keeps placeholder.html)'
+    script: |
+      find internal/webui/dist -mindepth 1 ! -name placeholder.html -exec rm -rf {} +
+      cp -R "$workspaceRoot/web/build/." internal/webui/dist/
+    deps:
+      - target: 'web:build'
+        cacheStrategy: 'outputs'
+    options:
+      # The destination is .gitignored and moon cannot hydrate it safely next
+      # to the committed placeholder, so always copy (it takes milliseconds).
+      cache: false
+
+  build:
+    deps: ['~:embed-web']
+
+  bin:
+    description: 'Build ./bin/tuskline with the web UI embedded'
+    script: |
+      VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo 0.0.0-dev)}"
+      COMMIT="${COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo none)}"
+      DATE="${DATE:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+      PKG=github.com/interlace-sh/tuskline/core/version
+      go build -trimpath -ldflags "-s -w -X $PKG.Version=$VERSION -X $PKG.Commit=$COMMIT -X $PKG.Date=$DATE" -o "$workspaceRoot/bin/tuskline" ./cmd/tuskline
+    deps: ['~:embed-web']
+    outputs:
+      - '/bin/tuskline'
+    options:
+      cache: false
+      runInCI: false
+
+  cross:
+    description: 'Cross-compile for windows/amd64 and darwin/arm64'
+    script: 'GOOS=windows GOARCH=amd64 go build ./... && GOOS=darwin GOARCH=arm64 go build ./...'
+    inputs:
+      - '@group(sources)'
+      - 'project://core?group=sources'
+    tags: ['go']

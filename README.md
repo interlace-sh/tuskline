@@ -45,13 +45,12 @@ docker run -p 8080:8080 -v tuskline:/data ghcr.io/interlace-sh/tuskline   # not 
 
 ### Build from source (works today)
 
-Requirements: Go 1.25+, Node.js 22.17+ (for `web/`), and Docker if you want to run the integration tests.
+Requirements: [proto](https://moonrepo.dev/proto), which installs the pinned Go, Node.js, npm, [moon](https://moonrepo.dev/moon) and golangci-lint from [`.prototools`](.prototools), and Docker if you want to run the integration tests.
 
 ```sh
-make build            # compile every Go module
-make test             # unit tests
-make web-install web  # build the SvelteKit UI and embed it in the server
-make bin              # ./bin/tl and ./bin/tuskline
+proto trust && proto install    # once per clone
+moon run :check                 # build, test and lint every project
+moon run cli:bin server:bin     # ./bin/tl and ./bin/tuskline, with the UI embedded
 ./bin/tl version
 ./bin/tuskline serve  # http://127.0.0.1:8080
 make dev-db           # PostgreSQL 14-18 on ports 5414-5418
@@ -70,6 +69,7 @@ make dev-db           # PostgreSQL 14-18 on ports 5414-5418
 | `deploy/` | Dev databases now; generated deployment templates later |
 | `prototype/` | Frozen React prototype: the design reference for `web/` |
 | `brand/` | Tusk Arc logo, icons and favicon |
+| `.prototools`, `.moon/`, `*/moon.yml` | Toolchain pins (proto) and tasks (moon) |
 
 ## Contributing
 

@@ -17,7 +17,7 @@ import (
 	"github.com/interlace-sh/tuskline/core/conn"
 )
 
-// Run with: make test-integration (needs Docker).
+// Run with: moon run core:integration (needs Docker).
 // PG_VERSIONS can narrow the matrix, e.g. PG_VERSIONS=17.
 func TestProbeAcrossVersions(t *testing.T) {
 	for _, major := range pgVersions(t) {

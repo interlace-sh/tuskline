@@ -13,17 +13,19 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 ## M0: repository, CI and tooling (about 1 week)
 
 - [x] M0.1 Monorepo scaffold: `go.work` with `core`, `cli`, `agent`, `server`; SvelteKit `web`; licences; docs; prototype; brand.
-- [x] M0.2 `Makefile` targets: build, test, test-integration, lint, web, bin, dev-db.
-- [x] M0.3 CI workflow: gofmt, vet, unit tests, cross-compile, golangci-lint per module, integration per PostgreSQL 14–18, web check/lint/test/build.
-- [ ] M0.4 Push to `github.com/interlace-sh/tuskline` and make the first CI run green. Fix anything that only fails on the runners.
+- [x] M0.2 Developer tasks: build, test, integration, lint, fmt, web embed, bin, dev-db. Now moon tasks with a thin `Makefile` alias layer ([0012](adr/0012-proto-and-moon.md)).
+- [x] M0.2a Toolchain pins in `.prototools` (Go, Node.js, npm, moon, golangci-lint) installed by proto; moon workspace, per-project `moon.yml` and inherited Go tasks with inputs and outputs for caching.
+- [x] M0.3 CI workflow: `moonrepo/setup-toolchain` + `moon ci` (gofmt, vet, unit tests, cross-compile, golangci-lint per module, web typecheck/lint/test/build), plus integration per PostgreSQL 14–18.
+- [ ] M0.4 Push to `github.com/interlace-sh/tuskline` and make the first CI run green. Fix anything that only fails on the runners (first run of `moon ci` and the integration matrix included).
+- [ ] M0.4a Optional: enable moon remote caching or `.protolock` once CI timings justify it; record the decision in ADR 0012.
 - [ ] M0.5 CI licence-boundary check: a script that fails if `core`, `cli` or `agent` import `server`, or if any `.go` file lacks the SPDX header for its directory.
 - [ ] M0.6 Dependency licence check for the Apache modules (for example `go-licenses check` with an allow-list).
-- [ ] M0.7 Repository hygiene: issue and PR templates (PR template includes the definition-of-done checklist), `CODEOWNERS`, Dependabot for Go modules, npm and actions, branch protection notes in CONTRIBUTING.
+- [ ] M0.7 Repository hygiene: issue and PR templates (PR template includes the definition-of-done checklist), `CODEOWNERS`, Dependabot for Go modules, npm and actions (or Renovate, which can also bump `.prototools`), branch protection notes in CONTRIBUTING.
 - [ ] M0.8 Release skeleton: GoReleaser config producing `tl` and `tuskline` for linux/darwin/windows × amd64/arm64 with checksums and an SBOM (no publishing yet).
 - [ ] M0.9 Container image: multi-stage Dockerfile (web build → Go build → distroless), `tuskline serve` on :8080, non-root.
 
 **Acceptance:**
-- A fresh clone passes `make check`, `make web-install web` and `make bin`.
+- A fresh clone passes `proto install`, `moon run :check` and `moon run cli:bin server:bin`.
 - CI is green on `main`.
 - `docker build` produces an image whose `/api/v1/health` returns `{"status":"ok"}`.
 - The boundary check fails on a deliberately bad import.
@@ -79,7 +81,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
   - History and cancel.
 - [ ] M3.5 EXPLAIN visualiser (`Shift Cmd/Ctrl Enter` runs EXPLAIN ANALYZE). The plan tree uses D3, with a plain-English summary and warnings. Prod requires a confirmation before ANALYZE on writes.
 - [ ] M3.6 Server: query execution API (streamed results), policy enforcement server-side, audit log of prod queries, local users plus sessions.
-- [ ] M3.7 Port the prototype's Playwright smoke checks to run against `make web && tuskline serve` in CI.
+- [ ] M3.7 Port the prototype's Playwright smoke checks to run against `moon run server:bin && tuskline serve` in CI.
 
 **Acceptance:**
 - The ported smoke checks pass.

@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
+language: 'go'
+layer: 'library'
+stack: 'backend'
+tags: ['apache', 'go']
+
+project:
+  title: 'agent'
+  description: 'The `tl agent` collector library, run inside networks the control plane cannot reach (Apache-2.0).'

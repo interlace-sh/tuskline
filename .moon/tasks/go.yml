@@ -1,0 +1,98 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/tasks.json
+#
+# Tasks inherited by every Go module (core, agent, cli, server).
+# Each module is its own moon project, so `go ... ./...` always runs inside one
+# module; that is why there is no root-level `go build ./...`.
+
+inheritedBy:
+  toolchains: ['go']
+
+fileGroups:
+  sources:
+    - '**/*.go'
+    - '**/testdata/**/*'
+    - 'go.mod'
+    - 'go.sum'
+  # Embedded assets (server/internal/webui/dist) are .gitignored apart from the
+  # placeholder, so they are tracked through task deps rather than inputs.
+
+implicitInputs:
+  - '/go.work'
+  - '/go.work.sum'
+  - '/.prototools'
+
+tasks:
+  build:
+    description: 'Compile every package in the module'
+    command: 'go build ./...'
+    inputs:
+      - '@group(sources)'
+      - 'project://^?group=sources'
+    tags: ['go']
+
+  test:
+    description: 'Unit tests with the race detector'
+    command: 'go test -race -count 1 ./...'
+    inputs:
+      - '@group(sources)'
+      - 'project://^?group=sources'
+    tags: ['go']
+
+  vet:
+    description: 'go vet, with and without the integration build tag'
+    script: 'go vet ./... && go vet -tags integration ./...'
+    inputs:
+      - '@group(sources)'
+      - 'project://^?group=sources'
+    tags: ['go']
+
+  fmt-check:
+    description: 'Fail if any file needs gofmt'
+    script: 'out="$(gofmt -l .)"; if [ -n "$out" ]; then echo "gofmt needed:"; echo "$out"; exit 1; fi'
+    inputs:
+      - '**/*.go'
+    tags: ['go']
+
+  golangci:
+    description: 'golangci-lint with the shared root config'
+    command: 'golangci-lint run --config $workspaceRoot/.golangci.yml ./...'
+    checks:
+      # The proto plugin for golangci-lint only loads once the repo is trusted.
+      - 'golangci-lint version >/dev/null 2>&1 || { echo "golangci-lint unavailable: run proto trust && proto install at the repository root" >&2; exit 1; }'
+    inputs:
+      - '@group(sources)'
+      - 'project://^?group=sources'
+      - '/.golangci.yml'
+    tags: ['go']
+    options:
+      # golangci-lint refuses to run twice at once (shared cache lock), so
+      # modules are linted one at a time.
+      mutex: 'golangci-lint'
+
+  lint:
+    description: 'gofmt check, go vet and golangci-lint'
+    command: 'noop'
+    deps: ['~:fmt-check', '~:vet', '~:golangci']
+    tags: ['go']
+
+  fmt:
+    description: 'Rewrite Go files with gofmt'
+    command: 'gofmt -w .'
+    options:
+      cache: false
+      runInCI: false
+
+  tidy:
+    description: 'go mod tidy for this module alone (GOWORK=off)'
+    command: 'go mod tidy'
+    env:
+      GOWORK: 'off'
+    options:
+      cache: false
+      runInCI: false
+
+  check:
+    description: 'Everything a pull request must pass for this module (no Docker)'
+    command: 'noop'
+    deps: ['~:build', '~:test', '~:lint']
+    tags: ['go']

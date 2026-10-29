@@ -30,4 +30,4 @@ alwaysApply: false
   3. Move `src/data.ts` and `src/setup-data.ts` types into `src/lib/fixtures/` for demo mode and tests.
   4. Convert the React context store to runes.
   5. Accept a screen only when its Playwright smoke checks pass and it matches the screenshot.
-- Before committing: `npm run format && npm run check && npm run lint && npm test && npm run build`. Requires Node.js 22.17+.
+- Before committing: `moon run web:fmt web:check` (prettier, svelte-check, eslint, vitest and the build). Node.js and npm come from `.prototools`; SvelteKit 3 needs Node.js 22.17+.

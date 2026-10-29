@@ -10,23 +10,26 @@ Thanks for helping. Tuskline is pre-alpha and run by one maintainer, so small, f
 
 ## Set up
 
-- Go 1.25+.
-- Node.js 22.17+ and npm.
-- Docker, for integration tests and `make dev-db`.
-- Optional: golangci-lint v2.
+Tool versions are pinned in [`.prototools`](.prototools) and installed by [proto](https://moonrepo.dev/proto); tasks run through [moon](https://moonrepo.dev/moon) ([ADR 0012](docs/adr/0012-proto-and-moon.md)).
+
+1. Install proto: `bash <(curl -fsSL https://moonrepo.dev/install/proto.sh)` (or see the [install guide](https://moonrepo.dev/docs/proto/install), including Windows).
+2. From the repository root:
 
 ```sh
-make build test          # Go
-make web-install lint-web test-web
-make test-integration    # needs Docker; PostgreSQL 14-18
+proto trust              # once: allows the vendored golangci-lint plugin in .prototools
+proto install            # Go, Node.js, npm, moon and golangci-lint at the pinned versions
+moon run :check          # build, test and lint everything (installs web deps on first run)
+moon run core:integration   # needs Docker; PostgreSQL 14-18
 ```
+
+You also need Docker for integration tests and `make dev-db`. `make` targets still work as short aliases for the moon commands (`make help`).
 
 ## Pull requests
 
 - One logical change per PR. Use a [Conventional Commits](https://www.conventionalcommits.org/) title, for example `feat(cli): add tl ls`.
 - **Sign off every commit** with `git commit -s` under the [DCO](https://developercertificate.org/). There is no CLA.
 - Tests and docs come in the same PR. Tick the roadmap checkbox when a task is complete.
-- `make check` must pass locally. CI also runs integration tests against PostgreSQL 14-18.
+- `moon run :check` (or `make check`) must pass locally. CI also runs integration tests against PostgreSQL 14-18.
 - UI changes include a screenshot (dark theme) and follow [docs/design.md](docs/design.md).
 - Respect the licence boundary in [LICENSING.md](LICENSING.md): `core/`, `cli/` and `agent/` never import AGPL code.
 

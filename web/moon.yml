@@ -1,0 +1,84 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
+language: 'typescript'
+layer: 'application'
+stack: 'frontend'
+tags: ['agpl', 'web']
+
+project:
+  title: 'web'
+  description: 'SvelteKit SPA for the Tuskline UI, embedded into the server binary (AGPL-3.0-only).'
+
+toolchains:
+  default: 'npm'
+
+fileGroups:
+  sources:
+    - 'src/**/*'
+    - 'static/**/*'
+  configs:
+    - 'package.json'
+    - 'package-lock.json'
+    - 'vite.config.ts'
+    - 'tsconfig.json'
+    - 'components.json'
+    - 'eslint.config.js'
+    - 'prettier.config.js'
+    - '.prettierignore'
+    - '.npmrc'
+
+# moon's npm toolchain runs `npm install` (from package-lock.json) before the
+# first task when the lockfile changes, so a fresh clone needs no manual step.
+
+tasks:
+  build:
+    description: 'Static SPA build (adapter-static) into web/build'
+    command: 'npm run build'
+    inputs:
+      - '@group(sources)'
+      - '@group(configs)'
+    outputs:
+      - 'build/'
+    tags: ['web']
+
+  typecheck:
+    description: 'svelte-kit sync and svelte-check'
+    command: 'npm run check'
+    inputs:
+      - '@group(sources)'
+      - '@group(configs)'
+    tags: ['web']
+
+  lint:
+    description: 'prettier --check and eslint'
+    command: 'npm run lint'
+    inputs:
+      - '@group(sources)'
+      - '@group(configs)'
+      - '*.md'
+    tags: ['web']
+
+  test:
+    description: 'Vitest unit tests'
+    command: 'npm test'
+    inputs:
+      - '@group(sources)'
+      - '@group(configs)'
+    tags: ['web']
+
+  fmt:
+    description: 'Rewrite files with prettier'
+    command: 'npm run format'
+    options:
+      cache: false
+      runInCI: false
+
+  dev:
+    description: 'Vite dev server on :5173 (proxies /api to :8080)'
+    command: 'npm run dev'
+    preset: 'server'
+
+  check:
+    description: 'Everything a pull request must pass for the web UI'
+    command: 'noop'
+    deps: ['~:typecheck', '~:lint', '~:test', '~:build']
+    tags: ['web']

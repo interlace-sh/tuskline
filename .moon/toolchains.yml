@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/toolchains.json
+#
+# Versions are NOT set here: every toolchain inherits its pin from the root
+# .prototools (versionFromPrototools defaults to true), so there is one place
+# to bump Go, Node or npm. moon installs missing tools through proto.
+
+proto:
+  version: '0.63.2'
+
+go:
+  # go.work at the repository root ties core, agent, cli and server together.
+  workspaces: true
+  # Project relationships are declared explicitly in each moon.yml (dependsOn),
+  # so the graph mirrors the licence boundary rather than whatever `go list`
+  # happens to find.
+  inferRelationships: false
+
+javascript:
+  packageManager: 'npm'
+  # Tasks are declared in web/moon.yml with inputs and outputs; do not infer
+  # them from package.json scripts.
+  inferTasksFromScripts: false
+  # Never rewrite package-lock.json behind a contributor's back.
+  dedupeOnLockfileChange: false
+  # Keeps web/package.json "packageManager" in step with the npm pin.
+  syncPackageManagerField: true
+
+node: {}
+
+npm: {}
