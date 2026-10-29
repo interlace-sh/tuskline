@@ -78,7 +78,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [x] M3.2 Typed API client (`src/lib/api`), fixtures moved from `prototype/src/data.ts`, and a demo mode. An empty inventory, a failed cluster list, or `?demo=1` keeps the prototype fixtures. A non-empty inventory replaces them. `setup-data.ts` moves with the setup screens (M4).
 - [x] M3.3a Fleet screen: health lanes, cluster cards and filter. Demo mode uses the prototype fixtures. A live inventory shows its clusters without invented metrics.
 - [x] M3.3b Cluster health from `/health` and `/activity`, with the prototype fixtures in demo mode. Live clusters show the analyser findings and `pg_stat_activity`; load charts stay on the fixture series until history is on this screen.
-- [ ] M3.3c Query insights from `/queries`, with the prototype fixtures in demo mode.
+- [x] M3.3c Query insights from `/queries`, with the prototype fixtures in demo mode. A live cluster lists `pg_stat_statements` rows. Plans and index advice in the detail pane are fixture-only and say so.
 - [ ] M3.4 SQL editor:
   - CodeMirror 6 with PostgreSQL highlighting and schema completion.
   - Run with `Cmd/Ctrl Enter`.

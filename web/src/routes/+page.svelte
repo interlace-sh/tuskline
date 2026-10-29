@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ClusterHealth from '#lib/components/cluster-health.svelte';
 	import Fleet from '#lib/components/fleet.svelte';
+	import Queries from '#lib/components/queries.svelte';
 	import { SCREEN_LABEL, shell } from '#lib/shell.svelte.js';
 </script>
 
@@ -8,6 +9,8 @@
 	<Fleet />
 {:else if shell.screen === 'cluster'}
 	<ClusterHealth />
+{:else if shell.screen === 'queries'}
+	<Queries />
 {:else}
 	<h1 class="text-xl font-semibold tracking-tight">{SCREEN_LABEL[shell.screen]}</h1>
 	<p class="mt-1 max-w-xl text-sm text-tl-fg2">
