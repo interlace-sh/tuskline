@@ -63,7 +63,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [x] M2.4b `core/store`: Parquet segment writer and reader, retention and compaction, per [ADR 0013](adr/0013-metrics-storage.md).
 - [x] M2.5 `tl snapshot` / `tl diff`: workload snapshots to a file, and the delta between two.
 - [x] M2.6 `core/analyser`: first health checks with evidence and a fix. Covers missing `pg_stat_statements`, cache hit ratio, idle in transaction, wraparound age, unused or duplicate indexes, bloat estimate and replication lag.
-- [ ] M2.7 `tl diagnose <ref>`: runs all checks and writes text, JSON or Markdown.
+- [x] M2.7 `tl diagnose <ref>`: runs all checks and writes text, JSON or Markdown.
 - [ ] M2.8 Server API: `/api/v1/clusters`, `/api/v1/clusters/{id}/queries` (top queries with deltas), `/activity`, `/health`.
 - [ ] M2.9 `/metrics` Prometheus export of collected metrics *(parallel)*.
 

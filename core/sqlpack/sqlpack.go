@@ -65,5 +65,6 @@ func All() []Query {
 		StatsCheckpointer17, StatsCheckpointer18,
 		StatsIO16, StatsIO18,
 		StatsStatements14, StatsStatements15, StatsStatements17,
+		DiagnoseStatementsInstalled, DiagnoseWraparound, DiagnoseIndexes, DiagnoseReplication,
 	}
 }

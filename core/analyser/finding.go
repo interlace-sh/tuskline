@@ -31,4 +31,7 @@ type Index struct {
 	Predicate string
 	Scans     int64
 	Bytes     int64
+	// Unique is true for a unique index or a primary key. Those are kept
+	// even when they have never been scanned.
+	Unique bool
 }

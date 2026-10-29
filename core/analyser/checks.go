@@ -103,12 +103,11 @@ func ReplicationLag(application string, lag, minimum time.Duration) *Finding {
 }
 
 // UnusedIndexes reports indexes that have never been scanned and are at
-// least MinIndexBytes. Primary keys and unique indexes are not passed in
-// by the caller when they must be kept.
+// least MinIndexBytes. Unique indexes and primary keys are skipped.
 func UnusedIndexes(indexes []Index) []Finding {
 	var out []Finding
 	for _, idx := range indexes {
-		if idx.Scans != 0 || idx.Bytes < MinIndexBytes {
+		if idx.Unique || idx.Scans != 0 || idx.Bytes < MinIndexBytes {
 			continue
 		}
 		out = append(out, Finding{

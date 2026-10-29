@@ -18,10 +18,11 @@ Conventions:
 | `tl ls` | Lists the inventory; see [below](#tl-ls) |
 | `tl top <ref>` | Live sessions, waits, locks and blocking chains; see [below](#tl-top) |
 | `tl snapshot <ref>`, `tl diff` | Workload snapshots; see [below](#tl-snapshot) |
+| `tl diagnose <ref>` | Health checks; see [below](#tl-diagnose) |
 | `tl serve [args]` | Runs the separate `tuskline serve`; see [below](#tl-serve) |
 | `tl agent` | Stub; see [below](#tl-agent) |
 
-Global flag: `--inventory <file>` (connect, ls and top) overrides the inventory location (default `$TUSKLINE_INVENTORY`, else `$XDG_CONFIG_HOME/tuskline/inventory.yaml`).
+Global flag: `--inventory <file>` (connect, ls, top, snapshot and diagnose) overrides the inventory location (default `$TUSKLINE_INVENTORY`, else `$XDG_CONFIG_HOME/tuskline/inventory.yaml`).
 
 ### `tl version`
 
@@ -107,6 +108,21 @@ tl diff before.json after.json
 
 `tl diff <older> <newer>` prints the change in calls, execution time, rows and WAL bytes. A decrease is a statistics reset and is marked `*`. `--output json` gives `{deltas}`.
 
+### `tl diagnose`
+
+```sh
+tl diagnose dev/pg17
+tl diagnose prod/orders --output markdown
+tl diagnose dev/pg17 --lag 30s --output json
+```
+
+Connects with the environment's session policy and runs the health checks: missing `pg_stat_statements`, cache hit ratio, idle-in-transaction sessions, wraparound age, unused and duplicate indexes, dead-tuple bloat, and replication lag. A check the role cannot read is reported and the rest still run.
+
+| Flag | Meaning |
+|---|---|
+| `--output text\|json\|markdown`, `-o` | Report format. The default is `text`. JSON is `{ref, taken, server_version_num, findings}`. |
+| `--lag <d>` | Replay lag that counts as a finding. The default is `1m`. |
+
 ### `tl serve`
 
 `tl serve [args]` runs `tuskline serve [args]`, the separate AGPL server binary ([ADR 0010](adr/0010-licence-boundary.md)); `tl` never links it. It looks for `tuskline` on `PATH`, then next to the `tl` executable, so `./bin/tl serve` finds `./bin/tuskline`. If neither has it, it exits 1 with install hints: a release binary, `moon run server:bin`, or building and running the container image.
@@ -129,7 +145,7 @@ The enrolment token is read from `TUSKLINE_AGENT_TOKEN` and never printed. The c
 | `tl connect prod/orders` | Add or probe a connection (M1); psql-style shell through the inventory, with tunnels and IAM handled (later) | M1 |
 | `tl ls` | List the inventory with environment, version, provider and last probe | M1 |
 | `tl top prod/orders` | Live activity, waits and locks TUI (`--once` for a text snapshot) | M1 |
-| `tl diagnose prod/orders` | Run all health checks; text, JSON or Markdown report | M2 |
+| `tl diagnose prod/orders` | Health-check report in text, JSON or Markdown (M2) | M2 |
 | `tl snapshot` / `tl diff` | Workload snapshots and deltas (M2); richer comparison later | M2 |
 | `tl explain file.sql` | Plan with plain-English summary and warnings | M3 |
 | `tl config advise prod/orders` | postgresql.conf linter and tuning advisor, with diffs, marked reload or restart | M4 |
