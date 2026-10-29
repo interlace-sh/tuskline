@@ -31,10 +31,11 @@ jobs:
         with:
           # `proto install`: go, node, npm, moon and golangci-lint from .prototools.
           auto-install: true
-      # Runs every affected task with runInCI enabled (see .moon/tasks/go.yml
-      # and the project moon.yml files). Integration tests are excluded and
-      # run in the matrix below.
-      - run: moon ci
+      # Runs every affected `check` (build, test, lint; web typecheck, lint,
+      # test, build) and the cross-compiles. Explicit targets keep
+      # core:integration (runInCI: always) out of this job; it runs in the
+      # matrix below.
+      - run: moon ci :check :cross
       - uses: actions/upload-artifact@v7
         if: always()
         with:

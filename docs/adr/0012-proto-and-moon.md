@@ -32,3 +32,7 @@ Tuskline is a Go workspace (`core`, `agent`, `cli`, `server`) plus a SvelteKit a
 - moon adds a cache directory (`.moon/cache/`, ignored by git) and a second configuration format to learn. Tasks must keep accurate `inputs`; an input missing from a task means a stale cached pass. When in doubt, run with `--force` or `-u` to bypass the cache.
 - `go.mod` keeps `go 1.25.0` as the minimum language version for library consumers; `.prototools` pins the toolchain developers and CI actually use.
 - Not adopted yet: `.protolock` checksums for every platform, moon remote caching and moon-managed Git hooks. Revisit once CI timings justify them (roadmap M0.4a).
+
+## Notes
+
+- 2026-10-29 (M0.4): on a runner, `runInCI: false` also stops an explicit `moon run`, so the first integration matrix reported "No tasks found". `core:integration` now uses `runInCI: 'always'`, and the moon job runs `moon ci :check :cross` so the Docker tests stay out of it. A task that needs Docker therefore uses `runInCI: 'always'` and is left out of the `moon ci` targets.

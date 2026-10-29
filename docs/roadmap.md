@@ -16,7 +16,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [x] M0.2 Developer tasks: build, test, integration, lint, fmt, web embed, bin, dev-db. Now moon tasks with a thin `Makefile` alias layer ([0012](adr/0012-proto-and-moon.md)).
 - [x] M0.2a Toolchain pins in `.prototools` (Go, Node.js, npm, moon, golangci-lint) installed by proto; moon workspace, per-project `moon.yml` and inherited Go tasks with inputs and outputs for caching.
 - [x] M0.3 CI workflow: `moonrepo/setup-toolchain` + `moon ci` (gofmt, vet, unit tests, cross-compile, golangci-lint per module, web typecheck/lint/test/build), plus integration per PostgreSQL 14–18.
-- [ ] M0.4 Push to `github.com/interlace-sh/tuskline` and make the first CI run green. Fix anything that only fails on the runners (first run of `moon ci` and the integration matrix included).
+- [x] M0.4 Push to `github.com/interlace-sh/tuskline` and make the first CI run green. Fix anything that only fails on the runners (first run of `moon ci` and the integration matrix included).
 - [ ] M0.4a Optional: enable moon remote caching or `.protolock` once CI timings justify it; record the decision in ADR 0012.
 - [ ] M0.5 CI licence-boundary check: a script that fails if `core`, `cli` or `agent` import `server`, or if any `.go` file lacks the SPDX header for its directory.
 - [ ] M0.6 Dependency licence check for the Apache modules (for example `go-licenses check` with an allow-list).

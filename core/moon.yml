@@ -21,5 +21,7 @@ tasks:
     options:
       # Talks to Docker, so never trust a cached pass.
       cache: false
-      # CI runs this explicitly per PostgreSQL version (see ci.yml), not via `moon ci`.
-      runInCI: false
+      # CI runs this explicitly per PostgreSQL version (see ci.yml). `false`
+      # would also stop that explicit `moon run` on runners, so the moon job
+      # passes explicit targets to `moon ci` instead of relying on this flag.
+      runInCI: 'always'

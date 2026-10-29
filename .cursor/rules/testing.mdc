@@ -26,5 +26,5 @@ alwaysApply: false
   - Playwright smoke checks (ported from `prototype/scripts/smoke.mjs`) for screens.
   - Use fixtures from `src/lib/fixtures`, never a live database.
 - A bug fix starts with a failing regression test.
-- CI (`.github/workflows/ci.yml`) installs the toolchain with `moonrepo/setup-toolchain` and runs `moon ci`: every affected task with `runInCI` (gofmt, vet, golangci-lint, unit tests, cross-compiles, web typecheck/lint/test/build). A separate matrix runs `core:integration` once per PostgreSQL major. Keep it green.
-- New kind of test? Add a moon task (in `.moon/tasks/go.yml` for every Go module, or the project's `moon.yml`) with accurate `inputs`, wire it into that project's `check` task, and tag it. Do not add bespoke shell steps to CI; if it needs Docker, set `runInCI: false` and add a CI job that runs the target.
+- CI (`.github/workflows/ci.yml`) installs the toolchain with `moonrepo/setup-toolchain` and runs `moon ci :check :cross`: every affected `check` (gofmt, vet, golangci-lint, unit tests, web typecheck/lint/test/build) plus the cross-compiles. A separate matrix runs `core:integration` once per PostgreSQL major. Keep it green.
+- New kind of test? Add a moon task (in `.moon/tasks/go.yml` for every Go module, or the project's `moon.yml`) with accurate `inputs`, wire it into that project's `check` task, and tag it. Do not add bespoke shell steps to CI. If it needs Docker, keep it out of `check`, set `runInCI: 'always'` (`false` would also block an explicit `moon run` on the runner) and add a CI job that runs the target.
