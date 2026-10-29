@@ -17,6 +17,7 @@ Conventions:
 | `tl connect` | Probes a server and adds it to the inventory, or probes an inventory entry again; see [below](#tl-connect) |
 | `tl ls` | Lists the inventory; see [below](#tl-ls) |
 | `tl top <ref>` | Live sessions, waits, locks and blocking chains; see [below](#tl-top) |
+| `tl snapshot <ref>`, `tl diff` | Workload snapshots; see [below](#tl-snapshot) |
 | `tl serve [args]` | Runs the separate `tuskline serve`; see [below](#tl-serve) |
 | `tl agent` | Stub; see [below](#tl-agent) |
 
@@ -94,6 +95,18 @@ A full-screen view of one inventory entry. It is read-only and has no actions: i
 
 A role without `pg_monitor` sees other users' sessions with query text and waits hidden by the server. Query text is shown live and never saved.
 
+### `tl snapshot`
+
+```sh
+tl snapshot dev/pg17 --file before.json
+tl snapshot dev/pg17 --file after.json
+tl diff before.json after.json
+```
+
+`tl snapshot` reads `pg_stat_statements` for the current database, under the environment's session policy, and writes JSON (mode 0600). Query text is included because the snapshot was requested; it is truncated to `--query-text` characters (default 500) and at most `--limit` statements are kept (default 100). The extension has to be installed.
+
+`tl diff <older> <newer>` prints the change in calls, execution time, rows and WAL bytes. A decrease is a statistics reset and is marked `*`. `--output json` gives `{deltas}`.
+
 ### `tl serve`
 
 `tl serve [args]` runs `tuskline serve [args]`, the separate AGPL server binary ([ADR 0010](adr/0010-licence-boundary.md)); `tl` never links it. It looks for `tuskline` on `PATH`, then next to the `tl` executable, so `./bin/tl serve` finds `./bin/tuskline`. If neither has it, it exits 1 with install hints: a release binary, `moon run server:bin`, or building and running the container image.
@@ -117,7 +130,7 @@ The enrolment token is read from `TUSKLINE_AGENT_TOKEN` and never printed. The c
 | `tl ls` | List the inventory with environment, version, provider and last probe | M1 |
 | `tl top prod/orders` | Live activity, waits and locks TUI (`--once` for a text snapshot) | M1 |
 | `tl diagnose prod/orders` | Run all health checks; text, JSON or Markdown report | M2 |
-| `tl snapshot` / `tl diff` | Workload snapshots and deltas | M2 |
+| `tl snapshot` / `tl diff` | Workload snapshots and deltas (M2); richer comparison later | M2 |
 | `tl explain file.sql` | Plan with plain-English summary and warnings | M3 |
 | `tl config advise prod/orders` | postgresql.conf linter and tuning advisor, with diffs, marked reload or restart | M4 |
 | `tl provision compose plan\|up` | Generate and start a Compose HA stack (non-production) | M5 |

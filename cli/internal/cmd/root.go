@@ -75,6 +75,8 @@ func newRoot(out, errOut io.Writer, a *app) *cobra.Command {
 	root.AddCommand(newConnectCmd(a))
 	root.AddCommand(newLsCmd(a))
 	root.AddCommand(newTopCmd(a))
+	root.AddCommand(newSnapshotCmd(a))
+	root.AddCommand(newDiffCmd())
 	root.AddCommand(newServeCmd())
 
 	var server string
