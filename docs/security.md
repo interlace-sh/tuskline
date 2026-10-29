@@ -4,7 +4,8 @@ Tuskline will hold production credentials and run statements against production.
 
 | Area | Design |
 |---|---|
-| Transport | TLS `verify-full` by default; SSH tunnels with jump hosts and agent forwarding; client certificates |
+| Transport | TLS `verify-full` by default, even where libpq would default to `prefer`, and `PGSSLMODE` cannot override it. A weaker `sslmode` must be set explicitly on the profile and always comes with a warning (`conn.TLSMode.Warning`). SSH tunnels with jump hosts and agent forwarding; client certificates |
+| Credentials in DSNs | `conn.Redact` masks passwords in URLs, keyword/value strings and `password`/`sslpassword` parameters. `conn.Profile` keeps the password in an unexported field, so it never reaches JSON, YAML, `%v` or errors. `~/.pgpass` is ignored, as in libpq, when the group or others can read it |
 | Cloud auth | Short-lived tokens: AWS RDS IAM, GCP Cloud SQL IAM, Azure Entra ID; no static passwords where avoidable |
 | Secrets | Envelope-encrypted at rest. Pluggable providers: HashiCorp Vault / OpenBao, AWS Secrets Manager, GCP Secret Manager, Azure Key Vault, 1Password, Kubernetes secrets; OS keychain on desktop |
 | Identity | Local users and OIDC (Google, Entra, Okta, Keycloak) in the open-source server; SAML and SCIM in Enterprise |
