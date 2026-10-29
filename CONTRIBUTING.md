@@ -48,13 +48,13 @@ GoReleaser and syft are fetched at pinned versions with `go run`, so they need n
 
 ## Branch protection (maintainers)
 
-Protect `main` with a ruleset (Settings → Rules → Rulesets) so it stays green:
+`main` is not under a ruleset while one person pushes to it directly. History stays linear by rebasing and fast-forwarding; there is no merge commit and no pull request. Turn the ruleset on when a second committer joins (Settings → Rules → Rulesets):
 
 - Pull requests required; no direct pushes, force-pushes or deletion.
 - Required status checks: `moon ci (build, lint, test, cross-compile, web)` and `integration (PostgreSQL 14)` to `(PostgreSQL 18)`. Branches must be up to date before merging.
 - One approving review, from a code owner ([CODEOWNERS](.github/CODEOWNERS)); stale approvals are dismissed on new commits.
 - DCO sign-off on every commit, checked by the [DCO app](https://github.com/apps/dco).
-- Linear history (squash or rebase merges).
+- Linear history (rebase merges only).
 
 Change these settings only together with this section.
 
