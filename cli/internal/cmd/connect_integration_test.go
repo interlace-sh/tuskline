@@ -81,6 +81,20 @@ func TestConnectAgainstPostgres(t *testing.T) {
 			if !strings.Contains(out, "read-write session") || !strings.Contains(errOut, "not saved") {
 				t.Errorf("dev connect:\n%s\n%s", out, errOut)
 			}
+
+			// Roadmap M1 acceptance: tl ls shows what connect saved.
+			out, _, err = runApp(t, &app{}, "ls", "--inventory", path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range []string{"scratch", "orders", fmt.Sprintf(" %d.", major), "community"} {
+				if !strings.Contains(out, want) {
+					t.Errorf("ls lacks %q:\n%s", want, out)
+				}
+			}
+			if strings.Contains(out, pgtest.Password) {
+				t.Fatalf("password in ls:\n%s", out)
+			}
 		})
 	}
 }

@@ -15,7 +15,8 @@ Conventions:
 |---|---|
 | `tl version` | Prints `tl <version> (commit <sha>, built <date>)` |
 | `tl connect` | Probes a server and adds it to the inventory, or probes an inventory entry again; see [below](#tl-connect) |
-| `tl ls`, `tl top <ref>` | Stubs that exit 1 with "not implemented yet (roadmap M1)" |
+| `tl ls` | Lists the inventory; see [below](#tl-ls) |
+| `tl top <ref>` | Stub that exits 1 with "not implemented yet (roadmap M1)" |
 
 Global flag: `--inventory <file>` overrides the inventory location (default `$TUSKLINE_INVENTORY`, else `$XDG_CONFIG_HOME/tuskline/inventory.yaml`).
 
@@ -42,6 +43,16 @@ Behaviour:
 - **Save.** With `--dsn` and a target, it adds or updates the entry and records the probe. Nothing is saved if the probe fails. On a terminal, missing values are asked for on stderr; leave them blank to only probe. When stdin is not a terminal, it never prompts.
 - **Passwords** are never stored or printed. The password is taken from the DSN, then the saved `--password-env` reference, then `~/.pgpass` (ignored if group- or world-readable). A DSN password is used for that probe only, with a note on stderr.
 - **TLS.** A `sslmode` weaker than `verify-full` gives a warning on stderr.
+
+### `tl ls`
+
+```text
+ENVIRONMENT   CLUSTER  TARGET                      VERSION  PROVIDER  ROLE     LAST PROBE
+prod          orders   db.example.com:6432/orders  17.6     rds       standby  1h ago
+team-a (dev)  -
+```
+
+One row per cluster, from the last successful `tl connect` probe; it does not connect. An environment without clusters gets a `-` row. The kind is shown in brackets when it differs from the environment's name. On a terminal the environment is coloured by kind (prod red, staging amber, dev green, local grey, as in [design](design.md)); `NO_COLOR` or a pipe turns colour off. `--output json` gives `{inventory, environments, clusters}`, with each environment's policy and no passwords.
 | `tl serve [args]` | Runs the separate AGPL `tuskline serve` binary from `PATH` ([ADR 0010](adr/0010-licence-boundary.md)) |
 | `tl agent --server <url>` | Stub; token from `TUSKLINE_AGENT_TOKEN` (M9) |
 

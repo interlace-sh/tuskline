@@ -29,6 +29,7 @@ func errNotYet(milestone string) error {
 type app struct {
 	in          io.Reader
 	interactive bool             // stdin is a terminal, so prompts are allowed
+	colour      bool             // stdout is a terminal and the no-colour variable is unset
 	now         func() time.Time // for last-probe timestamps
 	// inventoryPath is set by --inventory; empty means inventory.DefaultPath.
 	inventoryPath string
@@ -43,11 +44,21 @@ func (a *app) inventoryFile() (string, error) {
 
 // NewRoot builds the command tree. out/errOut are injectable for tests.
 func NewRoot(out, errOut io.Writer) *cobra.Command {
-	return newRoot(out, errOut, &app{in: os.Stdin, interactive: stdinIsTerminal(), now: time.Now})
+	_, noColour := os.LookupEnv("NO_COLOR") //nolint:misspell // the no-color.org variable name
+	return newRoot(out, errOut, &app{
+		in:          os.Stdin,
+		interactive: isTerminal(os.Stdin),
+		colour:      !noColour && isTerminal(out),
+		now:         time.Now,
+	})
 }
 
-func stdinIsTerminal() bool {
-	st, err := os.Stdin.Stat()
+func isTerminal(v any) bool {
+	f, ok := v.(*os.File)
+	if !ok {
+		return false
+	}
+	st, err := f.Stat()
 	return err == nil && st.Mode()&os.ModeCharDevice != 0
 }
 
@@ -74,12 +85,7 @@ func newRoot(out, errOut io.Writer, a *app) *cobra.Command {
 
 	root.AddCommand(newConnectCmd(a))
 
-	root.AddCommand(&cobra.Command{
-		Use:   "ls",
-		Short: "List environments and clusters in the inventory",
-		Args:  cobra.NoArgs,
-		RunE:  func(*cobra.Command, []string) error { return errNotYet("M1") },
-	})
+	root.AddCommand(newLsCmd(a))
 	root.AddCommand(&cobra.Command{
 		Use:   "top <env/cluster>",
 		Short: "Live activity, waits and locks (TUI)",
