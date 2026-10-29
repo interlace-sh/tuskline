@@ -36,7 +36,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 
 - [x] M1.1 `core/conn`: connection profiles. DSN parsing, a `Redact()` helper, TLS modes with `verify-full` as the default, and `~/.pgpass` and `pg_service.conf` lookup. Unit tests cover redaction and TLS defaults.
 - [x] M1.2 `core/conn`: `Probe` extended with provider detection. Covers community, RDS, Aurora (`aurora_version()`), Cloud SQL, Azure, AlloyDB and Neon heuristics, plus `shared_preload_libraries`, installed extensions and login-role privileges. Integration-tested on 14–18.
-- [ ] M1.3 `core/inventory`: file-backed inventory (`$XDG_CONFIG_HOME/tuskline/inventory.yaml`) with environments, clusters and connection profiles. Secrets are stored as references (env var, keychain placeholder), never plaintext. Includes CRUD and validation.
+- [x] M1.3 `core/inventory`: file-backed inventory (`$XDG_CONFIG_HOME/tuskline/inventory.yaml`) with environments, clusters and connection profiles. Secrets are stored as references (env var, keychain placeholder), never plaintext. Includes CRUD and validation.
 - [ ] M1.4 `core/conn`: session setup applies the environment policy (`default_transaction_read_only`, `statement_timeout`, `lock_timeout`). Integration test: a write in a prod session fails, the same write in dev succeeds.
 - [ ] M1.5 `tl connect <env/cluster>` and `tl connect --dsn`:
   - Adds or updates the inventory entry interactively (`--env`, `--name` flags for scripts).

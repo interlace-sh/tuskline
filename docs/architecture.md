@@ -92,6 +92,22 @@ erDiagram
 
 - CLI references use `environment/cluster`, for example `prod/orders` (`inventory.ParseRef`).
 - Environment kinds are `local`, `dev`, `staging` and `prod`. Each has a policy (`inventory.DefaultPolicy`). Prod defaults to read-only with a 30 s statement timeout, a 2 s lock timeout, a 1,000-row limit, typed confirmation and a maximum elevation of 15 min.
+- **Local inventory file** (M1.3): `$XDG_CONFIG_HOME/tuskline/inventory.yaml`, falling back to the OS config directory; `TUSKLINE_INVENTORY` overrides the path. It lists environments (name and kind) and clusters (connection profile, provider, last probe). Saves are atomic, with mode 0600 in a 0700 directory.
+  - Passwords are stored only as references (`password: {env: ORDERS_PASSWORD}`; `{keychain: …}` is reserved for M8.3). A plaintext value, a password inside the profile or an unknown key fails to load, and the error never repeats the value.
+  - Policies are never read from the file: each environment always gets `DefaultPolicy(kind)`, so editing the file cannot weaken prod.
+
+```yaml
+version: 1
+environments:
+  - name: prod
+    kind: prod
+clusters:
+  - name: orders
+    environment: prod
+    provider: rds
+    profile: {host: orders.example.com, database: orders, user: app}   # sslmode defaults to verify-full
+    password: {env: ORDERS_PASSWORD}
+```
 
 ## Data collection pipeline
 
