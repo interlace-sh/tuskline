@@ -70,6 +70,8 @@ Explain draws the plan with a D3 tree (`d3-hierarchy`), a plain-English summary 
 
 Result rows arrive as a stream and the grid virtualises them (TanStack Virtual), so only the visible window is in the DOM. The server has no sign-in; that is a later feature.
 
+Add connection (`n`) collects a host, a TLS mode and an environment. The provider is guessed from the host. Test connection checks the form on this machine and does not dial out. The draft is not written to the inventory yet.
+
 ## Porting the prototype
 
 1. Use the frozen React prototype as the spec. Its screenshots and smoke checks carry over unchanged, because they check visible text and behaviour.

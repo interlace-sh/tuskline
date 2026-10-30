@@ -93,7 +93,8 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 
 ## M4: onboarding and config advisor (about 3 weeks)
 
-- [ ] M4.1 Connection wizard (web and `tl connect`): connect → classify → detect → fix → verify.
+- [x] M4.1a Web connection wizard: connection details, TLS default `verify-full`, a provider guessed from the host, and a demo test that does not open a network connection. Nothing is written to the inventory.
+- [ ] M4.1b Save the connection the way `tl connect` already does, then probe a server the operator asked to reach. The wizard must not keep a password in the browser or in SQLite.
 - [ ] M4.2 Extension catalog and generated steps. A catalog in `core` covers the five extensions Tuskline uses (`pg_stat_statements`, `auto_explain`, `pg_wait_sampling`, `pg_stat_kcache`, `hypopg`) and the ordinary single-node ones Autobase auto-setup turns on (pgvector, PostGIS, pgRouting, pg_cron, pgaudit, pg_partman, pg_repack). Each entry records what it unlocks, PostgreSQL 14–18 availability, preload and restart, the PGDG package name, and which managed providers allow-list it. Generated steps merge `shared_preload_libraries` instead of replacing it, and use `patronictl edit-config` when Patroni manages config. See [onboarding](onboarding-and-deploy.md).
 - [ ] M4.2a Install plan (preview only; apply is M5). Self-managed targets install the PGDG package, or the Pigsty repository when PGDG does not ship it, then the conf change and `CREATE EXTENSION`. Managed clouds get the provider command, or "not offered here". No compiling from source. The plan shows every package and SQL line before anything runs.
 - [ ] M4.2b Dev database image: `make dev-db` installs `pg_wait_sampling`, `pg_stat_kcache` and `hypopg` from PGDG so a laptop matches the catalog. Integration tests stay on stock `postgres` images.

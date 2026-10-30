@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ClusterHealth from '#lib/components/cluster-health.svelte';
+	import ConnectScreen from '#lib/components/connect-screen.svelte';
 	import Fleet from '#lib/components/fleet.svelte';
 	import Queries from '#lib/components/queries.svelte';
 	import SqlScreen from '#lib/components/sql-screen.svelte';
@@ -14,6 +15,8 @@
 	<Queries />
 {:else if shell.screen === 'sql'}
 	<SqlScreen />
+{:else if shell.screen === 'connect'}
+	<ConnectScreen />
 {:else}
 	<h1 class="text-xl font-semibold tracking-tight">{SCREEN_LABEL[shell.screen]}</h1>
 	<p class="mt-1 max-w-xl text-sm text-tl-fg2">
