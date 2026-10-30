@@ -86,6 +86,8 @@ class Shell {
 	/** True while the shell is showing prototype fixtures rather than the inventory. */
 	demo = $state(true);
 	clusters = $state<ShellCluster[]>(fixtureClusters());
+	/** Icon-only left rail. */
+	navCollapsed = $state(false);
 	paletteOpen = $state(false);
 	envMenuOpen = $state(false);
 	helpOpen = $state(false);
@@ -166,6 +168,15 @@ class Shell {
 		this.persist();
 	}
 
+	toggleNav() {
+		this.navCollapsed = !this.navCollapsed;
+		try {
+			localStorage.setItem('tl-nav', this.navCollapsed ? 'icons' : 'full');
+		} catch {
+			/* private mode */
+		}
+	}
+
 	stepRange(direction: -1 | 1) {
 		this.range = stepRange(this.range, direction);
 	}
@@ -175,6 +186,7 @@ class Shell {
 		try {
 			const theme = localStorage.getItem('tl-theme');
 			if (theme === 'light' || theme === 'dark') this.theme = theme;
+			this.navCollapsed = localStorage.getItem('tl-nav') === 'icons';
 		} catch {
 			/* private mode */
 		}

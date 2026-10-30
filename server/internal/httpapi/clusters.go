@@ -184,19 +184,9 @@ func (a *api) open(ctx context.Context, ref inventory.Ref) (*pgx.Conn, int, erro
 	if !ok {
 		return nil, 0, fmt.Errorf("%s: environment is missing", ref)
 	}
-	p := cl.Profile
-	if !p.HasPassword() && cl.Password != nil {
-		pw, err := cl.Password.Resolve()
-		if err != nil {
-			return nil, 0, err
-		}
-		p = p.WithPassword(pw)
-	}
-	if !p.HasPassword() {
-		pw, err := conn.LookupPassword(conn.PassfilePath(), p)
-		if err == nil {
-			p = p.WithPassword(pw)
-		}
+	p, err := resolvePassword(cl.Profile, cl.Password, conn.PassfilePath())
+	if err != nil {
+		return nil, 0, err
 	}
 	p, err = conn.ResolveService(conn.ServicefilePaths(), p)
 	if err != nil {

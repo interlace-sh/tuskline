@@ -14,6 +14,8 @@
 	import Lock from '@lucide/svelte/icons/lock';
 	import Moon from '@lucide/svelte/icons/moon';
 	import Network from '@lucide/svelte/icons/network';
+	import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
+	import PanelLeftOpen from '@lucide/svelte/icons/panel-left-open';
 	import PlugZap from '@lucide/svelte/icons/plug-zap';
 	import Rocket from '@lucide/svelte/icons/rocket';
 	import Search from '@lucide/svelte/icons/search';
@@ -161,7 +163,9 @@
 	{/if}
 	<div class="flex min-h-0 flex-1">
 		<aside
-			class="flex w-[232px] shrink-0 flex-col overflow-y-auto border-r border-tl-line bg-tl-elev/40"
+			class="flex shrink-0 flex-col overflow-y-auto border-r border-tl-line bg-tl-elev/40 {shell.navCollapsed
+				? 'icon-rail w-14'
+				: 'w-[232px]'}"
 		>
 			<div class="flex h-12 items-center gap-2.5 border-b border-tl-line px-4">
 				<img
@@ -169,7 +173,7 @@
 					alt=""
 					class="size-6 shrink-0 rounded-[6px] ring-1 ring-tl-line2"
 				/>
-				<div class="min-w-0 leading-none">
+				<div class="brand-copy min-w-0 leading-none">
 					<div class="text-sm font-semibold tracking-tight">Tuskline</div>
 					<div class="mt-1 text-[10.5px] text-tl-fg3">
 						{shell.demo ? 'Acme Retail · demo' : 'Inventory'}
@@ -183,12 +187,12 @@
 					onclick={() => shell.go('fleet')}
 				>
 					<LayoutGrid size={15} />
-					<span class="flex-1 text-left">Fleet</span>
+					<span class="nav-label flex-1 text-left">Fleet</span>
 					<span class="keys"><kbd>g</kbd><kbd>f</kbd></span>
 				</button>
 				<button class="nav" onclick={() => shell.go('fleet')} title="Alerts (g a)">
 					<Bell size={15} />
-					<span class="flex-1 text-left">Alerts</span>
+					<span class="nav-label flex-1 text-left">Alerts</span>
 					{#if shell.unhealthy}
 						<span
 							class="rounded-full bg-env-prod/20 px-1.5 text-[10.5px] text-env-prod tabular-nums"
@@ -197,7 +201,9 @@
 					{/if}
 				</button>
 			</nav>
-			<div class="px-4 pt-2 pb-1.5 text-[10.5px] font-medium tracking-wider text-tl-fg3 uppercase">
+			<div
+				class="section-label px-4 pt-2 pb-1.5 text-[10.5px] font-medium tracking-wider text-tl-fg3 uppercase"
+			>
 				Setup & deploy
 			</div>
 			<div class="space-y-0.5 px-2">
@@ -205,18 +211,19 @@
 					{@const Icon = iconFor(item.id)}
 					<button
 						class="nav"
+						title={item.label}
 						class:active={shell.screen === item.id}
 						onclick={() => shell.go(item.id)}
 					>
 						<Icon size={15} />
-						<span class="flex-1 text-left">{item.label}</span>
+						<span class="nav-label flex-1 text-left">{item.label}</span>
 						<span class="keys"
 							>{#each item.keys.split(' ') as k (k)}<kbd>{k}</kbd>{/each}</span
 						>
 					</button>
 				{/each}
 			</div>
-			<div class="flex items-center justify-between px-4 pt-3 pb-1.5">
+			<div class="section-label flex items-center justify-between px-4 pt-3 pb-1.5">
 				<span class="text-[10.5px] font-medium tracking-wider text-tl-fg3 uppercase">Cluster</span>
 				<span
 					class="rounded px-1.5 py-0.5 text-[10px] font-medium text-tl-bg {envRailClass(shell.env)}"
@@ -225,7 +232,7 @@
 			</div>
 			<div class="px-2">
 				<div
-					class="mb-1 flex items-center gap-2 rounded-md border border-tl-line bg-tl-subtle px-2.5 py-2"
+					class="extra-collapsed mb-1 flex items-center gap-2 rounded-md border border-tl-line bg-tl-subtle px-2.5 py-2"
 				>
 					<span class="size-1.5 rounded-full {healthDotClass(shell.cluster.health)}"></span>
 					<div class="min-w-0 flex-1">
@@ -240,11 +247,12 @@
 						{@const Icon = iconFor(item.id)}
 						<button
 							class="nav"
+							title={item.label}
 							class:active={shell.screen === item.id}
 							onclick={() => shell.go(item.id)}
 						>
 							<Icon size={15} />
-							<span class="flex-1 text-left">{item.label}</span>
+							<span class="nav-label flex-1 text-left">{item.label}</span>
 							<span class="keys"
 								>{#each item.keys.split(' ') as k (k)}<kbd>{k}</kbd>{/each}</span
 							>
@@ -253,7 +261,7 @@
 				</div>
 			</div>
 			<div class="mt-auto space-y-2 p-3">
-				<div class="rounded-lg border border-tl-line bg-tl-subtle p-3">
+				<div class="extra-collapsed rounded-lg border border-tl-line bg-tl-subtle p-3">
 					<div class="mb-1.5 flex items-center gap-1.5 text-[11.5px] text-tl-fg2">
 						<Terminal size={12} /> Same thing, from your terminal
 					</div>
@@ -261,9 +269,19 @@
 						>$ tl connect {shell.env}/{shell.cluster.database}</code
 					>
 				</div>
-				<div class="flex items-center gap-1">
-					<button class="nav min-w-0 flex-1" onclick={() => shell.go('fleet')}
-						><Settings size={14} /> Settings</button
+				<div class="footer-row flex items-center gap-1">
+					<button
+						class="nav icon"
+						title={shell.navCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+						aria-pressed={shell.navCollapsed}
+						onclick={() => shell.toggleNav()}
+					>
+						{#if shell.navCollapsed}<PanelLeftOpen size={14} />{:else}<PanelLeftClose
+								size={14}
+							/>{/if}
+					</button>
+					<button class="nav min-w-0 flex-1" title="Settings" onclick={() => shell.go('fleet')}
+						><Settings size={14} /><span class="nav-label">Settings</span></button
 					>
 					<button class="nav icon" title="About Tuskline" onclick={() => (shell.helpOpen = true)}
 						><Info size={14} /></button
@@ -459,6 +477,26 @@
 		flex: none;
 		justify-content: center;
 		padding-inline: 0.5rem;
+	}
+	aside.icon-rail .nav-label,
+	aside.icon-rail .keys,
+	aside.icon-rail .section-label,
+	aside.icon-rail .brand-copy,
+	aside.icon-rail .extra-collapsed {
+		display: none;
+	}
+	aside.icon-rail .nav {
+		width: 2.25rem;
+		justify-content: center;
+		gap: 0;
+		margin-inline: auto;
+		padding-inline: 0;
+	}
+	aside.icon-rail .footer-row {
+		flex-direction: column;
+	}
+	aside.icon-rail .nav.flex-1 {
+		flex: none;
 	}
 	.nav :global(svg) {
 		flex-shrink: 0;

@@ -95,6 +95,9 @@ tasks:
     command: 'go run ./cmd/tuskline serve'
     env:
       TUSKLINE_ADDR: '127.0.0.1:8080'
+      # Throwaway make dev-db password, same value as the README quickstart.
+      # The inventory stores only the variable name.
+      TUSKLINE_PASSWORD: 'tuskline'
     preset: 'server'
 
   integration:

@@ -8,11 +8,13 @@
 	let {
 		sql: initial = '',
 		schema = {},
+		minHeight = 180,
 		onchange,
 		onrun
 	}: {
 		sql?: string;
 		schema?: Record<string, string[]>;
+		minHeight?: number;
 		onchange?: (sql: string) => void;
 		onrun?: () => void;
 	} = $props();
@@ -67,4 +69,4 @@
 	});
 </script>
 
-<div bind:this={host} class="h-full min-h-[220px]"></div>
+<div bind:this={host} class="h-full" style:min-height="{minHeight}px"></div>

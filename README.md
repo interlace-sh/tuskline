@@ -46,7 +46,7 @@ export TUSKLINE_PASSWORD=tuskline
 ./bin/tl ls
 ./bin/tl top dev/pg17 --once
 
-moon run :dev                   # Vite on :8090 and the API on :8080 (UI hot reload, /api proxied)
+moon run :dev                   # Vite on :8090 and the API on :8080. The API process gets TUSKLINE_PASSWORD=tuskline so a dev-db connection can resolve. Restart :dev after pulling this.
 moon run server:bin             # ./bin/tuskline, with the UI embedded
 ./bin/tl serve                  # http://127.0.0.1:8080  (finds ./bin/tuskline beside itself)
 
