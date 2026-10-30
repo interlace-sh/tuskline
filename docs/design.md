@@ -66,6 +66,8 @@ The design reference is the frozen React prototype in [`../prototype/`](../proto
 | `[` / `]` | Move the time range back or forward |
 | `?` | Contextual shortcut sheet |
 
+Explain draws the plan with a D3 tree (`d3-hierarchy`), a plain-English summary and warnings for sequential scans, row misestimates and disk spills. On production, `EXPLAIN ANALYZE` of a write asks for the cluster name before it is sent. The session stays read-only, so PostgreSQL still rejects the write.
+
 ## Porting the prototype
 
 1. Use the frozen React prototype as the spec. Its screenshots and smoke checks carry over unchanged, because they check visible text and behaviour.

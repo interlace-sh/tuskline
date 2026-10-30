@@ -12,15 +12,17 @@
 	import Play from '@lucide/svelte/icons/play';
 	import Plus from '@lucide/svelte/icons/plus';
 	import Search from '@lucide/svelte/icons/search';
-	import Shield from '@lucide/svelte/icons/shield';
 	import Square from '@lucide/svelte/icons/square';
 	import Table2 from '@lucide/svelte/icons/table-2';
 	import Timer from '@lucide/svelte/icons/timer';
 	import X from '@lucide/svelte/icons/x';
 	import Zap from '@lucide/svelte/icons/zap';
 	import { ApiError, runQuery, splitRef } from '#lib/api.js';
+	import { analyzeNeedsConfirm, explainSQL, writeVerb } from '#lib/explain.js';
 	import { RESULT_ROWS, SCHEMA } from '#lib/fixtures/demo.js';
 	import { shell } from '#lib/shell.svelte.js';
+	import ColumnProfile from './column-profile.svelte';
+	import ExplainView from './explain-view.svelte';
 	import SqlEditor from './sql-editor.svelte';
 
 	type RowResult = {
@@ -108,6 +110,9 @@ LIMIT 20;`
 	let active = $state(1);
 	let nextId = 4;
 	const page = $derived(pages.find((item) => item.id === active) ?? pages[0]);
+	const profileCell = $derived(
+		[...page.cells].reverse().find((entry) => entry.result.kind === 'rows')
+	);
 
 	let schemaOpen = $state<Record<string, boolean>>({ public: true, 'public.orders': true });
 	let schemaQuery = $state('');
@@ -138,12 +143,7 @@ LIMIT 20;`
 		);
 	}
 
-	function writeVerb(sql: string): string | null {
-		const match = /^\s*(?:--[^\n]*\n\s*)*(update|delete|insert|alter|drop|truncate|create)\b/i.exec(
-			sql
-		);
-		return match ? match[1].toUpperCase() : null;
-	}
+	let confirm = $state<{ pageId: number; entry: Cell; typed: string } | null>(null);
 
 	function newPage(sql = '', notebook = false) {
 		const id = nextId++;
@@ -181,11 +181,18 @@ LIMIT 20;`
 		}
 	}
 
-	async function runCell(entry: Cell, explain = false) {
-		const pageId = page.id;
+	function runCell(entry: Cell, explain = false) {
+		if (explain && analyzeNeedsConfirm(entry.sql, shell.readOnly)) {
+			confirm = { pageId: page.id, entry, typed: '' };
+			return;
+		}
+		void execute(page.id, entry, explain);
+	}
+
+	async function execute(pageId: number, entry: Cell, explain = false) {
 		resultTab = 'results';
 		const verb = writeVerb(entry.sql);
-		if (verb && shell.readOnly) {
+		if (verb && shell.readOnly && !explain) {
 			patchCell(pageId, entry.id, {
 				running: false,
 				result: {
@@ -197,6 +204,17 @@ LIMIT 20;`
 			return;
 		}
 		if (shell.demo || !shell.cluster.id.includes('/')) {
+			if (explain && verb && shell.readOnly) {
+				patchCell(pageId, entry.id, {
+					running: false,
+					result: {
+						kind: 'error',
+						stmt: verb,
+						message: `cannot execute ${verb} in a read-only transaction`
+					}
+				});
+				return;
+			}
 			patchCell(pageId, entry.id, {
 				running: false,
 				result: explain
@@ -217,7 +235,7 @@ LIMIT 20;`
 		const next = new AbortController();
 		controller = next;
 		patchCell(pageId, entry.id, { running: true });
-		const sql = explain ? `EXPLAIN (ANALYZE, BUFFERS) ${entry.sql}` : entry.sql;
+		const sql = explain ? explainSQL(entry.sql) : entry.sql;
 		try {
 			const ref = splitRef(shell.cluster.id);
 			const result = await runQuery(ref.env, ref.name, sql, fetch, next.signal);
@@ -303,7 +321,7 @@ LIMIT 20;`
 				{/if}
 			</div>
 		</div>
-		<div class="min-h-[140px] flex-1 overflow-auto">
+		<div class="min-h-[140px] min-w-0 flex-1 overflow-auto">
 			{#if entry.running}
 				<div class="space-y-2 p-4">
 					{#each [90, 80, 70, 60] as width (width)}
@@ -333,9 +351,7 @@ LIMIT 20;`
 					{entry.result.message} · {entry.result.ms} ms
 				</p>
 			{:else if entry.result.kind === 'explain'}
-				<pre
-					class="p-4 font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-tl-fg2">{entry
-						.result.text}</pre>
+				<ExplainView text={entry.result.text} />
 			{:else if entry.result.kind === 'rows'}
 				<table class="min-w-full font-mono text-[12px]">
 					<thead class="sticky top-0 z-10 bg-tl-elev">
@@ -362,7 +378,13 @@ LIMIT 20;`
 								<td class="border-r border-tl-line px-2 py-1 text-right text-tl-fg3">{index + 1}</td
 								>
 								{#each row as value, cellIndex (cellIndex)}
-									<td class="border-r border-tl-line px-3 py-1 whitespace-nowrap">{value ?? ''}</td>
+									<td class="border-r border-tl-line px-3 py-1 whitespace-nowrap">
+										{#if value == null}
+											<span class="text-tl-fg3 italic">null</span>
+										{:else}
+											{value}
+										{/if}
+									</td>
 								{/each}
 							</tr>
 						{/each}
@@ -378,21 +400,8 @@ LIMIT 20;`
 {/snippet}
 
 <div
-	class="flex flex-col overflow-hidden rounded-xl border border-tl-line bg-tl-elev"
-	style:height={shell.env === 'prod' ? 'calc(100dvh - 11.5rem)' : 'calc(100dvh - 9.5rem)'}
+	class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-tl-line bg-tl-elev"
 >
-	{#if shell.readOnly}
-		<div
-			class="flex h-10 shrink-0 items-center gap-2.5 border-b border-env-prod/30 bg-env-prod/10 px-4 text-[12.5px] text-env-prod"
-		>
-			<Shield size={14} />
-			<span class="font-semibold">Production · read-only</span>
-			<span class="text-tl-fg2">
-				Session runs with <span class="font-mono">default_transaction_read_only = on</span>. Writes
-				are not sent.
-			</span>
-		</div>
-	{/if}
 	<div class="flex min-h-0 flex-1">
 		<aside class="flex w-[248px] shrink-0 flex-col border-r border-tl-line">
 			<div class="border-b border-tl-line p-2">
@@ -413,7 +422,7 @@ LIMIT 20;`
 					/>
 				</label>
 			</div>
-			<div class="flex-1 overflow-auto p-1.5 text-[12px]">
+			<div class="min-h-0 flex-1 overflow-auto p-1.5 text-[12px]">
 				{#each SCHEMA as item (item.schema)}
 					<button
 						class="flex h-6 w-full items-center gap-1 rounded px-1 text-tl-fg2 hover:bg-tl-hover"
@@ -457,6 +466,9 @@ LIMIT 20;`
 					{/if}
 				{/each}
 			</div>
+			{#if profileCell?.result.kind === 'rows'}
+				<ColumnProfile columns={profileCell.result.columns} rows={profileCell.result.rows} />
+			{/if}
 		</aside>
 		<div class="flex min-w-0 flex-1 flex-col">
 			<div class="flex h-9 shrink-0 items-center border-b border-tl-line bg-tl-subtle/60">
@@ -540,6 +552,7 @@ LIMIT 20;`
 									minHeight={120}
 									onchange={(sql) => patchCell(page.id, entry.id, { sql })}
 									onrun={() => runCell(entry)}
+									onexplain={() => runCell(entry, true)}
 								/>
 							{/key}
 							{@render results(entry)}
@@ -582,6 +595,7 @@ LIMIT 20;`
 							schema={completion}
 							onchange={(sql) => patchCell(page.id, page.cells[0].id, { sql })}
 							onrun={() => runCell(page.cells[0])}
+							onexplain={() => runCell(page.cells[0], true)}
 						/>
 					{/key}
 				</div>
@@ -590,3 +604,44 @@ LIMIT 20;`
 		</div>
 	</div>
 </div>
+
+{#if confirm}
+	{@const verb = writeVerb(confirm.entry.sql) ?? 'statement'}
+	<div class="fixed inset-0 z-50 grid place-items-center bg-black/50 p-6">
+		<div
+			class="w-[440px] rounded-xl border border-tl-line bg-tl-elev p-4"
+			role="dialog"
+			aria-labelledby="analyze-title"
+		>
+			<h2 id="analyze-title" class="text-sm font-semibold">
+				EXPLAIN ANALYZE would run this {verb}
+			</h2>
+			<p class="mt-2 text-[13px] leading-relaxed text-tl-fg2">
+				Production stays read-only, so PostgreSQL rejects the statement. Type
+				<span class="font-mono text-tl-fg">{shell.cluster.name}</span> to send it anyway.
+			</p>
+			<label class="mt-3 block text-[12px] text-tl-fg3">
+				Cluster name
+				<input
+					class="mt-1 h-8 w-full rounded-md border border-tl-line bg-tl-subtle px-2 font-mono text-[13px] text-tl-fg outline-none"
+					value={confirm.typed}
+					oninput={(event) => {
+						if (confirm) confirm.typed = event.currentTarget.value;
+					}}
+				/>
+			</label>
+			<div class="mt-4 flex justify-end gap-2">
+				<button class={btn} onclick={() => (confirm = null)}>Cancel</button>
+				<button
+					class="{btn} border-transparent bg-env-prod text-white"
+					disabled={confirm.typed !== shell.cluster.name}
+					onclick={() => {
+						const pending = confirm;
+						confirm = null;
+						if (pending) void execute(pending.pageId, pending.entry, true);
+					}}>Send</button
+				>
+			</div>
+		</div>
+	</div>
+{/if}

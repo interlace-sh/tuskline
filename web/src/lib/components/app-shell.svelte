@@ -270,16 +270,6 @@
 					>
 				</div>
 				<div class="footer-row flex items-center gap-1">
-					<button
-						class="nav icon"
-						title={shell.navCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-						aria-pressed={shell.navCollapsed}
-						onclick={() => shell.toggleNav()}
-					>
-						{#if shell.navCollapsed}<PanelLeftOpen size={14} />{:else}<PanelLeftClose
-								size={14}
-							/>{/if}
-					</button>
 					<button class="nav min-w-0 flex-1" title="Settings" onclick={() => shell.go('fleet')}
 						><Settings size={14} /><span class="nav-label">Settings</span></button
 					>
@@ -296,6 +286,16 @@
 			<header
 				class="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b border-tl-line bg-tl-bg/80 px-4 backdrop-blur"
 			>
+				<button
+					class="nav icon shrink-0"
+					title={shell.navCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+					aria-pressed={shell.navCollapsed}
+					onclick={() => shell.toggleNav()}
+				>
+					{#if shell.navCollapsed}<PanelLeftOpen size={16} />{:else}<PanelLeftClose
+							size={16}
+						/>{/if}
+				</button>
 				<nav
 					class="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden text-[12.5px] whitespace-nowrap text-tl-fg3"
 					aria-label="Breadcrumb"
@@ -418,8 +418,8 @@
 				</div>
 				<div class="avatar" title="Account">TL</div>
 			</header>
-			<main class="flex-1 overflow-auto">
-				<div class="mx-auto max-w-[1600px] p-6">
+			<main class="flex min-h-0 flex-1 flex-col overflow-auto">
+				<div class="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col p-6">
 					{@render children()}
 				</div>
 			</main>
@@ -444,7 +444,7 @@
 		>
 			<h2 class="mb-3 text-sm font-semibold">Keyboard shortcuts</h2>
 			<div class="grid grid-cols-2 gap-x-8 gap-y-2 text-[13px]">
-				{#each [['⌘/Ctrl K', 'Command palette'], ['g f', 'Fleet'], ['g c', 'Cluster health'], ['g q', 'Query insights'], ['g s', 'SQL editor'], ['e', 'Switch environment'], ['t', 'Toggle theme'], ['[ ]', 'Step the time range'], ['?', 'This help']] as row (row[1])}
+				{#each [['⌘/Ctrl K', 'Command palette'], ['⌘/Ctrl ↵', 'Run statement'], ['⌘/Ctrl ⇧ ↵', 'EXPLAIN ANALYZE'], ['g f', 'Fleet'], ['g c', 'Cluster health'], ['g q', 'Query insights'], ['g s', 'SQL editor'], ['e', 'Switch environment'], ['t', 'Toggle theme'], ['[ ]', 'Step the time range'], ['?', 'This help']] as row (row[1])}
 					<div class="flex items-center justify-between border-b border-tl-line/60 py-1">
 						<span class="text-tl-fg2">{row[1]}</span>
 						<kbd>{row[0]}</kbd>

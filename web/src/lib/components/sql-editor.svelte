@@ -10,13 +10,15 @@
 		schema = {},
 		minHeight = 180,
 		onchange,
-		onrun
+		onrun,
+		onexplain
 	}: {
 		sql?: string;
 		schema?: Record<string, string[]>;
 		minHeight?: number;
 		onchange?: (sql: string) => void;
 		onrun?: () => void;
+		onexplain?: () => void;
 	} = $props();
 
 	let host: HTMLDivElement | undefined = $state();
@@ -51,6 +53,13 @@
 					sql({ dialect: PostgreSQL, schema }),
 					theme,
 					keymap.of([
+						{
+							key: 'Shift-Mod-Enter',
+							run: () => {
+								onexplain?.();
+								return true;
+							}
+						},
 						{
 							key: 'Mod-Enter',
 							run: () => {

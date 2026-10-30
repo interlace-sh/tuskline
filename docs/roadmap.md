@@ -80,7 +80,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [x] M3.3b Cluster health from `/health` and `/activity`, with the prototype fixtures in demo mode. Live clusters show the analyser findings and `pg_stat_activity`; load charts stay on the fixture series until history is on this screen.
 - [x] M3.3c Query insights from `/queries`, with the prototype fixtures in demo mode. A live cluster lists `pg_stat_statements` rows. Plans and index advice in the detail pane are fixture-only and say so.
 - [x] M3.4 SQL editor: CodeMirror 6 with PostgreSQL highlighting and schema completion, script pages (tabs) and notebook snippets, schema tree, run with `Cmd/Ctrl Enter`, explain, and a result grid capped by the environment row limit. A virtualised grid for uncapped results waits on streamed execution (M3.6b).
-- [ ] M3.5 EXPLAIN visualiser (`Shift Cmd/Ctrl Enter` runs EXPLAIN ANALYZE). The plan tree uses D3, with a plain-English summary and warnings. Prod requires a confirmation before ANALYZE on writes.
+- [x] M3.5 EXPLAIN visualiser (`Shift Cmd/Ctrl Enter` runs EXPLAIN ANALYZE). The plan tree uses D3, with a plain-English summary and warnings. Prod requires a confirmation before ANALYZE on writes.
 - [x] M3.6a Query API: one statement, the environment policy (production stays read-only), the policy row limit, and an audit row for each production statement. The actor is `local`. Result rows are not stored.
 - [ ] M3.6b Streamed results, a virtualised grid, and sign-in sessions. Until then the loopback server has one operator.
 - [ ] M3.7 Port the prototype's Playwright smoke checks to run against `moon run server:bin && tuskline serve` in CI.
