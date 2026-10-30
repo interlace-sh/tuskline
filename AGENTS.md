@@ -143,6 +143,7 @@ moon run core:integration        # Docker + PostgreSQL 14-18
 moon run cli:bin server:bin      # ./bin/tl and ./bin/tuskline (web UI built and embedded)
 ./bin/tuskline serve
 moon run :dev                    # Vite on :8090 and `tuskline serve` on :8080
+moon run server:smoke            # Playwright checks against a temporary tuskline serve
 moon query tasks                 # list every task; `make help` lists the aliases
 ```
 

@@ -90,6 +90,20 @@ tasks:
       - 'project://core?group=sources'
     tags: ['go']
 
+  smoke:
+    description: 'Playwright checks for the shipped shell against tuskline serve'
+    script: |
+      cd "$workspaceRoot/web"
+      if [ ! -x /usr/bin/google-chrome ] && [ ! -x /usr/bin/chromium ] && [ ! -x /usr/bin/chromium-browser ]; then
+        npx playwright install chromium
+      fi
+      node scripts/smoke.mjs
+    deps: ['~:bin']
+    options:
+      cache: false
+      # `moon ci :check` stays browser-free. CI calls `moon run server:smoke`.
+      runInCI: false
+
   dev:
     description: 'API on 127.0.0.1:8080. `moon run :dev` starts this beside the Vite server'
     command: 'go run ./cmd/tuskline serve'

@@ -44,6 +44,21 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  ui-smoke:
+    name: UI smoke (Playwright against tuskline serve)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - uses: moonrepo/setup-toolchain@v0
+        with:
+          auto-install: true
+      # Builds ./bin/tuskline, serves it on a throwaway port with an empty
+      # inventory, and checks the shipped shell. Nothing is published.
+      - run: moon run server:smoke
+
   image:
     name: container image (build and smoke test)
     runs-on: ubuntu-latest

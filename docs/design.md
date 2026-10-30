@@ -76,7 +76,7 @@ Result rows arrive as a stream and the grid virtualises them (TanStack Virtual),
 2. Move the data: `prototype/src/data.ts` now lives in `web/src/lib/fixtures` (M3.2). `setup-data.ts` moves with the setup screens. Demo mode is the empty-inventory path; `?demo=1` forces the fixtures. The React context store becomes `store.svelte.ts` with `$state` and `$derived`.
 3. Port primitives first: buttons, badges, cards, dialogs, tabs and the command palette, onto shadcn-svelte and Bits UI. `lucide-react` becomes `@lucide/svelte`.
 4. Port screens in the order above. Recharts becomes uPlot for time series, and plain SVG components replace the small charts.
-5. AI agents do the mechanical JSX-to-Svelte conversion. Each screen is accepted only when its smoke checks pass and its screenshot matches.
+5. AI agents do the mechanical JSX-to-Svelte conversion. Each screen is accepted only when its smoke checks pass and its screenshot matches. `moon run server:smoke` runs the checks for the shipped shell against `tuskline serve` with `?demo=1`. Connect, advisor, deploy, HA, backups and migrations stay in `prototype/scripts/smoke.mjs` until those screens land.
 6. Embed the result: `make web` puts the build into the server, and the same build runs in Wails.
 7. Delete `prototype/` when every screen passes.
 

@@ -83,7 +83,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [x] M3.5 EXPLAIN visualiser (`Shift Cmd/Ctrl Enter` runs EXPLAIN ANALYZE). The plan tree uses D3, with a plain-English summary and warnings. Prod requires a confirmation before ANALYZE on writes.
 - [x] M3.6a Query API: one statement, the environment policy (production stays read-only), the policy row limit, and an audit row for each production statement. The actor is `local`. Result rows are not stored.
 - [x] M3.6b Streamed results and a virtualised grid. The query API writes rows as newline-delimited JSON, and the grid windows them so a large result does not create a DOM node per row. The server stays unauthenticated; the actor stays `local`.
-- [ ] M3.7 Port the prototype's Playwright smoke checks to run against `moon run server:bin && tuskline serve` in CI.
+- [x] M3.7 Playwright smoke checks for the shipped shell (fleet, health, queries, SQL, theme, environment, command palette and keyboard) against `tuskline serve` in CI (`moon run server:smoke`). The prototype steps for connect, advisor, deploy, HA, backups and migrations move with those screens.
 
 **Acceptance:**
 - The ported smoke checks pass.
@@ -99,7 +99,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [ ] M4.2b Dev database image: `make dev-db` installs `pg_wait_sampling`, `pg_stat_kcache` and `hypopg` from PGDG so a laptop matches the catalog. Integration tests stay on stock `postgres` images.
 - [ ] M4.3 Monitoring-role script generator (`tuskline_monitor`) and managed-cloud snippets: RDS parameter groups, Cloud SQL flags, Azure `az` commands.
 - [ ] M4.4 `core/advisor` and `tl config advise <ref>`: lints `postgresql.conf` and tunes memory, WAL and checkpoints, autovacuum, planner and I/O, and connections. Each recommendation gives its evidence, a diff, and whether it needs a reload or restart.
-- [ ] M4.5 Port the Setup & deploy screens' onboarding parts (Add connection, Config advisor) from the prototype.
+- [ ] M4.5 Port the Setup & deploy screens' onboarding parts (Add connection, Config advisor) from the prototype, including the prototype smoke steps for the connection wizard and the config advisor.
 
 **Acceptance:**
 - On a fresh `postgres:17` container, the wizard generates SQL that, once applied, makes the verify step pass (integration test).
@@ -113,7 +113,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [ ] M5.4 Hand-over: add the cluster to the inventory with a monitoring role, register the Patroni API and backup repository, and schedule the first restore drill.
 - [ ] M5.5 CloudNativePG target (R3): `Cluster`, `Pooler` and Barman Cloud plugin manifests, server-side apply, status read back.
 - [ ] M5.6 SSH/VM target (R3): Go SSH executor, PGDG packages (extension packages from the M4.2 catalog, Pigsty repo only when PGDG lacks the package), systemd units and config templates, idempotent versioned steps. Autobase-playbook mode.
-- [ ] M5.7 Port the Deploy and Deployments screens.
+- [ ] M5.7 Port the Deploy and Deployments screens, including the prototype smoke steps for a completed deploy and its history row.
 
 **Acceptance:**
 - `tl provision compose up` brings up a 3-node cluster that Tuskline then monitors.
@@ -124,7 +124,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 
 - [ ] M6.1 Read-only (R2): Patroni REST topology, CNPG status, replication lag, timeline history.
 - [ ] M6.2 Read-only (R2): pgBackRest `info` timeline (full/diff/incr, WAL coverage band, gaps), CNPG backups. `tl backup status`.
-- [ ] M6.3 `tl ha status` and the HA and Backups screens ported from the prototype.
+- [ ] M6.3 `tl ha status` and the HA and Backups screens ported from the prototype, including the prototype smoke steps for switchover and point-in-time recovery.
 - [ ] M6.4 Guarded actions (R3): switchover, restart and PITR restore (`tl ha switchover`, `tl backup restore --to <time>`). Each has a dry run, pre-flight checks, typed confirmation and an audit record. Actions go through Patroni and CNPG APIs, never around them.
 - [ ] M6.5 `tl backup verify`: restore drill into a scratch container.
 
@@ -138,7 +138,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [ ] M7.1 `core/lint` on `pg_query_go`: lock-aware rules (for example `ADD COLUMN … DEFAULT` volatility, `CREATE INDEX` without `CONCURRENTLY`, `ALTER TYPE`, `SET NOT NULL` on big tables), using live table sizes and activity.
 - [ ] M7.2 `tl migrate lint|plan|apply --env staging`: drive Flyway, Sqitch or plain SQL folders. Prod needs approval.
 - [ ] M7.3 Drift detection: schema snapshot diff between environments.
-- [ ] M7.4 Migrations screen (PR-style review) ported from the prototype.
+- [ ] M7.4 Migrations screen (PR-style review) ported from the prototype, including the prototype smoke step that approves a migration after its rewrite.
 
 **Acceptance:** golden-file tests for lint rules; `migrate apply` on prod refuses without approval (test).
 
