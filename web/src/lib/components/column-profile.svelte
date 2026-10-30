@@ -16,10 +16,13 @@
 
 	let {
 		columns,
-		rows
+		rows,
+		embedded = false
 	}: {
 		columns: { name: string; type: string }[];
 		rows: unknown[][];
+		/** Drop the top border when this sits inside another panel. */
+		embedded?: boolean;
 	} = $props();
 
 	const key = $derived(fingerprint(columns, rows));
@@ -70,7 +73,11 @@
 	}
 </script>
 
-<aside class="flex min-h-0 w-full flex-1 flex-col overflow-auto border-t border-tl-line">
+<aside
+	class="flex min-h-0 w-full flex-1 flex-col overflow-auto {embedded
+		? ''
+		: 'border-t border-tl-line'}"
+>
 	<div class="px-3 py-2 text-[11px] text-tl-fg3 tabular-nums">
 		{rows.length} rows · {columns.length} columns
 		{#if !profiles}<span> · summarising…</span>{/if}

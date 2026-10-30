@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
 	RDS_PRESET,
 	detectProvider,
-	demoTestReport,
 	draftProblems,
+	verifyDraft,
 	type ConnectionDraft
 } from './connect-wizard';
 
@@ -24,16 +24,23 @@ describe('draftProblems', () => {
 		const tunneled: ConnectionDraft = { ...RDS_PRESET, ssh: true, bastion: '  ' };
 		expect(draftProblems(tunneled)).toContain('Bastion host is required for an SSH tunnel.');
 		expect(draftProblems({ ...RDS_PRESET, port: '0' })).toContain('Port must be 1–65535.');
+		expect(draftProblems({ ...RDS_PRESET, name: 'Orders' })).toContain(
+			'Name must be lowercase letters, digits and hyphens.'
+		);
+		expect(draftProblems({ ...RDS_PRESET, passwordEnv: 'not a name' })).toContain(
+			'Password environment variable must be a name such as ORDERS_PASSWORD, not the password itself.'
+		);
+		expect(draftProblems({ ...RDS_PRESET, ssh: true, bastion: 'bastion.example' })).toContain(
+			'SSH tunnels cannot be saved yet.'
+		);
 	});
 });
 
-describe('demoTestReport', () => {
-	it('does not claim a connection was opened', () => {
-		const lines = demoTestReport({ ...RDS_PRESET, tls: 'disable', env: 'prod' });
-		expect(lines.some((line) => line.text.includes('No connection was opened'))).toBe(true);
-		expect(
-			lines.some((line) => line.tone === 'warn' && line.text.includes('TLS is disabled'))
-		).toBe(true);
-		expect(lines.some((line) => line.text.includes('read-only'))).toBe(true);
+describe('verifyDraft', () => {
+	it('accepts the demo preset and refuses a remote host without TLS', () => {
+		expect(verifyDraft(RDS_PRESET)).toBeNull();
+		expect(verifyDraft({ ...RDS_PRESET, tls: 'disable' })).toMatch(/unencrypted/);
+		expect(verifyDraft({ ...RDS_PRESET, host: 'db.fail.example' })).toMatch(/Could not reach/);
+		expect(verifyDraft({ ...RDS_PRESET, tls: 'disable', host: '127.0.0.1' })).toBeNull();
 	});
 });

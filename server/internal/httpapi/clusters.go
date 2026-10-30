@@ -38,9 +38,11 @@ type api struct {
 
 func (a *api) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/clusters", a.listClusters)
+	mux.HandleFunc("POST /api/v1/clusters", a.saveCluster)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/queries", a.clusterQueries)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/activity", a.clusterActivity)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/health", a.clusterHealth)
+	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/probe", a.clusterProbe)
 	mux.HandleFunc("POST /api/v1/clusters/{env}/{name}/query", a.clusterQuery)
 }
 
@@ -116,6 +118,26 @@ func (a *api) clusterActivity(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (a *api) clusterProbe(w http.ResponseWriter, r *http.Request) {
+	a.withCluster(w, r, func(ctx context.Context, ref inventory.Ref, db *pgx.Conn, _ int) {
+		info, err := conn.Inspect(ctx, db)
+		if err != nil {
+			writeErr(w, http.StatusBadGateway, err)
+			return
+		}
+		if info.Extensions == nil {
+			info.Extensions = []conn.Extension{}
+		}
+		if info.SharedPreloadLibraries == nil {
+			info.SharedPreloadLibraries = []string{}
+		}
+		writeJSON(w, http.StatusOK, struct {
+			Ref string `json:"ref"`
+			conn.ServerInfo
+		}{Ref: ref.String(), ServerInfo: info})
+	})
+}
+
 func (a *api) clusterHealth(w http.ResponseWriter, r *http.Request) {
 	a.withCluster(w, r, func(ctx context.Context, ref inventory.Ref, db *pgx.Conn, version int) {
 		report, err := analyser.Diagnose(ctx, db, version, time.Minute)
@@ -159,14 +181,17 @@ func (a *api) withCluster(w http.ResponseWriter, r *http.Request, fn func(contex
 
 var errNotInInventory = errors.New("not in the inventory")
 
+func (a *api) inventoryFile() (string, error) {
+	if a.inventoryPath != "" {
+		return a.inventoryPath, nil
+	}
+	return inventory.DefaultPath()
+}
+
 func (a *api) inventory() (*inventory.Inventory, error) {
-	path := a.inventoryPath
-	if path == "" {
-		var err error
-		path, err = inventory.DefaultPath()
-		if err != nil {
-			return nil, err
-		}
+	path, err := a.inventoryFile()
+	if err != nil {
+		return nil, err
 	}
 	return inventory.Load(path)
 }

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -87,6 +88,35 @@ func TestClusterAPIAgainstPostgres(t *testing.T) {
 			if rr := get("/api/v1/clusters/dev/pg/health"); rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"findings"`) {
 				t.Fatalf("health: %d %s", rr.Code, rr.Body)
 			}
+			if rr := get("/api/v1/clusters/dev/pg/probe"); rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"name":"plpgsql"`) {
+				t.Fatalf("probe: %d %s", rr.Code, rr.Body)
+			}
+			saved := postJSON(t, h, "/api/v1/clusters", map[string]any{
+				"environment": "dev", "name": "added",
+				"host": srv.Profile.Host, "port": srv.Profile.EffectivePort(),
+				"database": srv.Profile.Database, "user": srv.Profile.User, "tls": "disable",
+				"password": pgtest.Password, "password_env": "TL_TEST_PASSWORD",
+			})
+			if saved.Code != http.StatusOK || strings.Contains(saved.Body.String(), pgtest.Password) {
+				t.Fatalf("save: %d %s", saved.Code, saved.Body)
+			}
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(raw), pgtest.Password) {
+				t.Fatalf("inventory stored the password: %s", raw)
+			}
+			if !strings.Contains(string(raw), "TL_TEST_PASSWORD") {
+				t.Fatalf("inventory missing the password reference: %s", raw)
+			}
+			storeRaw, err := os.ReadFile(storePath)
+			if err == nil && bytes.Contains(storeRaw, []byte(pgtest.Password)) {
+				t.Fatal("metadata store contains the password")
+			}
+			if rr := get("/api/v1/clusters/dev/added/probe"); rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"name":"plpgsql"`) {
+				t.Fatalf("saved probe: %d %s", rr.Code, rr.Body)
+			}
 			post := func(url, sql string) *httptest.ResponseRecorder {
 				t.Helper()
 				payload, err := json.Marshal(map[string]string{"sql": sql})
@@ -109,8 +139,8 @@ func TestClusterAPIAgainstPostgres(t *testing.T) {
 				t.Fatalf("stacked statement: %d %s", stacked.Code, stacked.Body)
 			}
 			updated := post("/api/v1/clusters/prod/pg/query", "UPDATE tl_editor SET n = 2")
-			if updated.Code == http.StatusOK {
-				t.Fatalf("prod write succeeded: %s", updated.Body)
+			if !strings.Contains(updated.Body.String(), "read-only") {
+				t.Fatalf("prod write was not rejected: %d %s", updated.Code, updated.Body)
 			}
 			again := post("/api/v1/clusters/dev/pg/query", "SELECT n FROM tl_editor")
 			if !strings.Contains(again.Body.String(), "\n[1]\n") {
@@ -127,4 +157,16 @@ func TestClusterAPIAgainstPostgres(t *testing.T) {
 			}
 		})
 	}
+}
+
+func postJSON(t *testing.T, h http.Handler, url string, body any) *httptest.ResponseRecorder {
+	t.Helper()
+	payload, err := json.Marshal(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, url, bytes.NewReader(payload))
+	h.ServeHTTP(rr, req)
+	return rr
 }

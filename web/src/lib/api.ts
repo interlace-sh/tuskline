@@ -1,5 +1,7 @@
 // Typed client for /api/v1. The UI has no private endpoints.
 
+import type { ServerProbe } from '#lib/extensions.js';
+
 export class ApiError extends Error {
 	readonly status: number;
 
@@ -148,6 +150,28 @@ async function getJSON<T>(path: string, fetchImpl: typeof fetch): Promise<T> {
 	return body as T;
 }
 
+async function sendJSON<T>(path: string, payload: unknown, fetchImpl: typeof fetch): Promise<T> {
+	const response = await fetchImpl(path, {
+		method: 'POST',
+		headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+		body: JSON.stringify(payload)
+	});
+	let body: unknown = null;
+	try {
+		body = await response.json();
+	} catch {
+		/* a non-JSON error page leaves body null */
+	}
+	if (!response.ok) {
+		const message =
+			body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
+				? body.error
+				: response.statusText;
+		throw new ApiError(response.status, message);
+	}
+	return body as T;
+}
+
 /** Split an inventory ref `env/name`. Names do not contain slashes. */
 export function splitRef(ref: string): { env: string; name: string } {
 	const slash = ref.indexOf('/');
@@ -176,6 +200,29 @@ export async function listClusters(fetchImpl: typeof fetch = fetch): Promise<Clu
 	return body.clusters ?? [];
 }
 
+export interface SavedCluster extends Cluster {
+	saved: boolean;
+	note?: string;
+}
+
+/** Probe and save a cluster. password is sent once and must not be kept by the caller. */
+export function saveCluster(
+	body: {
+		environment: string;
+		name: string;
+		host: string;
+		port: number;
+		database: string;
+		user: string;
+		tls: string;
+		password_env?: string;
+		password?: string;
+	},
+	fetchImpl: typeof fetch = fetch
+): Promise<SavedCluster> {
+	return sendJSON('/api/v1/clusters', body, fetchImpl);
+}
+
 export function clusterQueries(
 	env: string,
 	name: string,
@@ -198,6 +245,15 @@ export function clusterHealth(
 	fetchImpl: typeof fetch = fetch
 ): Promise<HealthResponse> {
 	return getJSON(clusterPath(env, name, 'health'), fetchImpl);
+}
+
+/** Installed and available extensions, plus shared_preload_libraries. */
+export function clusterProbe(
+	env: string,
+	name: string,
+	fetchImpl: typeof fetch = fetch
+): Promise<ServerProbe> {
+	return getJSON(clusterPath(env, name, 'probe'), fetchImpl);
 }
 
 export interface QueryResult {

@@ -135,6 +135,13 @@ class Shell {
 		}
 	}
 
+	/** Switch the database shown for the current cluster. Does not reconnect. */
+	setDatabase(name: string) {
+		this.clusters = this.clusters.map((cluster) =>
+			cluster.id === this.clusterId ? { ...cluster, database: name } : cluster
+		);
+	}
+
 	setCluster(id: string) {
 		const cluster = this.clusters.find((c) => c.id === id) ?? this.clusters[0];
 		this.clusterId = cluster.id;

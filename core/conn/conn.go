@@ -94,6 +94,12 @@ func CheckSupported(versionNum int) error {
 	return nil
 }
 
+// Inspect reads version, preload libraries and extensions from an open
+// connection. It runs only the read-only probe pack.
+func Inspect(ctx context.Context, db *pgx.Conn) (ServerInfo, error) {
+	return probe(ctx, db)
+}
+
 // Probe connects with p, reads what Tuskline needs to know about the server
 // and disconnects. It runs only the read-only probe pack, so it never
 // writes; it refuses servers older than PostgreSQL 14 before running

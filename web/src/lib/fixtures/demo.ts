@@ -706,8 +706,14 @@ export const SCHEMA = [
 		tables: [
 			{
 				name: 'orders',
+				kind: 'table' as const,
 				rows: '48.2 M',
 				size: '21 GB',
+				indexes: [
+					{ name: 'orders_pkey', unique: true },
+					{ name: 'idx_orders_created_at' },
+					{ name: 'idx_orders_customer_id' }
+				],
 				cols: [
 					['id', 'bigint', 'pk'],
 					['customer_id', 'bigint', 'fk'],
@@ -765,6 +771,19 @@ export const SCHEMA = [
 					['title', 'text'],
 					['price', 'numeric(12,2)'],
 					['search_vector', 'tsvector']
+				]
+			},
+			{
+				name: 'open_orders',
+				kind: 'view' as const,
+				rows: '1.2 M',
+				size: 'view',
+				indexes: [] as { name: string; unique?: boolean }[],
+				cols: [
+					['id', 'bigint', 'pk'],
+					['status', 'order_status'],
+					['total', 'numeric(12,2)'],
+					['created_at', 'timestamptz']
 				]
 			}
 		]

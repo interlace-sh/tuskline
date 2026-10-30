@@ -118,14 +118,21 @@ try {
 
 	await page.keyboard.press('n');
 	ok(
-		'n -> connection wizard',
+		'n -> add connection',
 		(await page.getByRole('heading', { name: 'Add connection' }).isVisible()) &&
-			(await page.getByRole('button', { name: 'verify-full' }).isVisible())
+			(await page.getByRole('button', { name: 'verify-full' }).isVisible()) &&
+			(await page.getByRole('button', { name: 'Create connection' }).isVisible())
 	);
-	await page.getByRole('button', { name: /^Test connection/ }).click();
-	await page.getByRole('button', { name: 'Test connection', exact: true }).click();
-	await page.getByText('No connection was opened.').waitFor();
-	ok('wizard test does not connect', true);
+	await page.getByRole('button', { name: 'Create connection' }).click();
+	await page.getByRole('textbox', { name: 'Filter objects' }).waitFor();
+	ok(
+		'create opens the database',
+		await page.getByText('orders', { exact: true }).first().isVisible()
+	);
+	await page.evaluate(() => {
+		const active = document.activeElement;
+		if (active instanceof HTMLElement) active.blur();
+	});
 
 	await page.keyboard.press('g');
 	await page.keyboard.press('h');

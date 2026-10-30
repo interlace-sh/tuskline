@@ -3,9 +3,11 @@
 package httpapi
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -71,6 +73,33 @@ func TestClusterRoutesRejectUnknown(t *testing.T) {
 		if rr.Code != http.StatusNotFound {
 			t.Errorf("%s: %d %s", path, rr.Code, rr.Body)
 		}
+	}
+}
+
+func TestSaveClusterDoesNotStorePassword(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "inventory.yaml")
+	h := newHandler(&api{inventoryPath: path})
+	const secret = "tuskline-do-not-store"
+	payload, err := json.Marshal(map[string]any{
+		"environment": "dev", "name": "pg", "host": "127.0.0.1", "port": 1,
+		"database": "tuskline", "user": "tuskline", "tls": "disable",
+		"password": secret, "password_env": "TL_TEST_PASSWORD",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/clusters", bytes.NewReader(payload))
+	h.ServeHTTP(rr, req)
+	if rr.Code == http.StatusOK {
+		t.Fatalf("closed port was saved: %s", rr.Body)
+	}
+	if strings.Contains(rr.Body.String(), secret) {
+		t.Fatalf("response leaked the password: %s", rr.Body)
+	}
+	raw, err := os.ReadFile(path)
+	if err == nil && strings.Contains(string(raw), secret) {
+		t.Fatalf("inventory stored the password: %s", raw)
 	}
 }
 
