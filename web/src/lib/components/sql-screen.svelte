@@ -490,12 +490,6 @@ LIMIT 20;`
 					title="New SQL page"
 					onclick={() => newPage()}><Plus size={14} /></button
 				>
-				<button
-					class="h-full px-2.5 text-tl-fg3 hover:text-tl-fg"
-					title="New notebook"
-					onclick={() => newPage('SELECT 1;\n', true)}
-					><span class="text-[12px]">+ notebook</span></button
-				>
 			</div>
 			{#if page.notebook}
 				<div
@@ -517,7 +511,7 @@ LIMIT 20;`
 									<Play size={12} /> Run
 								</button>
 								<button class={btn} onclick={() => runCell(entry, true)}
-									><Zap size={12} /> Explain</button
+									><Zap size={12} /> Analyse</button
 								>
 								{#if page.cells.length > 1}
 									<button
@@ -559,7 +553,7 @@ LIMIT 20;`
 						<span class="ml-0.5 text-[11px] opacity-70">⌘↵</span>
 					</button>
 					<button class={btn} onclick={() => runCell(page.cells[0], true)}>
-						<Zap size={12} /> Explain analyse
+						<Zap size={12} /> Analyse
 						<span class="ml-0.5 text-[11px] text-tl-fg3">⌘⇧↵</span>
 					</button>
 					<button class={btn} onclick={addCell}><Plus size={12} /> Add snippet</button>
