@@ -161,7 +161,7 @@ The enrolment token is read from `TUSKLINE_AGENT_TOKEN` and never printed. The c
 
 | Command | What it does |
 |---|---|
-| `tuskline serve [-addr 127.0.0.1:8080]` | HTTP server: `/api/v1/health`, `/api/v1/version`, `/api/v1/clusters` and `/api/v1/clusters/{env}/{name}/queries`, `/activity`, `/health`, plus `POST .../query` (one statement, environment policy, row limit; production statements are audited). The embedded SPA is served alongside. `TUSKLINE_ADDR` overrides the address. The inventory is `TUSKLINE_INVENTORY` or the XDG file. The audit database is `TUSKLINE_STORE` or `$XDG_DATA_HOME/tuskline/meta.db` |
+| `tuskline serve [-addr 127.0.0.1:8080]` | HTTP server: `/api/v1/health`, `/api/v1/version`, `/api/v1/clusters` and `/api/v1/clusters/{env}/{name}/queries`, `/activity`, `/health`, plus `POST .../query` (one statement, environment policy, row limit; production statements are audited; a successful body is newline-delimited JSON). The server is unauthenticated. The embedded SPA is served alongside. `TUSKLINE_ADDR` overrides the address. The inventory is `TUSKLINE_INVENTORY` or the XDG file. The audit database is `TUSKLINE_STORE` or `$XDG_DATA_HOME/tuskline/meta.db` |
 | `tuskline version` | Build info |
 
 The container image (`Dockerfile`) runs `tuskline serve` as the distroless `nonroot` user, with `TUSKLINE_ADDR=:8080` so the port can be published, and a `/data` volume for the metadata store. `moon run scripts:image-smoke` builds it and checks `/api/v1/health`.

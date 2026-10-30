@@ -102,7 +102,7 @@ func TestClusterAPIAgainstPostgres(t *testing.T) {
 				return rr
 			}
 			selected := post("/api/v1/clusters/dev/pg/query", "SELECT n FROM tl_editor")
-			if selected.Code != http.StatusOK || !strings.Contains(selected.Body.String(), `"rows":[[1]]`) {
+			if selected.Code != http.StatusOK || !strings.Contains(selected.Body.String(), "\n[1]\n") {
 				t.Fatalf("select: %d %s", selected.Code, selected.Body)
 			}
 			if stacked := post("/api/v1/clusters/dev/pg/query", "SELECT 1; SELECT 2"); stacked.Code != http.StatusBadRequest {
@@ -113,7 +113,7 @@ func TestClusterAPIAgainstPostgres(t *testing.T) {
 				t.Fatalf("prod write succeeded: %s", updated.Body)
 			}
 			again := post("/api/v1/clusters/dev/pg/query", "SELECT n FROM tl_editor")
-			if !strings.Contains(again.Body.String(), `"rows":[[1]]`) {
+			if !strings.Contains(again.Body.String(), "\n[1]\n") {
 				t.Fatalf("prod write changed the row: %s", again.Body)
 			}
 			meta, err := store.Open(context.Background(), storePath)

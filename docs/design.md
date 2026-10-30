@@ -68,6 +68,8 @@ The design reference is the frozen React prototype in [`../prototype/`](../proto
 
 Explain draws the plan with a D3 tree (`d3-hierarchy`), a plain-English summary and warnings for sequential scans, row misestimates and disk spills. On production, `EXPLAIN ANALYZE` of a write asks for the cluster name before it is sent. The session stays read-only, so PostgreSQL still rejects the write.
 
+Result rows arrive as a stream and the grid virtualises them (TanStack Virtual), so only the visible window is in the DOM. The server has no sign-in; that is a later feature.
+
 ## Porting the prototype
 
 1. Use the frozen React prototype as the spec. Its screenshots and smoke checks carry over unchanged, because they check visible text and behaviour.

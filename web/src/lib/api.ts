@@ -207,32 +207,77 @@ export interface QueryResult {
 	duration_ms: number;
 }
 
-/** Run one statement. The server applies the environment policy and row limit. */
+/** Apply one newline-delimited query event to an accumulator. */
+export function consumeQueryLine(line: string, acc: QueryResult): 'row' | 'end' | 'meta' {
+	const value: unknown = JSON.parse(line);
+	if (Array.isArray(value)) {
+		acc.rows.push(value);
+		return 'row';
+	}
+	if (!value || typeof value !== 'object')
+		throw new ApiError(400, 'The result stream was not JSON.');
+	const record = value as Record<string, unknown>;
+	if (typeof record.error === 'string') throw new ApiError(400, record.error);
+	if (Array.isArray(record.columns)) acc.columns = record.columns.map((column) => String(column));
+	if (record.end === true) {
+		acc.truncated = record.truncated === true;
+		acc.duration_ms = typeof record.duration_ms === 'number' ? record.duration_ms : 0;
+		return 'end';
+	}
+	return 'meta';
+}
+
+/** Run one statement. Rows arrive as newline-delimited JSON. */
 export async function runQuery(
 	env: string,
 	name: string,
 	sql: string,
 	fetchImpl: typeof fetch = fetch,
-	signal?: AbortSignal
+	signal?: AbortSignal,
+	onRows?: (partial: QueryResult) => void
 ): Promise<QueryResult> {
 	const response = await fetchImpl(clusterPath(env, name, 'query'), {
 		method: 'POST',
-		headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+		headers: { Accept: 'application/x-ndjson', 'Content-Type': 'application/json' },
 		body: JSON.stringify({ sql }),
 		signal
 	});
-	let body: unknown = null;
-	try {
-		body = await response.json();
-	} catch {
-		/* non-JSON */
-	}
 	if (!response.ok) {
-		const message =
-			body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
-				? body.error
-				: response.statusText;
+		let message = response.statusText;
+		try {
+			const body: unknown = await response.json();
+			if (body && typeof body === 'object' && 'error' in body && typeof body.error === 'string') {
+				message = body.error;
+			}
+		} catch {
+			/* non-JSON */
+		}
 		throw new ApiError(response.status, message);
 	}
-	return body as QueryResult;
+	if (!response.body) throw new ApiError(502, 'The result stream was empty.');
+	const acc: QueryResult = { columns: [], rows: [], truncated: false, duration_ms: 0 };
+	const reader = response.body.getReader();
+	const decoder = new TextDecoder();
+	let pending = '';
+	let ended = false;
+	const take = (line: string) => {
+		if (!line) return;
+		const kind = consumeQueryLine(line, acc);
+		if (kind === 'end') ended = true;
+		if (onRows && (kind === 'end' || (kind === 'row' && acc.rows.length % 100 === 0))) {
+			onRows({ ...acc, rows: acc.rows.slice() });
+		}
+	};
+	for (;;) {
+		const chunk = await reader.read();
+		if (chunk.done) break;
+		pending += decoder.decode(chunk.value, { stream: true });
+		const lines = pending.split('\n');
+		pending = lines.pop() ?? '';
+		for (const line of lines) take(line);
+	}
+	pending += decoder.decode();
+	if (pending.trim()) take(pending.trim());
+	if (!ended) throw new ApiError(502, 'The result stream ended early.');
+	return acc;
 }

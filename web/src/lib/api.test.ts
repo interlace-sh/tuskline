@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ApiError, listClusters, serverHealth, splitRef } from './api';
+import { ApiError, consumeQueryLine, listClusters, serverHealth, splitRef } from './api';
+import type { QueryResult } from './api';
 
 function fakeFetch(routes: Record<string, { status?: number; body: unknown }>): typeof fetch {
 	return (async (input) => {
@@ -32,6 +33,17 @@ describe('api client', () => {
 			message: 'inventory unreadable'
 		});
 		await expect(listClusters(missing)).rejects.toBeInstanceOf(ApiError);
+	});
+
+	it('reads a query stream and rejects an error line', () => {
+		const acc: QueryResult = { columns: [], rows: [], truncated: false, duration_ms: 0 };
+		expect(consumeQueryLine('{"columns":["n"]}', acc)).toBe('meta');
+		expect(consumeQueryLine('[1]', acc)).toBe('row');
+		expect(consumeQueryLine('{"end":true,"truncated":true,"duration_ms":4,"rows":1}', acc)).toBe(
+			'end'
+		);
+		expect(acc).toEqual({ columns: ['n'], rows: [[1]], truncated: true, duration_ms: 4 });
+		expect(() => consumeQueryLine('{"error":"audit store: closed"}', acc)).toThrow(ApiError);
 	});
 
 	it('splits an inventory ref on the first slash', () => {

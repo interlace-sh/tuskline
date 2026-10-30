@@ -12,7 +12,9 @@ import (
 )
 
 func TestResolvePasswordFallsThroughToPgpass(t *testing.T) {
-	os.Unsetenv("TL_TEST_UNSET_PASSWORD")
+	if err := os.Unsetenv("TL_TEST_UNSET_PASSWORD"); err != nil {
+		t.Fatal(err)
+	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "pgpass")
 	if err := os.WriteFile(path, []byte("127.0.0.1:5417:tuskline:tuskline:from-pgpass\n"), 0o600); err != nil {

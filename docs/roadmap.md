@@ -23,7 +23,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [x] M0.7 Repository hygiene: issue and PR templates (PR template includes the definition-of-done checklist), `CODEOWNERS`, Dependabot for Go modules, npm and actions (or Renovate, which can also bump `.prototools`), branch protection notes in CONTRIBUTING.
 - [x] M0.7a Maintainer: apply the `main` ruleset described in CONTRIBUTING.md (required checks, code-owner review, DCO app) once CI is green; this needs repository admin rights. Decision (2026-10-29): not applied. One person fast-forwards `main`; the ruleset waits for a second committer.
 - [x] M0.8 Release skeleton: GoReleaser config producing `tl` and `tuskline` for linux/darwin/windows × amd64/arm64 with checksums and an SBOM (no publishing yet). (`moon run scripts:release-snapshot`.)
-- [ ] M0.8a *(parallel)* Release workflow: tag-triggered GoReleaser job with keyless signing (cosign) of checksums and SBOMs. Needs explicit approval before anything is published. Publishing stays disabled in `.goreleaser.yaml` until then.
+- [ ] M0.8a *(parallel)* Release workflow: tag-triggered GoReleaser job with keyless signing (cosign) of checksums and SBOMs. Needs explicit approval before anything is published. Publishing stays disabled in `.goreleaser.yaml` until then. Decision (2026-10-30): not yet. No release is required.
 - [x] M0.9 Container image: multi-stage Dockerfile (web build → Go build → distroless), `tuskline serve` on :8080, non-root.
 
 **Acceptance:**
@@ -82,7 +82,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [x] M3.4 SQL editor: CodeMirror 6 with PostgreSQL highlighting and schema completion, script pages (tabs) and notebook snippets, schema tree, run with `Cmd/Ctrl Enter`, explain, and a result grid capped by the environment row limit. A virtualised grid for uncapped results waits on streamed execution (M3.6b).
 - [x] M3.5 EXPLAIN visualiser (`Shift Cmd/Ctrl Enter` runs EXPLAIN ANALYZE). The plan tree uses D3, with a plain-English summary and warnings. Prod requires a confirmation before ANALYZE on writes.
 - [x] M3.6a Query API: one statement, the environment policy (production stays read-only), the policy row limit, and an audit row for each production statement. The actor is `local`. Result rows are not stored.
-- [ ] M3.6b Streamed results, a virtualised grid, and sign-in sessions. Until then the loopback server has one operator.
+- [x] M3.6b Streamed results and a virtualised grid. The query API writes rows as newline-delimited JSON, and the grid windows them so a large result does not create a DOM node per row. The server stays unauthenticated; the actor stays `local`.
 - [ ] M3.7 Port the prototype's Playwright smoke checks to run against `moon run server:bin && tuskline serve` in CI.
 
 **Acceptance:**
@@ -166,6 +166,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 
 ## Later
 
+- [ ] Sign-in and sessions. Low priority. Leave the server unauthenticated until this is built; the loopback actor stays `local`. Desktop sign-in to a server or Cloud stays in M8.2, and organisation RBAC stays in M9.
 - [ ] Tier 2 systems with documented gaps: AlloyDB, Neon (frequent snapshots), TimescaleDB, Citus.
 - [ ] hypopg-validated index advisor (`tl advise indexes`); per-table autovacuum tuning.
 - [ ] **DuckDB / DuckLake:** DuckLake catalogue browser (`ducklake_*` tables); DuckDB as a second engine in the desktop IDE; explore DuckLake for the metrics archive; `pg_duckdb` awareness.

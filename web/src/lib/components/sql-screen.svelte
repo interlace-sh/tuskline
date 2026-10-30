@@ -23,6 +23,7 @@
 	import { shell } from '#lib/shell.svelte.js';
 	import ColumnProfile from './column-profile.svelte';
 	import ExplainView from './explain-view.svelte';
+	import ResultGrid from './result-grid.svelte';
 	import SqlEditor from './sql-editor.svelte';
 
 	type RowResult = {
@@ -111,7 +112,7 @@ LIMIT 20;`
 	let nextId = 4;
 	const page = $derived(pages.find((item) => item.id === active) ?? pages[0]);
 	const profileCell = $derived(
-		[...page.cells].reverse().find((entry) => entry.result.kind === 'rows')
+		[...page.cells].reverse().find((entry) => entry.result.kind === 'rows' && !entry.running)
 	);
 
 	let schemaOpen = $state<Record<string, boolean>>({ public: true, 'public.orders': true });
@@ -238,7 +239,27 @@ LIMIT 20;`
 		const sql = explain ? explainSQL(entry.sql) : entry.sql;
 		try {
 			const ref = splitRef(shell.cluster.id);
-			const result = await runQuery(ref.env, ref.name, sql, fetch, next.signal);
+			const result = await runQuery(
+				ref.env,
+				ref.name,
+				sql,
+				fetch,
+				next.signal,
+				explain
+					? undefined
+					: (partial) => {
+							patchCell(pageId, entry.id, {
+								running: true,
+								result: {
+									kind: 'rows',
+									columns: partial.columns.map((name) => ({ name, type: '' })),
+									rows: partial.rows,
+									ms: partial.duration_ms,
+									note: partial.truncated ? `Stopped after ${partial.rows.length} rows` : ''
+								}
+							});
+						}
+			);
 			if (explain) {
 				const text = result.rows.map((row) => String(row[0] ?? '')).join('\n');
 				patchCell(pageId, entry.id, {
@@ -308,7 +329,10 @@ LIMIT 20;`
 			{/each}
 			<div class="ml-auto flex items-center gap-3 pr-2 text-[11.5px] text-tl-fg3">
 				{#if entry.result.kind === 'rows'}
-					<span class="tabular-nums">{entry.result.rows.length} rows · {entry.result.ms} ms</span>
+					<span class="tabular-nums"
+						>{entry.result.rows.length} rows{entry.running ? '' : ` · ${entry.result.ms} ms`}
+						{entry.result.note}</span
+					>
 					<button
 						class="flex items-center gap-1 hover:text-tl-fg"
 						onclick={() => csv(entry.result as RowResult)}
@@ -321,8 +345,8 @@ LIMIT 20;`
 				{/if}
 			</div>
 		</div>
-		<div class="min-h-[140px] min-w-0 flex-1 overflow-auto">
-			{#if entry.running}
+		<div class="flex min-h-[140px] min-w-0 flex-1 flex-col overflow-hidden">
+			{#if entry.running && entry.result.kind !== 'rows'}
 				<div class="space-y-2 p-4">
 					{#each [90, 80, 70, 60] as width (width)}
 						<div class="h-5 animate-pulse rounded bg-tl-subtle" style:width="{width}%"></div>
@@ -353,43 +377,7 @@ LIMIT 20;`
 			{:else if entry.result.kind === 'explain'}
 				<ExplainView text={entry.result.text} />
 			{:else if entry.result.kind === 'rows'}
-				<table class="min-w-full font-mono text-[12px]">
-					<thead class="sticky top-0 z-10 bg-tl-elev">
-						<tr class="border-b border-tl-line">
-							<th
-								class="w-10 border-r border-tl-line px-2 py-1.5 text-right font-normal text-tl-fg3"
-								>#</th
-							>
-							{#each entry.result.columns as column (column.name)}
-								<th
-									class="border-r border-tl-line px-3 py-1.5 text-left font-medium whitespace-nowrap"
-								>
-									<span class="text-tl-fg">{column.name}</span>
-									{#if column.type}<span class="text-[10.5px] font-normal text-tl-fg3">
-											{column.type}</span
-										>{/if}
-								</th>
-							{/each}
-						</tr>
-					</thead>
-					<tbody>
-						{#each entry.result.rows as row, index (index)}
-							<tr class="border-b border-tl-line hover:bg-tl-hover/60">
-								<td class="border-r border-tl-line px-2 py-1 text-right text-tl-fg3">{index + 1}</td
-								>
-								{#each row as value, cellIndex (cellIndex)}
-									<td class="border-r border-tl-line px-3 py-1 whitespace-nowrap">
-										{#if value == null}
-											<span class="text-tl-fg3 italic">null</span>
-										{:else}
-											{value}
-										{/if}
-									</td>
-								{/each}
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+				<ResultGrid columns={entry.result.columns} rows={entry.result.rows} />
 			{:else}
 				<p class="p-4 text-[12.5px] text-tl-fg3">
 					Run a statement with ⌘↵. Results stay with this snippet.
