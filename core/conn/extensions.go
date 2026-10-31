@@ -2,6 +2,8 @@
 
 package conn
 
+import "github.com/interlace-sh/tuskline/core/catalog"
+
 // Recommendation is an extension Tuskline uses (docs/onboarding-and-deploy.md).
 type Recommendation struct {
 	Name string `json:"name"`
@@ -11,14 +13,21 @@ type Recommendation struct {
 	Required bool `json:"required"`
 	// Preload is true when the library must be in shared_preload_libraries.
 	Preload bool `json:"preload"`
+	// Create is false for libraries that are not CREATE EXTENSION, such as auto_explain.
+	Create bool `json:"create"`
 }
 
 // Recommended lists the extensions Tuskline looks for, most important first.
-var Recommended = []Recommendation{
-	{Name: "pg_stat_statements", Unlocks: "query insights, load attribution and workload snapshots", Required: true, Preload: true},
-	{Name: "pg_wait_sampling", Unlocks: "wait-event history between samples", Preload: true},
-	{Name: "pg_stat_kcache", Unlocks: "CPU and real disk I/O per query", Preload: true},
-	{Name: "hypopg", Unlocks: "index advice validated with hypothetical indexes"},
+// It is the catalogue's looked-for entries.
+var Recommended = recommendations()
+
+func recommendations() []Recommendation {
+	looked := catalog.LookedFor()
+	out := make([]Recommendation, len(looked))
+	for i, e := range looked {
+		out[i] = Recommendation{Name: e.Name, Unlocks: e.Unlocks, Required: e.Required, Preload: e.Preload, Create: e.Create}
+	}
+	return out
 }
 
 // Missing is a recommended extension that is not ready to use.
@@ -43,10 +52,18 @@ func (s ServerInfo) MissingExtensions() []Missing {
 	for _, r := range Recommended {
 		e, _ := s.Extension(r.Name)
 		needsPreload := r.Preload && (!s.PreloadKnown || !s.Preloaded(r.Name))
+		available := e.Available
+		if !r.Create {
+			if !needsPreload {
+				continue
+			}
+			out = append(out, Missing{Recommendation: r, Available: true, NeedsPreload: true})
+			continue
+		}
 		if e.Installed() && !needsPreload {
 			continue
 		}
-		out = append(out, Missing{Recommendation: r, Available: e.Available, NeedsPreload: needsPreload, Installed: e.Installed()})
+		out = append(out, Missing{Recommendation: r, Available: available, NeedsPreload: needsPreload, Installed: e.Installed()})
 	}
 	return out
 }

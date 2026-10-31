@@ -403,6 +403,8 @@ func missingStatus(m conn.Missing) string {
 		return "not available on this server"
 	case m.Installed && m.NeedsPreload:
 		return "installed; add to shared_preload_libraries (restart)"
+	case m.NeedsPreload && !m.Create:
+		return "available; add to shared_preload_libraries (restart)"
 	case m.NeedsPreload:
 		return "available; add to shared_preload_libraries (restart) and CREATE EXTENSION"
 	default:

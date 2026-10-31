@@ -22,7 +22,7 @@ The fastest way to lose a new user is a dashboard full of "extension not install
 
 ## Generated setup (self-managed example)
 
-The wizard merges with the current `shared_preload_libraries` value, because `ALTER SYSTEM` replaces the whole list. It switches to `patronictl edit-config` when Patroni manages the configuration.
+`core/catalog` holds the entries and builds the steps. The steps merge the current `shared_preload_libraries` value, because `ALTER SYSTEM` replaces the whole list, and they do not emit that statement when the current list could not be read. They switch to `patronictl edit-config` when Patroni manages the configuration.
 
 ```sql
 ALTER SYSTEM SET shared_preload_libraries = '<current>,pg_stat_statements,auto_explain';

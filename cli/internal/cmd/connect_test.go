@@ -120,8 +120,9 @@ func TestMissingStatus(t *testing.T) {
 		want string
 	}{
 		{conn.Missing{}, "not available"},
-		{conn.Missing{Available: true}, "CREATE EXTENSION"},
-		{conn.Missing{Available: true, NeedsPreload: true}, "restart) and CREATE"},
+		{conn.Missing{Recommendation: conn.Recommendation{Create: true}, Available: true}, "CREATE EXTENSION"},
+		{conn.Missing{Recommendation: conn.Recommendation{Create: true}, Available: true, NeedsPreload: true}, "restart) and CREATE"},
+		{conn.Missing{Available: true, NeedsPreload: true}, "shared_preload_libraries (restart)"},
 		{conn.Missing{Available: true, NeedsPreload: true, Installed: true}, "installed;"},
 	}
 	for _, tc := range cases {

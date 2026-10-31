@@ -5,6 +5,8 @@ package conn
 import (
 	"reflect"
 	"testing"
+
+	"github.com/interlace-sh/tuskline/core/catalog"
 )
 
 func TestDetectProvider(t *testing.T) {
@@ -48,6 +50,22 @@ func TestSplitList(t *testing.T) {
 	}
 }
 
+func TestRecommendedMatchesCatalogue(t *testing.T) {
+	t.Parallel()
+	if string(ProviderRDS) != catalog.ProviderRDS || string(ProviderCommunity) != catalog.ProviderCommunity {
+		t.Fatal("provider names drifted from core/catalog")
+	}
+	looked := catalog.LookedFor()
+	if len(Recommended) != len(looked) {
+		t.Fatalf("recommended %d, catalogue %d", len(Recommended), len(looked))
+	}
+	for i := range looked {
+		if Recommended[i].Name != looked[i].Name || Recommended[i].Create != looked[i].Create {
+			t.Fatalf("recommended[%d] = %+v, catalogue %+v", i, Recommended[i], looked[i])
+		}
+	}
+}
+
 func TestMissingExtensions(t *testing.T) {
 	t.Parallel()
 	names := func(ms []Missing) []string {
@@ -57,7 +75,7 @@ func TestMissingExtensions(t *testing.T) {
 		}
 		return out
 	}
-	all := []string{"pg_stat_statements", "pg_wait_sampling", "pg_stat_kcache", "hypopg"}
+	all := []string{"pg_stat_statements", "auto_explain", "pg_wait_sampling", "pg_stat_kcache", "hypopg"}
 
 	bare := ServerInfo{PreloadKnown: true}
 	if got := names(bare.MissingExtensions()); !reflect.DeepEqual(got, all) {
@@ -74,10 +92,10 @@ func TestMissingExtensions(t *testing.T) {
 		},
 	}
 	got := ready.MissingExtensions()
-	if want := []string{"pg_wait_sampling", "pg_stat_kcache"}; !reflect.DeepEqual(names(got), want) {
+	if want := []string{"auto_explain", "pg_wait_sampling", "pg_stat_kcache"}; !reflect.DeepEqual(names(got), want) {
 		t.Fatalf("ready server: missing %v, want %v", names(got), want)
 	}
-	if !got[0].Available || !got[0].NeedsPreload || got[1].Available {
+	if !got[0].Available || !got[0].NeedsPreload || got[0].Create || !got[1].Available || !got[1].NeedsPreload || got[2].Available {
 		t.Fatalf("availability or preload flags wrong: %+v", got)
 	}
 
