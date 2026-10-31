@@ -120,7 +120,7 @@
 			<p class="px-4 py-6 text-[13px] text-tl-fg2">No findings. The checks that ran were clean.</p>
 		{:else}
 			<div class="divide-y divide-tl-line">
-				{#each items as item (item.id)}
+				{#each items as item, index (`${item.id}:${index}`)}
 					<div class="px-4 py-3">
 						<button
 							class="flex w-full items-start gap-2.5 text-left"

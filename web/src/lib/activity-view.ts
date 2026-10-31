@@ -50,8 +50,9 @@ export function sessionsFromActivity(sessions: Session[]): SessionRow[] {
 
 /** Analyser severities are info and warn. Info is a note, not a failure. */
 export function findingsFromReport(findings: Finding[]): DiagnosisItem[] {
-	return findings.map((finding) => ({
-		id: finding.check,
+	return findings.map((finding, index) => ({
+		// One check runs once per database or session, so the name is not unique.
+		id: `${finding.check}:${index}`,
 		sev: finding.severity === 'warn' ? 'warn' : 'ok',
 		title: finding.summary,
 		detail: finding.evidence,

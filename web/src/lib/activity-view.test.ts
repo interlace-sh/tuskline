@@ -34,6 +34,16 @@ describe('activity view', () => {
 		expect(rows[1]).toMatchObject({ blocked: true, wait: 'Lock:transactionid' });
 	});
 
+	it('keeps repeated checks as separate rows', () => {
+		const findings: Finding[] = [
+			{ check: 'cache_hit', severity: 'warn', summary: 'orders is 90%', evidence: 'a', fix: '' },
+			{ check: 'cache_hit', severity: 'warn', summary: 'auth is 80%', evidence: 'b', fix: '' }
+		];
+		const rows = findingsFromReport(findings);
+		expect(new Set(rows.map((row) => row.id)).size).toBe(2);
+		expect(rows.map((row) => row.title)).toEqual(['orders is 90%', 'auth is 80%']);
+	});
+
 	it('keeps info findings as notes', () => {
 		const findings: Finding[] = [
 			{ check: 'wraparound', severity: 'info', summary: 'Fine', evidence: 'low', fix: '' },
