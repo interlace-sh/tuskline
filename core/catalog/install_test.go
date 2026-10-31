@@ -27,8 +27,11 @@ func TestInstallPlanSelfManaged(t *testing.T) {
 	if !strings.Contains(text, "sudo apt-get install -y postgresql-16-hypopg") {
 		t.Fatalf("missing PGDG package:\n%s", text)
 	}
-	if !strings.Contains(text, "Pigsty") || !strings.Contains(text, "postgresql-16-pg-wait-sampling") {
-		t.Fatalf("missing Pigsty package:\n%s", text)
+	if !strings.Contains(text, "sudo apt-get install -y postgresql-16-pg-wait-sampling") {
+		t.Fatalf("missing pg_wait_sampling package:\n%s", text)
+	}
+	if strings.Contains(text, "Pigsty") {
+		t.Fatalf("PGDG ships pg_wait_sampling; plan asked for Pigsty:\n%s", text)
 	}
 	if !strings.Contains(text, "ALTER SYSTEM SET shared_preload_libraries = 'neon,pg_stat_statements,pg_wait_sampling';") {
 		t.Fatalf("preload was not merged:\n%s", text)

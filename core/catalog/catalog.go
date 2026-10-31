@@ -126,7 +126,7 @@ var entries = []Extension{
 	},
 	{
 		Name: "pg_wait_sampling", Unlocks: "wait-event history between samples",
-		LookedFor: true, Preload: true, Restart: true, Create: true, PackageSuffix: "pg-wait-sampling", Repo: "pigsty",
+		LookedFor: true, Preload: true, Restart: true, Create: true, PackageSuffix: "pg-wait-sampling",
 		MinMajor: 14, MaxMajor: 18, Providers: []string{ProviderCloudSQL},
 	},
 	{

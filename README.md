@@ -38,7 +38,7 @@ proto trust && proto install    # once per clone
 moon run cli:bin                # ./bin/tl
 ./bin/tl version
 
-make dev-db                     # PostgreSQL 14-18 on ports 5414-5418 (not for production)
+make dev-db                     # PostgreSQL 14-18 on ports 5414-5418, with hypopg, pg_stat_kcache and pg_wait_sampling (not for production)
 # Throwaway dev-db credentials. The password is referenced, never written to the inventory.
 # Local dev-db has no TLS, so connect and top warn about sslmode=disable.
 export TUSKLINE_PASSWORD=tuskline

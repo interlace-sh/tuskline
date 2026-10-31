@@ -52,7 +52,6 @@ func InstallPlan(req Request) ([]PlanLine, error) {
 
 func selfManagedPackages(req Request) []PlanLine {
 	var lines []PlanLine
-	pigsty := false
 	var pkgs []Extension
 	for _, e := range wanted(req) {
 		if !needsInstall(req, e) || e.Contrib {
@@ -60,20 +59,21 @@ func selfManagedPackages(req Request) []PlanLine {
 		}
 		pkgs = append(pkgs, e)
 		if e.Repo == "pigsty" {
-			pigsty = true
+			lines = append(lines, PlanLine{
+				Name: e.Name, Kind: "repo",
+				Text: "# PGDG does not ship " + e.Name + ". Add the Pigsty DEB or RPM repository (https://pigsty.io/docs/install/repo), which publishes that package name.",
+			})
 		}
-	}
-	if pigsty {
-		lines = append(lines, PlanLine{
-			Kind: "repo",
-			Text: "# PGDG does not ship pg_wait_sampling. Add the Pigsty DEB or RPM repository (https://pigsty.io/docs/install/repo), which publishes that package name.",
-		})
 	}
 	for _, e := range pkgs {
 		name := e.PGDGPackage(req.Major)
+		note := "PGDG build"
+		if e.Repo == "pigsty" {
+			note = "Pigsty build"
+		}
 		lines = append(lines, PlanLine{
 			Name: e.Name, Kind: "package",
-			Text: "sudo apt-get install -y " + name + "\n# RHEL/Fedora: install the PGDG or Pigsty build of " + name + ". Do not compile it.",
+			Text: "sudo apt-get install -y " + name + "\n# RHEL/Fedora: install the " + note + " of " + name + ". Do not compile it.",
 		})
 	}
 	return lines

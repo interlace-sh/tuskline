@@ -6,8 +6,10 @@
 #   tl connect --dsn "postgres://tuskline@localhost:5417/tuskline?sslmode=disable" --env dev --name pg17 --password-env TUSKLINE_PASSWORD
 #
 # Ports: 54<major> -> pg14 on 5414 ... pg18 on 5418.
-# Each server preloads pg_stat_statements and auto_explain, so collectors
-# have something to read. initdb/ creates the least-privilege monitor role.
+# Each server preloads pg_stat_statements, auto_explain, pg_stat_kcache and
+# pg_wait_sampling. The image installs hypopg, pg_stat_kcache and
+# pg_wait_sampling from PGDG. initdb/ creates those extensions and the
+# least-privilege monitor role.
 
 x-pg: &pg
   environment:
@@ -17,7 +19,7 @@ x-pg: &pg
   command:
     - postgres
     - -c
-    - shared_preload_libraries=pg_stat_statements,auto_explain
+    - shared_preload_libraries=pg_stat_statements,auto_explain,pg_stat_kcache,pg_wait_sampling
     - -c
     - pg_stat_statements.track=top
     - -c
@@ -32,25 +34,49 @@ x-pg: &pg
     timeout: 3s
     retries: 20
 
+x-build: &build
+  context: .
+  dockerfile: Dockerfile
+
 services:
   pg14:
     <<: *pg
-    image: postgres:14-alpine
+    build:
+      <<: *build
+      args:
+        PG_MAJOR: "14"
+    image: tuskline-dev-pg:14
     ports: ["5414:5432"]
   pg15:
     <<: *pg
-    image: postgres:15-alpine
+    build:
+      <<: *build
+      args:
+        PG_MAJOR: "15"
+    image: tuskline-dev-pg:15
     ports: ["5415:5432"]
   pg16:
     <<: *pg
-    image: postgres:16-alpine
+    build:
+      <<: *build
+      args:
+        PG_MAJOR: "16"
+    image: tuskline-dev-pg:16
     ports: ["5416:5432"]
   pg17:
     <<: *pg
-    image: postgres:17-alpine
+    build:
+      <<: *build
+      args:
+        PG_MAJOR: "17"
+    image: tuskline-dev-pg:17
     ports: ["5417:5432"]
   pg18:
     <<: *pg
-    image: postgres:18-alpine
+    build:
+      <<: *build
+      args:
+        PG_MAJOR: "18"
+    image: tuskline-dev-pg:18
     ports: ["5418:5432"]
     # PostgreSQL 18 images keep data under /var/lib/postgresql/18/docker.
