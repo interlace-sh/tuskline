@@ -35,20 +35,21 @@ Requirements: [proto](https://moonrepo.dev/proto), which installs the pinned Go,
 
 ```sh
 proto trust && proto install    # once per clone
-moon run cli:bin                # ./bin/tl
-./bin/tl version
+moon run cli:bin                # ./bin/tl, linked to ~/.local/bin/tl
+tl -v
 
-make dev-db                     # PostgreSQL 14-18 on ports 5414-5418, with hypopg, pg_stat_kcache and pg_wait_sampling (not for production)
+moon run :up                    # PostgreSQL 14-18 on ports 5414-5418, with hypopg, pg_stat_kcache and pg_wait_sampling (not for production)
+moon run :down                  # stop those databases and delete their volumes
 # Throwaway dev-db credentials. The password is referenced, never written to the inventory.
 # Local dev-db has no TLS, so connect and top warn about sslmode=disable.
 export TUSKLINE_PASSWORD=tuskline
-./bin/tl connect --dsn "postgres://tuskline@127.0.0.1:5417/tuskline?sslmode=disable" --env dev --name pg17 --password-env TUSKLINE_PASSWORD
-./bin/tl ls
-./bin/tl top dev/pg17 --once
+tl connect --dsn "postgres://tuskline@127.0.0.1:5417/tuskline?sslmode=disable" --env dev --name pg17 --password-env TUSKLINE_PASSWORD
+tl ls
+tl top dev/pg17 --once
 
 moon run :dev                   # Vite on :8090 and the API on :8080. The API process gets TUSKLINE_PASSWORD=tuskline so a dev-db connection can resolve. Restart :dev after pulling this.
-moon run server:bin             # ./bin/tuskline, with the UI embedded
-./bin/tl serve                  # http://127.0.0.1:8080  (finds ./bin/tuskline beside itself)
+moon run server:bin             # ./bin/tuskline, with the UI embedded, linked the same way
+tl serve                        # http://127.0.0.1:8080
 
 # Container image (distroless, non-root, `tuskline serve` on :8080)
 docker build -t tuskline .

@@ -7,7 +7,7 @@
 MOON ?= moon
 PG_VERSIONS ?= 14 15 16 17 18
 
-.PHONY: help check build bin test test-integration test-web lint lint-go lint-web fmt tidy web web-install dev dev-db dev-db-down clean
+.PHONY: help check build bin test test-integration test-web lint lint-go lint-web fmt tidy web web-install dev up down dev-db dev-db-down clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -18,8 +18,8 @@ check: ## Build, test and lint every project, Go and web (moon run :check)
 build: ## Compile every project; server embeds the web build (moon run :build)
 	$(MOON) run :build
 
-bin: ## Build ./bin/tl and ./bin/tuskline (web UI embedded)
-	$(MOON) run cli:bin server:bin
+bin: ## Build ./bin/tl and ./bin/tuskline and link them onto PATH (moon run :bin)
+	$(MOON) run :bin
 
 test: ## Go and web unit tests (moon run :test)
 	$(MOON) run :test
@@ -54,11 +54,14 @@ web-install: ## Install web dependencies (moon also does this on demand)
 dev: ## Vite on :8090 and the API on :8080 (moon run :dev)
 	$(MOON) run :dev
 
-dev-db: ## Start PostgreSQL 14-18 on ports 5414-5418 (Docker)
-	docker compose -f deploy/compose/compose.yaml up -d --wait
+up: ## Start PostgreSQL 14-18 on ports 5414-5418 (moon run :up)
+	$(MOON) run :up
 
-dev-db-down: ## Stop the dev databases and delete their volumes
-	docker compose -f deploy/compose/compose.yaml down -v
+down: ## Stop the dev databases and delete their volumes (moon run :down)
+	$(MOON) run :down
+
+dev-db: up ## Same as up
+dev-db-down: down ## Same as down
 
 clean: ## Remove build output and moon's cache
 	rm -rf bin web/build web/.svelte-kit .moon/cache

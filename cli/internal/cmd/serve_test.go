@@ -4,39 +4,10 @@ package cmd
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
-	"runtime"
 	"strings"
 	"testing"
-
-	"github.com/interlace-sh/tuskline/core/version"
 )
-
-func TestVersionJSON(t *testing.T) {
-	out, err := run(t, "version", "-o", "json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var got map[string]string
-	if err := json.Unmarshal([]byte(out), &got); err != nil {
-		t.Fatalf("%v:\n%s", err, out)
-	}
-	for k, want := range map[string]string{
-		"version": version.Version, "commit": version.Commit, "date": version.Date,
-		"go": runtime.Version(), "os": runtime.GOOS, "arch": runtime.GOARCH,
-	} {
-		if got[k] != want {
-			t.Errorf("%s = %q, want %q", k, got[k], want)
-		}
-	}
-}
-
-func TestVersionRejectsBadOutput(t *testing.T) {
-	if _, err := run(t, "version", "-o", "yaml"); err == nil || !strings.Contains(err.Error(), "want text or json") {
-		t.Fatalf("got %v", err)
-	}
-}
 
 func TestExitCode(t *testing.T) {
 	var buf bytes.Buffer

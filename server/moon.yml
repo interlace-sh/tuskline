@@ -68,13 +68,14 @@ tasks:
     deps: ['~:embed-web']
 
   bin:
-    description: 'Build ./bin/tuskline with the web UI embedded'
+    description: 'Build ./bin/tuskline, with the web UI embedded, and link it into ~/.local/bin'
     script: |
       VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo 0.0.0-dev)}"
       COMMIT="${COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo none)}"
       DATE="${DATE:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
       PKG=github.com/interlace-sh/tuskline/core/version
       go build -trimpath -ldflags "-s -w -X $PKG.Version=$VERSION -X $PKG.Commit=$COMMIT -X $PKG.Date=$DATE" -o "$workspaceRoot/bin/tuskline" ./cmd/tuskline
+      bash "$workspaceRoot/scripts/link-bin.sh" "$workspaceRoot/bin/tuskline" "${TUSKLINE_BIN_DIR:-$HOME/.local/bin}"
     deps: ['~:embed-web']
     outputs:
       - '/bin/tuskline'
@@ -109,7 +110,7 @@ tasks:
     command: 'go run ./cmd/tuskline serve'
     env:
       TUSKLINE_ADDR: '127.0.0.1:8080'
-      # Throwaway make dev-db password, same value as the README quickstart.
+      # Throwaway dev-database password, same value as the README quickstart.
       # The inventory stores only the variable name.
       TUSKLINE_PASSWORD: 'tuskline'
     preset: 'server'

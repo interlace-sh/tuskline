@@ -72,7 +72,7 @@ func findServer() (string, error) {
 	}
 	return "", errors.New(msg + `. Either:
   - install it from the same release as tl and put it on PATH, or
-  - build it from source: moon run server:bin (writes ./bin/tuskline), or
+  - build it from source: moon run server:bin (writes ./bin/tuskline and links ~/.local/bin/tuskline), or
   - run it in a container, from a source checkout:
       docker build -t tuskline . && docker run --rm -p 8080:8080 -v tuskline:/data tuskline`)
 }

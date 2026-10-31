@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -65,13 +64,15 @@ func newRoot(out, errOut io.Writer, a *app) *cobra.Command {
 		Short:         "Tuskline: a keyboard-first PostgreSQL workbench",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		Version:       version.String(),
 	}
 	root.SetOut(out)
 	root.SetErr(errOut)
 	root.SetIn(a.in)
+	root.SetVersionTemplate("tl {{.Version}}\n")
+	root.Flags().BoolP("version", "v", false, "print the version")
 	root.PersistentFlags().StringVar(&a.inventoryPath, "inventory", "", "inventory file (default $TUSKLINE_INVENTORY or $XDG_CONFIG_HOME/tuskline/inventory.yaml)")
 
-	root.AddCommand(newVersionCmd())
 	root.AddCommand(newConnectCmd(a))
 	root.AddCommand(newLsCmd(a))
 	root.AddCommand(newTopCmd(a))
@@ -113,28 +114,4 @@ func exitCode(err error, errOut io.Writer) int {
 		fmt.Fprintln(errOut, "tl:", err)
 		return 1
 	}
-}
-
-func newVersionCmd() *cobra.Command {
-	var output string
-	c := &cobra.Command{
-		Use:   "version",
-		Short: "Print the version",
-		Args:  cobra.NoArgs,
-		RunE: func(c *cobra.Command, _ []string) error {
-			if err := checkOutput(output); err != nil {
-				return err
-			}
-			if output == outputJSON {
-				return writeJSON(c.OutOrStdout(), map[string]string{
-					"version": version.Version, "commit": version.Commit, "date": version.Date,
-					"go": runtime.Version(), "os": runtime.GOOS, "arch": runtime.GOARCH,
-				})
-			}
-			_, err := fmt.Fprintf(c.OutOrStdout(), "tl %s\n", version.String())
-			return err
-		},
-	}
-	addOutputFlag(c, &output)
-	return c
 }

@@ -22,7 +22,7 @@ moon run :check          # build, test and lint everything (installs web deps on
 moon run core:integration cli:integration server:integration   # needs Docker; PostgreSQL 14-18
 ```
 
-You also need Docker for integration tests and `make dev-db`. `make` targets still work as short aliases for the moon commands (`make help`).
+You also need Docker for integration tests and `moon run :up` (the dev databases; `moon run :down` removes them). `make` targets still work as short aliases for the moon commands (`make help`).
 
 ## Pull requests
 

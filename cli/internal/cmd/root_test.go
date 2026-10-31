@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/interlace-sh/tuskline/core/version"
 )
 
 func run(t *testing.T, args ...string) (string, error) {
@@ -46,12 +48,18 @@ func isolatePGFiles(t *testing.T) {
 }
 
 func TestVersion(t *testing.T) {
-	out, err := run(t, "version")
-	if err != nil {
-		t.Fatal(err)
+	want := "tl " + version.String() + "\n"
+	for _, args := range [][]string{{"-v"}, {"--version"}} {
+		out, err := run(t, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out != want {
+			t.Fatalf("%v: got %q", args, out)
+		}
 	}
-	if !strings.HasPrefix(out, "tl ") {
-		t.Fatalf("got %q", out)
+	if _, err := run(t, "version"); err == nil || !strings.Contains(err.Error(), "unknown command") {
+		t.Fatalf("tl version: %v", err)
 	}
 }
 

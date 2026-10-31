@@ -34,11 +34,15 @@ tasks:
     tags: ['licence']
 
   test:
-    description: 'Self-test: the boundary check fails on deliberately bad fixtures'
-    command: 'bash check-licence-boundary.test.sh'
+    description: 'Self-test the licence boundary and the PATH linker'
+    script: |
+      bash check-licence-boundary.test.sh
+      bash link-bin.test.sh
     inputs:
       - 'check-licence-boundary.sh'
       - 'check-licence-boundary.test.sh'
+      - 'link-bin.sh'
+      - 'link-bin.test.sh'
     tags: ['licence']
 
   release-check:

@@ -43,7 +43,7 @@ agent/     Apache-2.0  module …/agent  outbound collector (`tl agent`)
 server/    AGPL-3.0    module …/server cmd/tuskline, internal/httpapi, internal/webui (go:embed)
 web/       AGPL-3.0    SvelteKit app; `moon run server:embed-web` copies web/build → server/internal/webui/dist
 desktop/   AGPL-3.0    Wails v3 app (placeholder until M8)
-deploy/    dev databases (compose) now; generated templates later
+deploy/    dev databases (compose) now; `moon run :up` and `moon run :down`. Generated templates later
 docs/      CC BY 4.0   vision, architecture, decisions + adr/, roadmap, design, cli, security …
 prototype/ frozen React prototype = UI spec; port to web/, then delete
 brand/     Tusk Arc SVG/PNG/ICO
@@ -93,7 +93,7 @@ Tasks run through [moon](https://moonrepo.dev/moon) (`.moon/`, each project's `m
 - `moon run web:test`: vitest for pure TypeScript logic. UI screens are accepted by Playwright smoke checks ported from `prototype/scripts/smoke.mjs` plus a screenshot comparison.
 - Table-driven tests; `t.Parallel()` where safe; no sleeps (poll with a deadline).
 - Bug fix ⇒ regression test first.
-- `make dev-db` (Docker Compose, not a moon task) starts PostgreSQL 14–18 on ports 5414–5418 for manual testing.
+- `moon run :up` starts PostgreSQL 14–18 on ports 5414–5418 for manual testing. `moon run :down` stops them and deletes their volumes. Integration tests do not use these containers.
 
 ## 7. Safety rules (non-negotiable)
 
@@ -140,11 +140,13 @@ moon run :check                  # everything a PR must pass (no Docker)
 moon run cli:test                # one task in one project
 moon run :lint --affected        # only projects touched by uncommitted changes
 moon run core:integration        # Docker + PostgreSQL 14-18
-moon run cli:bin server:bin      # ./bin/tl and ./bin/tuskline (web UI built and embedded)
+moon run :bin                    # ./bin/tl and ./bin/tuskline, linked into ~/.local/bin
 ./bin/tuskline serve
 moon run :dev                    # Vite on :8090 and `tuskline serve` on :8080
+moon run :up                     # PostgreSQL 14-18 on ports 5414-5418 (not for production)
+moon run :down                   # stop those databases and delete their volumes
 moon run server:smoke            # Playwright checks against a temporary tuskline serve
-moon query tasks                 # list every task; `make help` lists the aliases
+moon query tasks                 # list every task; `make help` lists the Makefile aliases
 ```
 
 Do not call `go`, `npm` or `golangci-lint` with versions other than the `.prototools` pins; proto's shims pick the pinned ones automatically. In the Go workspace (`go.work`), Go commands must run inside a module, which moon does for you; `go build ./...` from the repository root does not work. Task dependencies are declared, not implied: `server:build` and `server:bin` depend on `web:build` (embedding), and `cli`/`server` depend on `core`, so `moon run server:bin` always embeds a fresh UI. Change tasks in `.moon/tasks/go.yml` (all Go modules) or the project's `moon.yml`, never only in CI.

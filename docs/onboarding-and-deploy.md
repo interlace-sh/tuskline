@@ -54,7 +54,7 @@ Tuskline keeps a catalog and drives the install. It does not build extension bin
 
 A catalog entry is metadata: what the extension unlocks, the PostgreSQL 14–18 builds that exist, whether it needs a preload and a restart, the package name, the provider allow-list, and any settings (`pg_stat_statements.track`, `auto_explain.log_min_duration`). The first cut is the five extensions in the table above, plus the ordinary single-node extensions Autobase turns on with a flag: pgvector, PostGIS, pgRouting, pg_cron, pgaudit, pg_partman and pg_repack. TimescaleDB and Citus stay compatible systems (tier 2), not one-click installs. Pigsty's catalog of several hundred extensions is the index for everything else; Tuskline does not copy that list in.
 
-`make dev-db` builds that image for PostgreSQL 14–18: the official image plus the PGDG packages for `hypopg`, `pg_stat_kcache` and `pg_wait_sampling`, preloaded where they must be. The 14–18 integration tests stay on the stock images.
+`moon run :up` builds that image for PostgreSQL 14–18: the official image plus the PGDG packages for `hypopg`, `pg_stat_kcache` and `pg_wait_sampling`, preloaded where they must be. The 14–18 integration tests stay on the stock images.
 
 Managed services have no superuser and no `postgresql.conf`. Tuskline emits the provider's own commands, warns about static parameters that need a reboot, and offers Terraform equivalents:
 

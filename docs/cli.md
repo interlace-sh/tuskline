@@ -2,6 +2,8 @@
 
 `tl` is the Apache-2.0 CLI and TUI. It uses the same core and inventory as the UI. References take the form `environment/cluster`, for example `prod/orders`.
 
+From a checkout, `moon run :bin` builds `./bin/tl` and `./bin/tuskline` and symlinks each one into `~/.local/bin` (override the directory with `TUSKLINE_BIN_DIR`). Rebuilding updates the commands, because the links point at those files. `~/.local/bin` has to be on `PATH`. A name that is already a real file, or a link to somewhere else, is left as it is.
+
 Conventions:
 
 - Every data command takes `--output text|json` (`-o`; the default is `text`).
@@ -13,7 +15,7 @@ Conventions:
 
 | Command | Status |
 |---|---|
-| `tl version` | Prints `tl <version> (commit <sha>, built <date>)`; see [below](#tl-version) |
+| `tl -v` | Prints `tl <version> (commit <sha>, built <date>)`; see [below](#tl--v) |
 | `tl connect` | Probes a server and adds it to the inventory, or probes an inventory entry again; see [below](#tl-connect) |
 | `tl ls` | Lists the inventory; see [below](#tl-ls) |
 | `tl top <ref>` | Live sessions, waits, locks and blocking chains; see [below](#tl-top) |
@@ -24,11 +26,9 @@ Conventions:
 
 Global flag: `--inventory <file>` (connect, ls, top, snapshot and diagnose) overrides the inventory location (default `$TUSKLINE_INVENTORY`, else `$XDG_CONFIG_HOME/tuskline/inventory.yaml`).
 
-### `tl version`
+### `tl -v`
 
-| Flag | Meaning |
-|---|---|
-| `--output text\|json`, `-o` | Text is one line, `tl <version> (commit <sha>, built <date>)`. JSON is `{version, commit, date, go, os, arch}`. |
+`tl -v` and `tl --version` print one line, `tl <version> (commit <sha>, built <date>)`.
 
 ### `tl connect`
 
@@ -125,7 +125,7 @@ Connects with the environment's session policy and runs the health checks: missi
 
 ### `tl serve`
 
-`tl serve [args]` runs `tuskline serve [args]`, the separate AGPL server binary ([ADR 0010](adr/0010-licence-boundary.md)); `tl` never links it. It looks for `tuskline` on `PATH`, then next to the `tl` executable, so `./bin/tl serve` finds `./bin/tuskline`. If neither has it, it exits 1 with install hints: a release binary, `moon run server:bin`, or building and running the container image.
+`tl serve [args]` runs `tuskline serve [args]`, the separate AGPL server binary ([ADR 0010](adr/0010-licence-boundary.md)); `tl` never links it. It looks for `tuskline` on `PATH`, then next to the `tl` executable, so `./bin/tl serve` finds `./bin/tuskline`. If neither has it, it exits 1 with install hints: a release binary, `moon run server:bin` (which also links `~/.local/bin/tuskline`), or building and running the container image.
 
 Arguments after `serve` are the server's. `tl serve -h` prints this help; `tl serve -addr :8080` is passed through (`TUSKLINE_ADDR` also sets the listen address; the server default is `127.0.0.1:8080`). While the server runs, `SIGINT`, `SIGTERM` and `SIGHUP` sent to `tl` are passed on to it (`os.Interrupt` on Windows), and `tl` exits with the server's exit code.
 

@@ -23,7 +23,7 @@ Tuskline is a Go workspace (`core`, `agent`, `cli`, `server`) plus a SvelteKit a
   - `server:build` and `server:bin` depend on `server:embed-web`, which depends on `web:build` (outputs `web/build/`). The UI is therefore always rebuilt when it changed and reused from cache when it did not.
   - moon's npm toolchain installs `web/` dependencies on demand (`npm ci` in CI), so a fresh clone needs no separate install step.
 - **CI** uses `moonrepo/setup-toolchain` (which runs `proto install`) and `moon ci`, which runs only affected tasks with `runInCI`. The PostgreSQL 14–18 integration matrix stays as separate jobs running `moon run core:integration` with `PG_VERSIONS` set per job.
-- **The `Makefile` stays as a thin alias layer.** Every target is a single moon (or Docker Compose) command and adds no behaviour. It keeps muscle memory, existing docs and `make help` working, and costs almost nothing to maintain. If it ever needs logic, that logic belongs in a moon task instead.
+- **The `Makefile` stays as a thin alias layer.** Every target is a single moon command and adds no behaviour. It keeps muscle memory, existing docs and `make help` working, and costs almost nothing to maintain. If it ever needs logic, that logic belongs in a moon task instead.
 
 ## Consequences
 
@@ -37,3 +37,4 @@ Tuskline is a Go workspace (`core`, `agent`, `cli`, `server`) plus a SvelteKit a
 
 - 2026-10-29 (M0.4): on a runner, `runInCI: false` also stops an explicit `moon run`, so the first integration matrix reported "No tasks found". `core:integration` now uses `runInCI: 'always'`, and the moon job runs `moon ci :check :cross` so the Docker tests stay out of it. A task that needs Docker therefore uses `runInCI: 'always'` and is left out of the `moon ci` targets.
 - 2026-10-29 (M0.4a): moon remote caching and `.protolock` stay off. A local `moon run :check` finishes in a few seconds once the cache is warm, which does not justify a remote cache service or checksums for every platform. Revisit when a CI run is slow enough that the cache misses cost more than the service.
+- 2026-10-31: the dev databases are `moon run :up` and `moon run :down` (the `compose` project). `make dev-db` only calls `:up`. Integration tests still start their own containers.

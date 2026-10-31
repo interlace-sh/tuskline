@@ -1,7 +1,7 @@
 # Development and test databases: PostgreSQL 14-18 side by side.
 # Not for production. Credentials are throwaway dev values.
 #
-#   docker compose -f deploy/compose/compose.yaml up -d
+#   moon run :up          # build and start; moon run :down stops and deletes volumes
 #   export TUSKLINE_PASSWORD=tuskline
 #   tl connect --dsn "postgres://tuskline@localhost:5417/tuskline?sslmode=disable" --env dev --name pg17 --password-env TUSKLINE_PASSWORD
 #

@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
+#
+# Throwaway PostgreSQL 14-18 for manual testing. Not for production, and not
+# the containers the integration tests start themselves.
+language: 'bash'
+layer: 'application'
+stack: 'infrastructure'
+tags: ['docker']
+
+project:
+  title: 'compose'
+  description: 'Dev databases: PostgreSQL 14-18 with the catalogue extensions.'
+
+toolchains:
+  default: 'system'
+
+tasks:
+  up:
+    description: 'Build and start PostgreSQL 14-18 on ports 5414-5418 (not for production)'
+    command: 'docker compose up -d --build --wait'
+    type: 'run'
+    inputs:
+      - 'compose.yaml'
+      - 'Dockerfile'
+      - 'initdb/**/*'
+    options:
+      cache: false
+      runInCI: false
+
+  down:
+    description: 'Stop the dev databases and delete their volumes'
+    command: 'docker compose down -v'
+    type: 'run'
+    inputs:
+      - 'compose.yaml'
+    options:
+      cache: false
+      runInCI: false

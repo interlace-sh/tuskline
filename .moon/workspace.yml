@@ -14,6 +14,8 @@ projects:
   web: 'web'
   # Repository-wide checks (licence boundary, SPDX headers).
   scripts: 'scripts'
+  # Throwaway PostgreSQL 14-18. `moon run :up` and `moon run :down`.
+  compose: 'deploy/compose'
 
 vcs:
   client: 'git'
