@@ -86,7 +86,7 @@ func composePlan(spec ComposeSpec, start bool) (Plan, error) {
 	return plan, nil
 }
 
-func normaliseCompose(spec ComposeSpec) (ComposeSpec, error) {
+func prepareCompose(spec ComposeSpec) (ComposeSpec, error) {
 	if err := inventory.ValidateName(spec.Name); err != nil {
 		return spec, fmt.Errorf("cluster name: %w", err)
 	}
@@ -115,7 +115,14 @@ func normaliseCompose(spec ComposeSpec) (ComposeSpec, error) {
 	if spec.Nodes > 1 && spec.Etcd != 3 {
 		return spec, fmt.Errorf("more than one Postgres node needs a 3-member etcd")
 	}
-	var err error
+	return spec, nil
+}
+
+func normaliseCompose(spec ComposeSpec) (ComposeSpec, error) {
+	spec, err := prepareCompose(spec)
+	if err != nil {
+		return spec, err
+	}
 	if spec.Superuser == "" {
 		if spec.Superuser, err = randomSecret(); err != nil {
 			return spec, err

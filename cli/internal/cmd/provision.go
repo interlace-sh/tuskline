@@ -68,8 +68,9 @@ up writes those files and starts the stack.`,
 		Short: "Write the stack and start it. Waits for health checks.",
 		Long: `Write the Compose files into --dir and run docker compose up.
 The command waits until etcd and Patroni health checks pass, up to 10 minutes
-after the containers have started. Passwords are written into the directory
-as mode 0600 files and are not printed.
+after the containers have started. Before anything is written it checks Docker,
+free disk, the published ports and leftover volumes. Passwords are written
+into the directory as mode 0600 files and are not printed.
 
 Compose is non-production: one host is a single point of failure.`,
 		Example: `  tl provision compose up --name demo --dir ~/clusters/demo --nodes 1 --etcd 1`,
@@ -79,6 +80,20 @@ Compose is non-production: one host is a single point of failure.`,
 			if err := provision.CheckOutputDir(dir); err != nil {
 				return err
 			}
+			need, err := provision.Requirements(spec)
+			if err != nil {
+				return err
+			}
+			probeCtx, cancelProbe := context.WithTimeout(c.Context(), 15*time.Second)
+			report, err := probeCompose(probeCtx, need, dir)
+			cancelProbe()
+			if err != nil {
+				return err
+			}
+			if err := provision.Evaluate(need, report); err != nil {
+				return err
+			}
+			fmt.Fprintln(c.OutOrStdout(), provision.Summary(need, report))
 			built, err := provision.ComposeStart(spec)
 			if err != nil {
 				return err
@@ -87,6 +102,9 @@ Compose is non-production: one host is a single point of failure.`,
 				return err
 			}
 			fmt.Fprintln(c.OutOrStdout(), "Applying. Non-production. Passwords stay in the directory.")
+			if err := provision.RefuseDataDirs(c.Context(), built, provision.OSFS{Root: dir}); err != nil {
+				return err
+			}
 			if err := os.MkdirAll(dir, 0o700); err != nil {
 				return fmt.Errorf("create %s: %w", dir, err)
 			}

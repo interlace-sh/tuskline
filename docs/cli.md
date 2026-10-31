@@ -155,7 +155,7 @@ tl provision compose plan --name demo --pg 16 --nodes 1 --etcd 1 --pooler=false
 
 Prints the diff for a Patroni stack on one Docker host: `compose.yaml`, `haproxy.cfg`, `pgbackrest.conf` and a secret `.env`. Passwords are generated and redacted. The stack is labelled non-production.
 
-`up` prints the same diff, writes the files into `--dir`, and runs `docker compose up -d --wait`. etcd and Patroni must pass their health checks. Passwords are written as mode 0600 and are not printed. `--dir` must be missing, empty, or already hold only these generated files.
+`up` checks the machine before it writes anything. It needs Docker Engine 24 or newer and Compose 2.20 or newer, free space of 2 GiB per Postgres node plus 1 GiB, and ports 5000, 5001 and (with PgBouncer) 6432 free. A named volume such as `demo_pg1` that already exists is refused unless `--dir` is a previous run of the same stack, in which case those volumes and ports are kept. It then prints the same diff, writes the files into `--dir`, and runs `docker compose up -d --wait`. etcd and Patroni must pass their health checks. Passwords are written as mode 0600 and are not printed. `--dir` must be missing, empty, or already hold only these generated files. A plan step that names a data directory is refused when that directory already has files; this Compose stack keeps its data in named volumes instead.
 
 | Flag | Meaning |
 |---|---|
