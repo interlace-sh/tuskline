@@ -49,17 +49,21 @@ func (a *api) routes(mux *http.ServeMux) {
 }
 
 type clusterView struct {
-	ID          string                 `json:"id"`
-	Environment string                 `json:"environment"`
-	Name        string                 `json:"name"`
-	Kind        string                 `json:"kind"`
-	Provider    string                 `json:"provider,omitempty"`
-	Host        string                 `json:"host,omitempty"`
-	Port        uint16                 `json:"port,omitempty"`
-	Database    string                 `json:"database,omitempty"`
-	User        string                 `json:"user,omitempty"`
-	TLS         string                 `json:"tls,omitempty"`
-	LastProbe   *inventory.ProbeRecord `json:"last_probe,omitempty"`
+	ID           string                 `json:"id"`
+	Environment  string                 `json:"environment"`
+	Name         string                 `json:"name"`
+	Kind         string                 `json:"kind"`
+	Provider     string                 `json:"provider,omitempty"`
+	Host         string                 `json:"host,omitempty"`
+	Port         uint16                 `json:"port,omitempty"`
+	Database     string                 `json:"database,omitempty"`
+	User         string                 `json:"user,omitempty"`
+	TLS          string                 `json:"tls,omitempty"`
+	LastProbe    *inventory.ProbeRecord `json:"last_probe,omitempty"`
+	HAEngine     string                 `json:"ha_engine,omitempty"`
+	PatroniURL   string                 `json:"patroni_url,omitempty"`
+	Backup       string                 `json:"backup,omitempty"`
+	RestoreDrill string                 `json:"restore_drill,omitempty"`
 }
 
 func (a *api) listClusters(w http.ResponseWriter, r *http.Request) {
@@ -72,11 +76,21 @@ func (a *api) listClusters(w http.ResponseWriter, r *http.Request) {
 	for _, cl := range inv.List() {
 		env, _ := inv.Environment(cl.Environment)
 		p := cl.Profile
-		out = append(out, clusterView{
+		view := clusterView{
 			ID: cl.Ref().String(), Environment: cl.Environment, Name: cl.Name, Kind: string(env.Kind),
 			Provider: cl.Provider, Host: p.Host, Port: p.EffectivePort(), Database: p.Database,
-			User: p.User, TLS: string(p.TLSMode()), LastProbe: cl.LastProbe,
-		})
+			User: p.User, TLS: string(p.TLSMode()), LastProbe: cl.LastProbe, HAEngine: cl.HAEngine,
+		}
+		if cl.Patroni != nil {
+			view.PatroniURL = cl.Patroni.URL
+		}
+		if cl.Backup != nil {
+			view.Backup = cl.Backup.Tool + " " + cl.Backup.Repo
+		}
+		if cl.RestoreDrill != nil {
+			view.RestoreDrill = cl.RestoreDrill.Status
+		}
+		out = append(out, view)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"clusters": out})
 }

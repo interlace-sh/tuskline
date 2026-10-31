@@ -16,6 +16,8 @@ var composeFiles = map[string]bool{
 	"pgbackrest.conf":       true,
 	".env":                  true,
 	".tuskline-apply.jsonl": true,
+	"handover.yaml":         true,
+	"monitor.sql":           true,
 	"pgbouncer":             true,
 }
 

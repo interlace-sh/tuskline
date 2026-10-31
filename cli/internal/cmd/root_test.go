@@ -14,6 +14,7 @@ import (
 
 func run(t *testing.T, args ...string) (string, error) {
 	t.Helper()
+	t.Setenv("TUSKLINE_INVENTORY", filepath.Join(t.TempDir(), "inventory.yaml"))
 	var out bytes.Buffer
 	root := NewRoot(&out, &out)
 	root.SetArgs(args)

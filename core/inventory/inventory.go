@@ -92,6 +92,32 @@ type Cluster struct {
 	Password *SecretRef `json:"password,omitempty" yaml:"password,omitempty"`
 	// LastProbe is the latest successful probe, for `tl ls`.
 	LastProbe *ProbeRecord `json:"last_probe,omitempty" yaml:"last_probe,omitempty"`
+	// Patroni is the REST API when HAEngine is patroni.
+	Patroni *Patroni `json:"patroni,omitempty" yaml:"patroni,omitempty"`
+	// Backup is the repository registered at hand-over.
+	Backup *Backup `json:"backup,omitempty" yaml:"backup,omitempty"`
+	// RestoreDrill is the next scheduled drill. Running it is a later command.
+	RestoreDrill *RestoreDrill `json:"restore_drill,omitempty" yaml:"restore_drill,omitempty"`
+}
+
+// Patroni is how to reach a cluster's Patroni REST API. The URL has no password.
+type Patroni struct {
+	URL string `json:"url" yaml:"url"`
+}
+
+// Backup is a backup repository. Repo local-volume is the Compose pgBackRest volume.
+type Backup struct {
+	Tool   string `json:"tool" yaml:"tool"`
+	Stanza string `json:"stanza" yaml:"stanza"`
+	Repo   string `json:"repo" yaml:"repo"`
+	Path   string `json:"path" yaml:"path"`
+}
+
+// RestoreDrill is a scheduled restore drill. Status scheduled means it has not been run.
+type RestoreDrill struct {
+	Status  string    `json:"status" yaml:"status"`
+	Due     time.Time `json:"due" yaml:"due"`
+	Command string    `json:"command" yaml:"command"`
 }
 
 // Ref returns the cluster's env/cluster reference.

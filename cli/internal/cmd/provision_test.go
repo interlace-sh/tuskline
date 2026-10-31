@@ -28,6 +28,13 @@ func TestComposeUpStopsWhenPreflightFails(t *testing.T) {
 	}
 }
 
+func TestComposeRejectsProd(t *testing.T) {
+	_, err := run(t, "provision", "compose", "plan", "--name", "demo", "--env", "prod")
+	if err == nil || !strings.Contains(err.Error(), "prod") {
+		t.Fatalf("got %v", err)
+	}
+}
+
 func TestComposeUpRefusesAForeignDirectory(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("keep"), 0o644); err != nil {

@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/interlace-sh/tuskline/core/inventory"
 )
@@ -40,24 +41,61 @@ type ComposeSpec struct {
 	// values are filled with random ones. They appear only in secret steps.
 	Superuser   string
 	Replication string
+	// Env is the inventory environment for the hand-over. Empty means dev.
+	// prod is refused: Compose is not a production target.
+	Env string
+	// Now is the clock for a new restore-drill date. Zero means the current time.
+	Now time.Time
+	// DrillDue keeps a drill that is already scheduled. Zero means seven days after Now.
+	DrillDue time.Time
+	// MonitorPassword is the tuskline_monitor password. Empty generates one.
+	// It is written only to a secret file and the OS keychain.
+	MonitorPassword string
 }
 
 // Compose builds a plan for compose.yaml, haproxy.cfg, pgBackRest config
 // and a secret env file. The plan is not production, and nothing is started.
 func Compose(spec ComposeSpec) (Plan, error) {
-	return composePlan(spec, false)
+	plan, _, _, err := composePlan(spec, false)
+	return plan, err
 }
 
 // ComposeStart is Compose plus a command that starts the stack and waits
 // until the health checks pass. The command has no passwords in it.
 func ComposeStart(spec ComposeSpec) (Plan, error) {
-	return composePlan(spec, true)
+	plan, _, _, err := composePlan(spec, true)
+	return plan, err
 }
 
-func composePlan(spec ComposeSpec, start bool) (Plan, error) {
+// HandedOver is a started stack plus the inventory entry and the monitor
+// password. The password is not in the plan diff.
+type HandedOver struct {
+	Plan            Plan
+	Cluster         inventory.Cluster
+	MonitorPassword string
+}
+
+// Up is ComposeStart with the hand-over values the caller stores after Apply.
+func Up(spec ComposeSpec) (HandedOver, error) {
+	plan, cluster, password, err := composePlan(spec, true)
+	if err != nil {
+		return HandedOver{}, err
+	}
+	return HandedOver{Plan: plan, Cluster: cluster, MonitorPassword: password}, nil
+}
+
+func composePlan(spec ComposeSpec, start bool) (Plan, inventory.Cluster, string, error) {
 	spec, err := normaliseCompose(spec)
 	if err != nil {
-		return Plan{}, err
+		return Plan{}, inventory.Cluster{}, "", err
+	}
+	cluster, monitorPassword, sql, err := handover(spec)
+	if err != nil {
+		return Plan{}, inventory.Cluster{}, "", err
+	}
+	handoverYAML, err := handoverDocument(cluster)
+	if err != nil {
+		return Plan{}, inventory.Cluster{}, "", err
 	}
 	plan := Plan{
 		Target:     "compose",
@@ -75,15 +113,28 @@ func composePlan(spec ComposeSpec, start bool) (Plan, error) {
 			After: fmt.Sprintf("\"postgres\" \"%s\"\n", spec.Superuser),
 		})
 	}
+	plan.Steps = append(plan.Steps,
+		Step{ID: "handover", Kind: KindFile, Path: "handover.yaml", After: handoverYAML},
+		Step{ID: "monitor-sql", Kind: KindFile, Path: "monitor.sql", Secret: true, After: sql},
+	)
 	if start {
-		plan.Steps = append(plan.Steps, Step{
-			ID: "up", Kind: KindCommand, Path: "docker compose up",
-			After: "docker compose --env-file .env up -d --wait --wait-timeout 600",
-			Argv:  []string{"docker", "compose", "--env-file", ".env", "up", "-d", "--wait", "--wait-timeout", "600"},
-			Rerun: true,
-		})
+		plan.Steps = append(plan.Steps,
+			Step{
+				ID: "up", Kind: KindCommand, Path: "docker compose up",
+				After: "docker compose --env-file .env up -d --wait --wait-timeout 600",
+				Argv:  []string{"docker", "compose", "--env-file", ".env", "up", "-d", "--wait", "--wait-timeout", "600"},
+				Rerun: true,
+			},
+			Step{
+				ID: "monitor-role", Kind: KindCommand, Path: "tuskline_monitor",
+				After:     "docker compose exec -T pg1 psql -U postgres -d postgres -v ON_ERROR_STOP=1",
+				Argv:      []string{"docker", "compose", "exec", "-T", "pg1", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1"},
+				StdinPath: "monitor.sql",
+				Rerun:     true,
+			},
+		)
 	}
-	return plan, nil
+	return plan, cluster, monitorPassword, nil
 }
 
 func prepareCompose(spec ComposeSpec) (ComposeSpec, error) {
@@ -200,6 +251,9 @@ func composeYAML(spec ComposeSpec) string {
 `, i, spiloImages[spec.Major], i, spec.Name, spec.Major, clientList)
 		if spec.Sync {
 			b.WriteString("      # Synchronous replication was requested. Starting the stack confirms the image honours it.\n")
+		}
+		if i == 1 {
+			b.WriteString("    ports:\n      - \"127.0.0.1:8008:8008\"\n")
 		}
 		fmt.Fprintf(&b, `    volumes:
       - pg%d:/home/postgres/pgdata

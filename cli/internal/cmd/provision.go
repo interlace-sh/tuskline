@@ -14,19 +14,20 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/interlace-sh/tuskline/core/inventory"
 	"github.com/interlace-sh/tuskline/core/provision"
 )
 
-func newProvisionCmd() *cobra.Command {
+func newProvisionCmd(a *app) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "provision",
 		Short: "Plan a deployment",
 	}
-	cmd.AddCommand(newComposeCmd())
+	cmd.AddCommand(newComposeCmd(a))
 	return cmd
 }
 
-func newComposeCmd() *cobra.Command {
+func newComposeCmd(a *app) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "compose",
 		Short: "Non-production Patroni stack for one Docker host",
@@ -41,6 +42,7 @@ func newComposeCmd() *cobra.Command {
 	flags.IntVar(&spec.Etcd, "etcd", 0, "etcd members, 1 or 3 (default 1 for one node, otherwise 3)")
 	flags.BoolVar(&pooler, "pooler", true, "include PgBouncer")
 	flags.BoolVar(&spec.Sync, "sync", false, "ask Patroni for synchronous replication")
+	flags.StringVar(&spec.Env, "env", "dev", "inventory environment (local, dev, staging; not prod)")
 	flags.StringVar(&dir, "dir", "", "directory to write the stack into")
 
 	plan := &cobra.Command{
@@ -56,6 +58,9 @@ up writes those files and starts the stack.`,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			spec.Pooler = pooler
+			if err := prepareSpec(a, &spec); err != nil {
+				return err
+			}
 			built, err := provision.Compose(spec)
 			if err != nil {
 				return err
@@ -69,14 +74,19 @@ up writes those files and starts the stack.`,
 		Long: `Write the Compose files into --dir and run docker compose up.
 The command waits until etcd and Patroni health checks pass, up to 10 minutes
 after the containers have started. Before anything is written it checks Docker,
-free disk, the published ports and leftover volumes. Passwords are written
-into the directory as mode 0600 files and are not printed.
+free disk, the published ports and leftover volumes. It then creates
+tuskline_monitor, saves that cluster in the inventory, and schedules a restore
+drill. Passwords are written into the directory as mode 0600 files and the
+keychain, and are not printed.
 
 Compose is non-production: one host is a single point of failure.`,
 		Example: `  tl provision compose up --name demo --dir ~/clusters/demo --nodes 1 --etcd 1`,
 		Args:    cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			spec.Pooler = pooler
+			if err := prepareSpec(a, &spec); err != nil {
+				return err
+			}
 			if err := provision.CheckOutputDir(dir); err != nil {
 				return err
 			}
@@ -94,10 +104,11 @@ Compose is non-production: one host is a single point of failure.`,
 				return err
 			}
 			fmt.Fprintln(c.OutOrStdout(), provision.Summary(need, report))
-			built, err := provision.ComposeStart(spec)
+			handed, err := provision.Up(spec)
 			if err != nil {
 				return err
 			}
+			built := handed.Plan
 			if err := showCompose(c.OutOrStdout(), built, "Compose plan. Non-production."); err != nil {
 				return err
 			}
@@ -111,9 +122,24 @@ Compose is non-production: one host is a single point of failure.`,
 			ctx, cancel := context.WithTimeout(c.Context(), 15*time.Minute)
 			defer cancel()
 			fs := provision.OSFS{Root: dir}
-			return provision.Apply(ctx, built, provision.FileJournal{Path: filepath.Join(dir, ".tuskline-apply.jsonl")}, fs, dockerExec{dir: dir, stdout: c.OutOrStdout(), stderr: c.ErrOrStderr()}, func(ev provision.Event) {
+			if err := provision.Apply(ctx, built, provision.FileJournal{Path: filepath.Join(dir, ".tuskline-apply.jsonl")}, fs, dockerExec{dir: dir, stdout: c.OutOrStdout(), stderr: c.ErrOrStderr()}, func(ev provision.Event) {
 				fmt.Fprintf(c.OutOrStdout(), "%s  %s  %s\n", ev.Status, ev.Kind, ev.Text)
-			}, fs)
+			}, fs); err != nil {
+				return err
+			}
+			invPath, err := a.inventoryFile()
+			if err != nil {
+				return err
+			}
+			if err := provision.SaveHandover(invPath, handed.Cluster, handed.MonitorPassword); err != nil {
+				return err
+			}
+			drill := handed.Cluster.RestoreDrill.Due.Format("2006-01-02")
+			fmt.Fprintln(c.OutOrStdout(), handed.Cluster.Profile.TLSMode().Warning())
+			fmt.Fprintf(c.OutOrStdout(), "Hand-over: %s as %s at %s:%d. Patroni %s. pgBackRest stanza %s on the local volume. Restore drill scheduled %s (%s), not run.\n",
+				handed.Cluster.Ref(), handed.Cluster.Profile.User, handed.Cluster.Profile.Host, handed.Cluster.Profile.Port,
+				handed.Cluster.Patroni.URL, handed.Cluster.Backup.Stanza, drill, handed.Cluster.RestoreDrill.Command)
+			return nil
 		},
 	}
 	_ = plan.MarkFlagRequired("name")
@@ -153,13 +179,50 @@ type dockerExec struct {
 }
 
 func (d dockerExec) Run(ctx context.Context, step provision.Step) error {
+	if step.StdinPath != "" && (filepath.IsAbs(step.StdinPath) || strings.Contains(step.StdinPath, "..")) {
+		return fmt.Errorf("stdin path %s is not in the output directory", step.StdinPath)
+	}
 	cmd := exec.CommandContext(ctx, step.Argv[0], step.Argv[1:]...)
 	cmd.Dir = d.dir
 	cmd.Stdout = d.stdout
 	cmd.Stderr = d.stderr
 	cmd.Env = os.Environ()
+	if step.StdinPath != "" {
+		f, err := os.Open(filepath.Join(d.dir, step.StdinPath))
+		if err != nil {
+			return err
+		}
+		cmd.Stdin = f
+		runErr := cmd.Run()
+		closeErr := f.Close()
+		if runErr != nil {
+			return fmt.Errorf("%s: %w", step.Path, runErr)
+		}
+		return closeErr
+	}
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("docker compose up: %w", err)
+		return fmt.Errorf("%s: %w", step.Path, err)
+	}
+	return nil
+}
+
+func prepareSpec(a *app, spec *provision.ComposeSpec) error {
+	if spec.Env == "prod" {
+		return fmt.Errorf("compose cannot be added to a prod environment")
+	}
+	if a.now != nil {
+		spec.Now = a.now()
+	}
+	path, err := a.inventoryFile()
+	if err != nil {
+		return err
+	}
+	inv, err := inventory.Load(path)
+	if err != nil {
+		return err
+	}
+	if existing, ok := inv.Cluster(inventory.Ref{Env: spec.Env, Cluster: spec.Name}); ok && existing.RestoreDrill != nil {
+		spec.DrillDue = existing.RestoreDrill.Due
 	}
 	return nil
 }

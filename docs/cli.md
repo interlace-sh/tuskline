@@ -155,11 +155,14 @@ tl provision compose plan --name demo --pg 16 --nodes 1 --etcd 1 --pooler=false
 
 Prints the diff for a Patroni stack on one Docker host: `compose.yaml`, `haproxy.cfg`, `pgbackrest.conf` and a secret `.env`. Passwords are generated and redacted. The stack is labelled non-production.
 
-`up` checks the machine before it writes anything. It needs Docker Engine 24 or newer and Compose 2.20 or newer, free space of 2 GiB per Postgres node plus 1 GiB, and ports 5000, 5001 and (with PgBouncer) 6432 free. A named volume such as `demo_pg1` that already exists is refused unless `--dir` is a previous run of the same stack, in which case those volumes and ports are kept. It then prints the same diff, writes the files into `--dir`, and runs `docker compose up -d --wait`. etcd and Patroni must pass their health checks. Passwords are written as mode 0600 and are not printed. `--dir` must be missing, empty, or already hold only these generated files. A plan step that names a data directory is refused when that directory already has files; this Compose stack keeps its data in named volumes instead.
+`up` checks the machine before it writes anything. It needs Docker Engine 24 or newer and Compose 2.20 or newer, free space of 2 GiB per Postgres node plus 1 GiB, and ports 5000, 5001, 8008 and (with PgBouncer) 6432 free. A named volume such as `demo_pg1` that already exists is refused unless `--dir` is a previous run of the same stack, in which case those volumes and ports are kept. It then prints the same diff, writes the files into `--dir`, and runs `docker compose up -d --wait`. etcd and Patroni must pass their health checks. Passwords are written as mode 0600 and are not printed. `--dir` must be missing, empty, or already hold only these generated files. A plan step that names a data directory is refused when that directory already has files; this Compose stack keeps its data in named volumes instead.
+
+After the stack is healthy, `up` applies `monitor.sql` (the `tuskline_monitor` role, with a password) through the local Postgres socket, stores that password in the OS keychain, and adds `dev/demo` to the inventory. The connection is `127.0.0.1:5000` with TLS disabled, because this stack does not speak TLS. Patroni's REST API is published on `127.0.0.1:8008` from the first node. pgBackRest is recorded as a local volume. A restore drill is scheduled seven days out and is not run (`tl backup verify` is later). `--env prod` is refused. A second `up` keeps the drill date already stored.
 
 | Flag | Meaning |
 |---|---|
 | `--name` | Cluster name. Lowercase letters, digits and hyphens. Required. |
+| `--env` | Inventory environment. The default is `dev`. `prod` is refused. |
 | `--dir` | Output directory. Required for `up`. |
 | `--pg` | PostgreSQL major, 14–18. The default is 17. |
 | `--nodes` | Postgres nodes, 1, 2 or 3. The default is 3. |

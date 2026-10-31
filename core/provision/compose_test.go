@@ -30,7 +30,7 @@ func TestComposePlanIsNonProduction(t *testing.T) {
 	for _, want := range []string{
 		"Non-production", "etcd1:", "etcd3:", "pg1:", "pg3:", "haproxy:", "pgbouncer:",
 		"ALLOW_NOSSL", "ghcr.io/zalando/spilo-17:4.0-p3", "pgbackrest.conf",
-		"service_healthy", "8008/health",
+		"service_healthy", "8008/health", "127.0.0.1:8008:8008",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("compose.yaml lacks %q", want)

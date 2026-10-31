@@ -5,5 +5,5 @@
 // a log, and resumes from the last completed step. Compose targets are
 // non-production. Compose generates that stack. Secrets are written only
 // through a secret store, as mode 0600 files for a local Compose directory.
-// Milestones M5.1, M5.2a, M5.2b and M5.3.
+// Milestones M5.1, M5.2a, M5.2b, M5.3 and M5.4.
 package provision

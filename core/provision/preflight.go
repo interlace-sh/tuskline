@@ -56,7 +56,7 @@ func Requirements(spec ComposeSpec) (Need, error) {
 	}
 	need := Need{
 		Name:    spec.Name,
-		Ports:   []int{5000, 5001},
+		Ports:   []int{5000, 5001, 8008},
 		MinFree: int64(spec.Nodes*2+1) << 30,
 	}
 	if spec.Pooler {

@@ -31,6 +31,9 @@ type Step struct {
 	After string
 	// Argv is the command to run. The engine does not split After into a shell command.
 	Argv []string
+	// StdinPath is a file in the output directory fed to a command step.
+	// The executor opens it. The path is not a shell fragment.
+	StdinPath string
 	// DataDir refuses the step when Path is an existing non-empty directory.
 	DataDir bool
 	// Secret means the body is not shown. It is written only when Apply is
@@ -164,6 +167,6 @@ func cleanPath(p string) (string, error) {
 }
 
 func stepHash(step Step) string {
-	sum := sha256.Sum256([]byte(step.Kind + "\n" + step.Path + "\n" + step.After + "\n" + strings.Join(step.Argv, "\x00")))
+	sum := sha256.Sum256([]byte(step.Kind + "\n" + step.Path + "\n" + step.After + "\n" + strings.Join(step.Argv, "\x00") + "\n" + step.StdinPath))
 	return hex.EncodeToString(sum[:])
 }

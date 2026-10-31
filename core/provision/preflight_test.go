@@ -24,7 +24,7 @@ func TestRequirementsForASingleNode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Join(ints(need.Ports), ",") != "5000,5001" {
+	if strings.Join(ints(need.Ports), ",") != "5000,5001,8008" {
 		t.Fatalf("ports %v", need.Ports)
 	}
 	if strings.Join(need.Volumes, ",") != "demo_etcd1,demo_pg1,demo_pgbackrest" {
@@ -66,8 +66,8 @@ func TestEvaluatePreflight(t *testing.T) {
 	resume.FreeBytes = 20 << 30
 	resume.DockerCompose = "2.20.0"
 	resume.Resume = true
-	resume.OwnPorts = map[int]bool{5000: true, 5001: true, 6432: true}
-	resume.BusyPorts = map[int]bool{5000: true, 5001: true, 6432: true}
+	resume.OwnPorts = map[int]bool{5000: true, 5001: true, 6432: true, 8008: true}
+	resume.BusyPorts = map[int]bool{5000: true, 5001: true, 6432: true, 8008: true}
 	if err := Evaluate(need, resume); err != nil {
 		t.Fatal(err)
 	}

@@ -132,6 +132,9 @@ func (inv *Inventory) Validate() error {
 				errs = append(errs, fmt.Errorf("cluster %s: %w", c.Ref(), err))
 			}
 		}
+		if err := c.validateHandover(); err != nil {
+			errs = append(errs, fmt.Errorf("cluster %s: %w", c.Ref(), err))
+		}
 	}
 	return errors.Join(errs...)
 }
@@ -265,6 +268,9 @@ func (inv *Inventory) PutCluster(c Cluster) error {
 		if err := c.Password.Validate(); err != nil {
 			return fmt.Errorf("cluster %s: %w", c.Ref(), err)
 		}
+	}
+	if err := c.validateHandover(); err != nil {
+		return fmt.Errorf("cluster %s: %w", c.Ref(), err)
 	}
 	for i := range inv.Clusters {
 		if inv.Clusters[i].Ref() == c.Ref() {
