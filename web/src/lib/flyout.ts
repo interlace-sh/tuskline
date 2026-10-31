@@ -28,19 +28,46 @@ export function flyoutBox(
 	return { top: nextTop, maxHeight: Math.max(120, viewportHeight - nextTop - margin) };
 }
 
-/** Keep a fixed flyout inside the window after it has been rendered. */
-export function fitFlyout(node: HTMLElement) {
-	const place = () => {
-		const rect = node.getBoundingClientRect();
-		const box = flyoutBox(rect.top, rect.height, window.innerHeight);
-		node.style.top = `${box.top}px`;
-		node.style.maxHeight = `${box.maxHeight}px`;
-	};
+/** Position the panel from the row, not from wherever it was last shifted. */
+export function applyFlyout(
+	node: HTMLElement,
+	anchor: { top: number; left: number },
+	viewportHeight: number
+) {
+	node.style.left = `${anchor.left}px`;
+	node.style.maxHeight = 'none';
+	node.style.top = `${anchor.top}px`;
+	const box = flyoutBox(anchor.top, node.scrollHeight, viewportHeight);
+	node.style.top = `${box.top}px`;
+	node.style.maxHeight = `${box.maxHeight}px`;
+}
+
+/**
+ * Hang the panel on document.body and keep it inside the window.
+ * The SQL card is overflow:hidden with a radius, which becomes the
+ * containing block for position:fixed and clips the panel.
+ * Passing the anchor again recalculates when another row is chosen
+ * without closing the panel first.
+ */
+export function mountFlyout(node: HTMLElement, anchor: { top: number; left: number }) {
+	document.body.appendChild(node);
+	let origin = anchor;
+	const place = () => applyFlyout(node, origin, window.innerHeight);
+	let frame = 0;
 	place();
-	window.addEventListener('resize', place);
+	const onResize = () => place();
+	window.addEventListener('resize', onResize);
 	return {
+		update(next: { top: number; left: number }) {
+			origin = next;
+			place();
+			cancelAnimationFrame(frame);
+			frame = requestAnimationFrame(place);
+		},
 		destroy() {
-			window.removeEventListener('resize', place);
+			cancelAnimationFrame(frame);
+			window.removeEventListener('resize', onResize);
+			node.remove();
 		}
 	};
 }

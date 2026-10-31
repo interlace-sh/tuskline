@@ -470,10 +470,14 @@
 		font-size: 13px;
 		color: var(--tl-fg2);
 	}
-	.nav:hover,
-	.nav.active {
+	.nav:hover {
 		background: var(--tl-hover);
 		color: var(--tl-fg);
+	}
+	.nav.active,
+	.nav.active:hover {
+		background: var(--brand);
+		color: #fff;
 	}
 	.nav.icon {
 		width: auto;

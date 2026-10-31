@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Hash from '@lucide/svelte/icons/hash';
-	import { fitFlyout, flyoutAnchor } from '#lib/flyout.js';
+	import { flyoutAnchor, mountFlyout } from '#lib/flyout.js';
 	import type { OverviewColumn } from '#lib/overview-stats.js';
 
 	let {
@@ -62,10 +62,8 @@
 
 {#if current && anchor}
 	<div
-		class="fixed z-40 w-64 overflow-auto rounded-lg border border-tl-line bg-tl-elev p-3"
-		style:top="{anchor.top}px"
-		style:left="{anchor.left}px"
-		use:fitFlyout
+		class="fixed z-50 w-64 overflow-auto rounded-lg border border-tl-line bg-tl-elev p-3"
+		use:mountFlyout={anchor}
 		style:box-shadow="var(--tl-shadow)"
 	>
 		<div class="font-mono text-[12px]">{current.name}</div>
@@ -77,7 +75,7 @@
 				{current.depth ? 'Equal-depth histogram' : 'Most common values'}
 			</p>
 			<ul class="mt-1.5 space-y-1.5">
-				{#each current.bars as bar (bar.label)}
+				{#each current.bars as bar, index (`${index}:${bar.label}`)}
 					{@const peak = Math.max(...current.bars.map((item) => item.weight), 1)}
 					<li>
 						<div class="flex items-center justify-between gap-2 text-[11px]">

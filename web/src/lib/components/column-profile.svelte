@@ -13,7 +13,7 @@
 		writeProfileCache
 	} from '#lib/column-profile-cache.js';
 	import type { ColumnProfile } from '#lib/column-profile.js';
-	import { fitFlyout, flyoutAnchor } from '#lib/flyout.js';
+	import { flyoutAnchor, mountFlyout } from '#lib/flyout.js';
 
 	let {
 		columns,
@@ -106,10 +106,8 @@
 
 {#if current && anchor}
 	<div
-		class="fixed z-40 w-64 overflow-auto rounded-lg border border-tl-line bg-tl-elev p-3"
-		style:top="{anchor.top}px"
-		style:left="{anchor.left}px"
-		use:fitFlyout
+		class="fixed z-50 w-64 overflow-auto rounded-lg border border-tl-line bg-tl-elev p-3"
+		use:mountFlyout={anchor}
 		style:box-shadow="var(--tl-shadow)"
 	>
 		<div class="font-mono text-[12px]">{current.name}</div>
@@ -118,7 +116,7 @@
 		</p>
 		{#if current.kind === 'category'}
 			<ul class="mt-2 space-y-1.5">
-				{#each current.values as value (value.label)}
+				{#each current.values as value, index (`${index}:${value.label}`)}
 					<li>
 						<div class="flex items-center justify-between gap-2 text-[11px]">
 							<span class="truncate font-mono {value.null ? 'text-tl-fg3 italic' : ''}"

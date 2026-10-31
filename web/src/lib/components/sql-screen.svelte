@@ -130,7 +130,7 @@ LIMIT 20;`
 		[...page.cells].reverse().find((entry) => entry.result.kind === 'rows' && !entry.running)
 	);
 
-	let schemaOpen = $state<Record<string, boolean>>({ public: true, 'public.orders': true });
+	let schemaOpen = $state<Record<string, boolean>>({ public: true });
 	let schemaQuery = $state('');
 	let selectedRelation = $state('');
 	let dbMenu = $state(false);
@@ -638,7 +638,7 @@ LIMIT 20;`
 {/snippet}
 
 <div
-	class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-tl-line bg-tl-elev"
+	class="flex min-h-0 flex-1 flex-col overflow-hidden border border-tl-line bg-tl-elev"
 >
 	<div class="flex min-h-0 flex-1">
 		{#if expanded == null}
@@ -717,31 +717,39 @@ LIMIT 20;`
 							{#each item.tables.filter( (table) => table.name.includes(schemaQuery.toLowerCase()) ) as table (table.name)}
 								{@const key = `${item.schema}.${table.name}`}
 								{@const view = 'kind' in table && table.kind === 'view'}
-								<button
-									class="flex h-6 w-full items-center gap-1.5 rounded pr-1 pl-4 hover:bg-tl-hover {selectedRelation ===
+								<div
+									class="flex h-6 w-full items-center gap-0.5 rounded pr-1 pl-3 {selectedRelation ===
 									key
-										? 'bg-tl-hover'
-										: ''}"
-									title={view ? 'View. Double-click to query' : 'Table. Double-click to query'}
-									aria-pressed={selectedRelation === key}
-									onclick={() => {
-										selectedRelation = key;
-										schemaOpen[key] = !schemaOpen[key];
-									}}
-									ondblclick={() => newPage(`SELECT *\nFROM ${key}\nLIMIT 100;\n`)}
+										? 'bg-brand text-white'
+										: 'hover:bg-tl-hover'}"
 								>
-									{#if schemaOpen[key]}<ChevronDown
-											size={11}
-											class="text-tl-fg3"
-										/>{:else}<ChevronRight size={11} class="text-tl-fg3" />{/if}
-									{#if view}<Eye size={12} class="text-tl-fg3" />{:else}<Table2
-											size={12}
-											class="text-tl-accent"
-										/>{/if}
-									<span class="truncate font-mono">{table.name}</span>
-									<span class="ml-auto text-[10.5px] text-tl-fg3">{view ? 'view' : table.size}</span
+									<button
+										class="grid size-4 shrink-0 place-items-center rounded"
+										aria-expanded={!!schemaOpen[key]}
+										aria-label={schemaOpen[key] ? 'Collapse columns' : 'Expand columns'}
+										onclick={() => (schemaOpen[key] = !schemaOpen[key])}
 									>
-								</button>
+										{#if schemaOpen[key]}<ChevronDown size={11} />{:else}<ChevronRight
+												size={11}
+											/>{/if}
+									</button>
+									<button
+										class="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+										title={view ? 'View. Double-click to query' : 'Table. Double-click to query'}
+										aria-pressed={selectedRelation === key}
+										onclick={() => (selectedRelation = key)}
+										ondblclick={() => newPage(`SELECT *\nFROM ${key}\nLIMIT 100;\n`)}
+									>
+										{#if view}<Eye size={12} class="shrink-0" />{:else}<Table2
+												size={12}
+												class="shrink-0 {selectedRelation === key ? '' : 'text-tl-accent'}"
+											/>{/if}
+										<span class="truncate font-mono">{table.name}</span>
+										<span class="ml-auto text-[10.5px] {selectedRelation === key ? '' : 'text-tl-fg3'}"
+											>{view ? 'view' : table.size}</span
+										>
+									</button>
+								</div>
 								{#if schemaOpen[key]}
 									{#each table.cols as column (`${key}.${column[0]}`)}
 										<div class="flex h-[22px] items-center gap-1.5 rounded pr-1 pl-10 text-tl-fg2">
