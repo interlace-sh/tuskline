@@ -38,8 +38,10 @@ type Extension struct {
 	Create        bool
 	Contrib       bool
 	PackageSuffix string
-	MinMajor      int
-	MaxMajor      int
+	// Repo is "pigsty" when PGDG does not ship the package. Empty means PGDG, or the server package when Contrib is set.
+	Repo     string
+	MinMajor int
+	MaxMajor int
 	// Providers lists managed services that allow the extension.
 	// Self-managed servers are not listed: Offered treats them separately.
 	Providers []string
@@ -124,7 +126,7 @@ var entries = []Extension{
 	},
 	{
 		Name: "pg_wait_sampling", Unlocks: "wait-event history between samples",
-		LookedFor: true, Preload: true, Restart: true, Create: true, PackageSuffix: "pg-wait-sampling",
+		LookedFor: true, Preload: true, Restart: true, Create: true, PackageSuffix: "pg-wait-sampling", Repo: "pigsty",
 		MinMajor: 14, MaxMajor: 18, Providers: []string{ProviderCloudSQL},
 	},
 	{
