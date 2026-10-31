@@ -91,6 +91,9 @@ func TestClusterAPIAgainstPostgres(t *testing.T) {
 			if rr := get("/api/v1/clusters/dev/pg/probe"); rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"name":"plpgsql"`) {
 				t.Fatalf("probe: %d %s", rr.Code, rr.Body)
 			}
+			if rr := get("/api/v1/clusters/dev/pg/advise?memory=1GB&cpus=2&storage=ssd&workload=web"); rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"name":"track_io_timing"`) {
+				t.Fatalf("advise: %d %s", rr.Code, rr.Body)
+			}
 			saved := postJSON(t, h, "/api/v1/clusters", map[string]any{
 				"environment": "dev", "name": "added",
 				"host": srv.Profile.Host, "port": srv.Profile.EffectivePort(),

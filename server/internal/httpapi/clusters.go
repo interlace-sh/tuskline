@@ -43,6 +43,7 @@ func (a *api) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/activity", a.clusterActivity)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/health", a.clusterHealth)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/probe", a.clusterProbe)
+	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/advise", a.clusterAdvise)
 	mux.HandleFunc("POST /api/v1/clusters/{env}/{name}/query", a.clusterQuery)
 }
 

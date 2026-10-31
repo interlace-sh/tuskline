@@ -1,6 +1,7 @@
-// Playwright checks for the shipped shell. Later screens (connect, advisor,
-// deploy, HA, backups, migrations) stay in prototype/scripts/smoke.mjs until
-// those milestones land.
+// Playwright checks for the shipped shell. Deploy, HA, backups and migrations
+// stay in prototype/scripts/smoke.mjs until those milestones land. The
+// connection check is the shipped one-step form. The advisor check is the
+// prototype's production confirmation.
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -145,6 +146,30 @@ try {
 	ok('sql run shows rows', await page.getByText(/12 rows · \d+ ms/).isVisible());
 	await page.getByRole('button', { name: /^Analyse/ }).click();
 	ok('sql analyse summarises the plan', await page.getByText(/returned 100 rows/).isVisible());
+
+	await page.keyboard.press('g');
+	await page.keyboard.press('f');
+	await page
+		.getByRole('button', { name: /prod-eu-west/ })
+		.first()
+		.click();
+	await page.keyboard.press('g');
+	await page.keyboard.press('v');
+	ok(
+		'g v -> config advisor',
+		await page.getByRole('heading', { name: 'Config advisor' }).isVisible()
+	);
+	await page.getByRole('button', { name: /Apply \d+ to prod/ }).click();
+	const confirm = page.getByRole('button', { name: 'Apply to production', exact: true });
+	ok('advisor: prod apply disabled before confirmation', await confirm.isDisabled());
+	await page.getByPlaceholder(/CHG-2041/).fill('CHG-1 test');
+	await page.locator('.fixed input.mono').last().fill('prod-eu-west');
+	ok('advisor: enabled after ticket + typed name', await confirm.isEnabled());
+	await confirm.click();
+	ok(
+		'advisor: apply does not run the change',
+		await page.getByText('Nothing was applied').isVisible()
+	);
 
 	ok('no page errors', pageErrors.length === 0);
 	if (pageErrors.length) console.log(pageErrors.slice(0, 5).join('\n'));

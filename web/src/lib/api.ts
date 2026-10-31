@@ -337,3 +337,52 @@ export async function runQuery(
 	if (!ended) throw new ApiError(502, 'The result stream ended early.');
 	return acc;
 }
+
+export interface AdviceItem {
+	name: string;
+	current: string;
+	proposed: string;
+	apply: string;
+	summary: string;
+	evidence?: string;
+	diff: string;
+}
+
+export interface AdviseReport {
+	ref: string;
+	server_version_num: number;
+	advice: AdviceItem[];
+	notes: string[];
+}
+
+export interface AdviseQuery {
+	memory?: string;
+	cpus?: number;
+	storage?: string;
+	workload?: string;
+	dbSize?: string;
+	os?: string;
+	connections?: number;
+	pooler?: boolean;
+}
+
+/** Preview configuration changes. The server does not apply them. */
+export function clusterAdvise(
+	env: string,
+	name: string,
+	query: AdviseQuery = {},
+	fetchImpl: typeof fetch = fetch
+): Promise<AdviseReport> {
+	const params = new URLSearchParams();
+	if (query.memory) params.set('memory', query.memory);
+	if (query.cpus) params.set('cpus', String(query.cpus));
+	if (query.storage) params.set('storage', query.storage);
+	if (query.workload) params.set('workload', query.workload);
+	if (query.dbSize) params.set('db_size', query.dbSize);
+	if (query.os) params.set('os', query.os);
+	if (query.connections) params.set('connections', String(query.connections));
+	if (query.pooler) params.set('pooler', '1');
+	const qs = params.toString();
+	const path = clusterPath(env, name, 'advise') + (qs ? `?${qs}` : '');
+	return getJSON(path, fetchImpl);
+}

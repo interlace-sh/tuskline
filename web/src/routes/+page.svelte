@@ -1,8 +1,10 @@
 <script lang="ts">
+	import AdvisorScreen from '#lib/components/advisor-screen.svelte';
 	import ClusterHealth from '#lib/components/cluster-health.svelte';
 	import ConnectScreen from '#lib/components/connect-screen.svelte';
 	import Fleet from '#lib/components/fleet.svelte';
 	import Queries from '#lib/components/queries.svelte';
+	import SetupScreen from '#lib/components/setup-screen.svelte';
 	import SqlScreen from '#lib/components/sql-screen.svelte';
 	import { SCREEN_LABEL, shell } from '#lib/shell.svelte.js';
 </script>
@@ -17,6 +19,10 @@
 	<SqlScreen />
 {:else if shell.screen === 'connect'}
 	<ConnectScreen />
+{:else if shell.screen === 'advisor'}
+	<AdvisorScreen />
+{:else if shell.screen === 'setup'}
+	<SetupScreen />
 {:else}
 	<h1 class="text-xl font-semibold tracking-tight">{SCREEN_LABEL[shell.screen]}</h1>
 	<p class="mt-1 max-w-xl text-sm text-tl-fg2">

@@ -67,12 +67,22 @@ func TestClusterRoutesRejectUnknown(t *testing.T) {
 		"/api/v1/clusters/dev/missing/queries",
 		"/api/v1/clusters/dev/missing/activity",
 		"/api/v1/clusters/dev/missing/health",
+		"/api/v1/clusters/dev/missing/advise",
 	} {
 		rr := httptest.NewRecorder()
 		h.ServeHTTP(rr, httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, nil))
 		if rr.Code != http.StatusNotFound {
 			t.Errorf("%s: %d %s", path, rr.Code, rr.Body)
 		}
+	}
+}
+
+func TestAdviseRejectsBadMemory(t *testing.T) {
+	h, _ := handlerWithInventory(t)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/clusters/dev/orders/advise?memory=lots", nil))
+	if rr.Code != http.StatusBadRequest || !strings.Contains(rr.Body.String(), "memory") {
+		t.Fatalf("%d %s", rr.Code, rr.Body)
 	}
 }
 
