@@ -63,6 +63,22 @@ func TestVersion(t *testing.T) {
 	}
 }
 
+func TestComposePlanPrintsNoSecrets(t *testing.T) {
+	out, err := run(t, "provision", "compose", "plan", "--name", "demo", "--nodes", "1", "--etcd", "1", "--pooler=false")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "Nothing has been applied") || !strings.Contains(out, "compose.yaml") {
+		t.Fatalf("%s", out)
+	}
+	if !strings.Contains(out, "contents not shown") {
+		t.Fatal("secret env was printed")
+	}
+	if strings.Contains(out, "PGPASSWORD_SUPERUSER=") {
+		t.Fatal("password line was printed")
+	}
+}
+
 func TestConnectRejectsBadRef(t *testing.T) {
 	if _, err := run(t, "connect", "orders"); err == nil || !strings.Contains(err.Error(), "env/cluster") {
 		t.Fatalf("got %v", err)

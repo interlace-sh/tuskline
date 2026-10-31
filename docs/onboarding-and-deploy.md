@@ -75,7 +75,7 @@ The rules are [ADR 0014](adr/0014-config-advisor.md). PgTune supplies the candid
 
 | Target | What Tuskline deploys | How | Production HA? |
 |---|---|---|---|
-| Docker Compose (R2) | Patroni ×3, etcd ×3, PgBouncer, HAProxy, pgBackRest as containers | Generated `compose.yaml`, `.env`, `haproxy.cfg`; `tl provision compose up` with health-gated start-up | **No:** one host is a single point of failure. For dev, CI, staging and demos |
+| Docker Compose (R2) | Patroni ×3, etcd ×3, PgBouncer, HAProxy, pgBackRest as containers | `tl provision compose plan` writes `compose.yaml`, a secret `.env`, `haproxy.cfg` and `pgbackrest.conf`. `up` is later | **No:** one host is a single point of failure. For dev, CI, staging and demos |
 | Kubernetes (R3) | CloudNativePG `Cluster` (failover through the Kubernetes API, so no Patroni or etcd), CNPG `Pooler`, Barman Cloud plugin or volume snapshots | Generated manifests or Helm values; server-side apply; status read back | Yes |
 | VMs and bare metal over SSH (R3) | Patroni + etcd (3 nodes) + PgBouncer + HAProxy or vip-manager + pgBackRest to S3, GCS, Azure or NFS | Go SSH executor running idempotent, versioned steps (PGDG packages, systemd units, templates); optional Autobase-playbook mode | Yes, with 3+ hosts across failure domains |
 
@@ -92,5 +92,7 @@ The rules are [ADR 0014](adr/0014-config-advisor.md). PgTune supplies the candid
 `core/provision` is the plan and apply engine. `Changes` is the diff of every file, unit and manifest. `Apply` writes those paths, streams a log, and records each finished step so a later call resumes after a failure. A step whose body has changed runs again. Compose marked as production is refused. A step that names a data directory is refused when that directory already has files. A secret is redacted in the diff and is not written: there is no secret store in this engine yet. Nothing runs until `Apply` is called, and a command step does not start a shell unless the caller supplies an executor.
 
 Safety: refuse to touch non-empty data directories, show diffs before applying, and label Compose as non-production.
+
+`tl provision compose plan` writes that preview: Patroni (Spilo), etcd, HAProxy, optional PgBouncer and a pgBackRest config for a local volume. Passwords stay in secret steps and are not printed. The stack is not started.
 
 `deploy/compose/compose.yaml` in this repository is only for dev and test databases. It is not the generated HA topology.

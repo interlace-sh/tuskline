@@ -146,6 +146,24 @@ Prints a preview. Nothing is changed. Each change has the current value, the pro
 | `--pooler` | A connection pooler is already in front of this server. |
 | `--output text\|json`, `-o` | Text is the preview. JSON is `{ref, report}`. |
 
+### `tl provision compose plan`
+
+```sh
+tl provision compose plan --name demo
+tl provision compose plan --name demo --pg 16 --nodes 1 --etcd 1 --pooler=false
+```
+
+Prints the diff for a Patroni stack on one Docker host: `compose.yaml`, `haproxy.cfg`, `pgbackrest.conf` and a secret `.env`. Passwords are generated and redacted. The stack is labelled non-production and is not started.
+
+| Flag | Meaning |
+|---|---|
+| `--name` | Cluster name. Lowercase letters, digits and hyphens. Required. |
+| `--pg` | PostgreSQL major, 14–18. The default is 17. |
+| `--nodes` | Postgres nodes, 1, 2 or 3. The default is 3. |
+| `--etcd` | etcd members, 1 or 3. The default is 1 for one Postgres node and 3 otherwise. |
+| `--pooler` | Include PgBouncer. On by default; `--pooler=false` leaves it out. |
+| `--sync` | Record that synchronous replication was requested. |
+
 ### `tl serve`
 
 `tl serve [args]` runs `tuskline serve [args]`, the separate AGPL server binary ([ADR 0010](adr/0010-licence-boundary.md)); `tl` never links it. It looks for `tuskline` on `PATH`, then next to the `tl` executable, so `./bin/tl serve` finds `./bin/tuskline`. If neither has it, it exits 1 with install hints: a release binary, `moon run server:bin` (which also links `~/.local/bin/tuskline`), or building and running the container image.
@@ -172,7 +190,7 @@ The enrolment token is read from `TUSKLINE_AGENT_TOKEN` and never printed. The c
 | `tl snapshot` / `tl diff` | Workload snapshots and deltas (M2); richer comparison later | M2 |
 | `tl explain file.sql` | Plan with plain-English summary and warnings | M3 |
 | `tl config advise prod/orders` | postgresql.conf linter and tuning advisor, with diffs, marked reload or restart | M4 |
-| `tl provision compose plan\|up` | Generate and start a Compose HA stack (non-production) | M5 |
+| `tl provision compose plan` | Generate a non-production Compose plan. `up` is later | M5 |
 | `tl backup status\|verify\|restore --to <time>` | Read and drive pgBackRest and CNPG backups | M6 |
 | `tl ha status\|switchover` | Patroni and operator topology; guarded actions | M6 |
 | `tl migrate plan\|lint\|apply --env staging` | Run Flyway, Sqitch or SQL folders with lock analysis | M7 |
