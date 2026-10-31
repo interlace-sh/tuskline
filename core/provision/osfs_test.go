@@ -18,7 +18,7 @@ func TestFileJournalAndOSFS(t *testing.T) {
 		{ID: "cfg", Kind: KindFile, Path: "compose/patroni.yml", After: "scope: demo\n"},
 	}}
 	ctx := context.Background()
-	if err := Apply(ctx, plan, journal, fs, nil, nil); err != nil {
+	if err := Apply(ctx, plan, journal, fs, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	body, ok, err := fs.Read(ctx, "compose/patroni.yml")
@@ -36,7 +36,7 @@ func TestFileJournalAndOSFS(t *testing.T) {
 		t.Fatalf("nonempty %v %v", nonEmpty, err)
 	}
 	again := Plan{Steps: []Step{{ID: "data", Kind: KindFile, Path: "pgdata", DataDir: true}}}
-	if err := Apply(ctx, again, journal, fs, nil, nil); err == nil {
+	if err := Apply(ctx, again, journal, fs, nil, nil, nil); err == nil {
 		t.Fatal("wrote into a non-empty data directory")
 	}
 	loaded, err := journal.Load(ctx)
@@ -49,5 +49,15 @@ func TestFileJournalAndOSFS(t *testing.T) {
 	}
 	if info.Mode().Perm() != 0o600 {
 		t.Fatalf("journal mode %o", info.Mode().Perm())
+	}
+	if err := fs.WriteSecret(ctx, ".env", "PASSWORD=secret\n"); err != nil {
+		t.Fatal(err)
+	}
+	secret, err := os.Stat(filepath.Join(dir, ".env"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret.Mode().Perm() != 0o600 {
+		t.Fatalf("secret mode %o", secret.Mode().Perm())
 	}
 }

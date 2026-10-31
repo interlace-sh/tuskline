@@ -3,9 +3,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -28,6 +33,16 @@ func newComposeCmd() *cobra.Command {
 	}
 	var spec provision.ComposeSpec
 	var pooler bool
+	var dir string
+	flags := cmd.PersistentFlags()
+	flags.StringVar(&spec.Name, "name", "", "cluster name (lowercase letters, digits and hyphens)")
+	flags.IntVar(&spec.Major, "pg", 17, "PostgreSQL major, 14–18")
+	flags.IntVar(&spec.Nodes, "nodes", 3, "Postgres nodes, 1, 2 or 3")
+	flags.IntVar(&spec.Etcd, "etcd", 0, "etcd members, 1 or 3 (default 1 for one node, otherwise 3)")
+	flags.BoolVar(&pooler, "pooler", true, "include PgBouncer")
+	flags.BoolVar(&spec.Sync, "sync", false, "ask Patroni for synchronous replication")
+	flags.StringVar(&dir, "dir", "", "directory to write the stack into")
+
 	plan := &cobra.Command{
 		Use:   "plan",
 		Short: "Print the Compose files. Nothing is started.",
@@ -35,7 +50,7 @@ func newComposeCmd() *cobra.Command {
 for a Patroni cluster on one Docker host. The diff is a preview.
 Compose is non-production: one host is a single point of failure.
 
-Starting the stack is a later step.`,
+up writes those files and starts the stack.`,
 		Example: `  tl provision compose plan --name demo
   tl provision compose plan --name demo --pg 16 --nodes 1 --etcd 1`,
 		Args: cobra.NoArgs,
@@ -45,26 +60,61 @@ Starting the stack is a later step.`,
 			if err != nil {
 				return err
 			}
-			changes, err := provision.Changes(built)
+			return showCompose(c.OutOrStdout(), built, "Compose plan. Non-production. Nothing has been applied.")
+		},
+	}
+	up := &cobra.Command{
+		Use:   "up",
+		Short: "Write the stack and start it. Waits for health checks.",
+		Long: `Write the Compose files into --dir and run docker compose up.
+The command waits until etcd and Patroni health checks pass, up to 10 minutes
+after the containers have started. Passwords are written into the directory
+as mode 0600 files and are not printed.
+
+Compose is non-production: one host is a single point of failure.`,
+		Example: `  tl provision compose up --name demo --dir ~/clusters/demo --nodes 1 --etcd 1`,
+		Args:    cobra.NoArgs,
+		RunE: func(c *cobra.Command, _ []string) error {
+			spec.Pooler = pooler
+			if err := provision.CheckOutputDir(dir); err != nil {
+				return err
+			}
+			built, err := provision.ComposeStart(spec)
 			if err != nil {
 				return err
 			}
-			return printComposePlan(c.OutOrStdout(), changes)
+			if err := showCompose(c.OutOrStdout(), built, "Compose plan. Non-production."); err != nil {
+				return err
+			}
+			fmt.Fprintln(c.OutOrStdout(), "Applying. Non-production. Passwords stay in the directory.")
+			if err := os.MkdirAll(dir, 0o700); err != nil {
+				return fmt.Errorf("create %s: %w", dir, err)
+			}
+			ctx, cancel := context.WithTimeout(c.Context(), 15*time.Minute)
+			defer cancel()
+			fs := provision.OSFS{Root: dir}
+			return provision.Apply(ctx, built, provision.FileJournal{Path: filepath.Join(dir, ".tuskline-apply.jsonl")}, fs, dockerExec{dir: dir, stdout: c.OutOrStdout(), stderr: c.ErrOrStderr()}, func(ev provision.Event) {
+				fmt.Fprintf(c.OutOrStdout(), "%s  %s  %s\n", ev.Status, ev.Kind, ev.Text)
+			}, fs)
 		},
 	}
-	plan.Flags().StringVar(&spec.Name, "name", "", "cluster name (lowercase letters, digits and hyphens)")
-	plan.Flags().IntVar(&spec.Major, "pg", 17, "PostgreSQL major, 14–18")
-	plan.Flags().IntVar(&spec.Nodes, "nodes", 3, "Postgres nodes, 1, 2 or 3")
-	plan.Flags().IntVar(&spec.Etcd, "etcd", 0, "etcd members, 1 or 3 (default 1 for one node, otherwise 3)")
-	plan.Flags().BoolVar(&pooler, "pooler", true, "include PgBouncer")
-	plan.Flags().BoolVar(&spec.Sync, "sync", false, "ask Patroni for synchronous replication")
 	_ = plan.MarkFlagRequired("name")
-	cmd.AddCommand(plan)
+	_ = up.MarkFlagRequired("name")
+	_ = up.MarkFlagRequired("dir")
+	cmd.AddCommand(plan, up)
 	return cmd
 }
 
-func printComposePlan(w io.Writer, changes []provision.Change) error {
-	fmt.Fprintln(w, "Compose plan. Non-production. Nothing has been applied.")
+func showCompose(w io.Writer, plan provision.Plan, header string) error {
+	changes, err := provision.Changes(plan)
+	if err != nil {
+		return err
+	}
+	return printComposePlan(w, header, changes)
+}
+
+func printComposePlan(w io.Writer, header string, changes []provision.Change) error {
+	fmt.Fprintln(w, header)
 	for _, change := range changes {
 		fmt.Fprintf(w, "\n# %s  %s\n", change.Kind, change.Path)
 		if strings.TrimSpace(change.Diff) == "" {
@@ -72,6 +122,26 @@ func printComposePlan(w io.Writer, changes []provision.Change) error {
 			continue
 		}
 		fmt.Fprint(w, change.Diff)
+	}
+	return nil
+}
+
+// dockerExec runs a command step in the output directory. It does not put
+// passwords on the command line; Compose reads them from .env.
+type dockerExec struct {
+	dir    string
+	stdout io.Writer
+	stderr io.Writer
+}
+
+func (d dockerExec) Run(ctx context.Context, step provision.Step) error {
+	cmd := exec.CommandContext(ctx, step.Argv[0], step.Argv[1:]...)
+	cmd.Dir = d.dir
+	cmd.Stdout = d.stdout
+	cmd.Stderr = d.stderr
+	cmd.Env = os.Environ()
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("docker compose up: %w", err)
 	}
 	return nil
 }

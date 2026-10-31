@@ -58,6 +58,21 @@ func (f OSFS) Write(ctx context.Context, p, content string) error {
 	return os.WriteFile(full, []byte(content), 0o644)
 }
 
+// WriteSecret writes a secret file as mode 0600. The body is not logged.
+func (f OSFS) WriteSecret(ctx context.Context, p, content string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	full, err := f.full(p)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(full), 0o700); err != nil {
+		return err
+	}
+	return os.WriteFile(full, []byte(content), 0o600)
+}
+
 // NonEmpty reports whether p is an existing directory that already has entries.
 func (f OSFS) NonEmpty(ctx context.Context, p string) (bool, error) {
 	if err := ctx.Err(); err != nil {

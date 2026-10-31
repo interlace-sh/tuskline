@@ -35,10 +35,17 @@ type Executor interface {
 	Run(ctx context.Context, step Step) error
 }
 
+// SecretStore writes a secret step. The engine does not log the body.
+// A nil store refuses every secret step.
+type SecretStore interface {
+	WriteSecret(ctx context.Context, path, content string) error
+}
+
 // Apply writes plan in order. A step whose journal hash still matches is
-// skipped. A failed step is not recorded, so the next call resumes there.
-// log may be nil.
-func Apply(ctx context.Context, plan Plan, journal Journal, fs FS, exec Executor, log func(Event)) error {
+// skipped, unless the step is marked Rerun. A failed step is not recorded,
+// so the next call resumes there. log may be nil. secrets may be nil, in
+// which case a secret step fails without writing.
+func Apply(ctx context.Context, plan Plan, journal Journal, fs FS, exec Executor, log func(Event), secrets SecretStore) error {
 	if err := plan.Check(); err != nil {
 		return err
 	}
@@ -56,16 +63,16 @@ func Apply(ctx context.Context, plan Plan, journal Journal, fs FS, exec Executor
 			return err
 		}
 		hash := stepHash(step)
-		if done[step.ID] == hash {
+		if !step.Rerun && done[step.ID] == hash {
 			emit(log, Event{Step: step.ID, Kind: step.Kind, Status: "skip", Text: "already applied"})
 			continue
 		}
 		emit(log, Event{Step: step.ID, Kind: step.Kind, Status: "start", Text: step.Path})
-		if err := applyStep(ctx, step, fs, exec); err != nil {
+		if err := applyStep(ctx, step, fs, exec, secrets); err != nil {
 			emit(log, Event{Step: step.ID, Kind: step.Kind, Status: "fail", Text: err.Error()})
 			return fmt.Errorf("step %s: %w", step.ID, err)
 		}
-		if journal != nil {
+		if journal != nil && !step.Rerun {
 			if err := journal.Append(ctx, step.ID, hash); err != nil {
 				emit(log, Event{Step: step.ID, Kind: step.Kind, Status: "fail", Text: err.Error()})
 				return fmt.Errorf("record step %s: %w", step.ID, err)
@@ -77,14 +84,24 @@ func Apply(ctx context.Context, plan Plan, journal Journal, fs FS, exec Executor
 	return nil
 }
 
-func applyStep(ctx context.Context, step Step, fs FS, exec Executor) error {
+func applyStep(ctx context.Context, step Step, fs FS, exec Executor, secrets SecretStore) error {
 	if step.Secret {
-		return fmt.Errorf("secret store is not configured")
+		if secrets == nil {
+			return fmt.Errorf("secret store is not configured")
+		}
+		dest, err := cleanPath(step.Path)
+		if err != nil {
+			return err
+		}
+		return secrets.WriteSecret(ctx, dest, step.After)
 	}
 	switch step.Kind {
 	case KindCommand:
 		if exec == nil {
 			return fmt.Errorf("no executor for a command step")
+		}
+		if len(step.Argv) == 0 {
+			return fmt.Errorf("command step has no argv")
 		}
 		return exec.Run(ctx, step)
 	case KindFile, KindUnit, KindManifest:

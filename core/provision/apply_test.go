@@ -71,14 +71,14 @@ func TestApplyWritesThenSkipsOnResume(t *testing.T) {
 	fs := newMem()
 	journal := &memJournal{}
 	var log []Event
-	if err := Apply(context.Background(), plan, journal, fs, nil, func(ev Event) { log = append(log, ev) }); err != nil {
+	if err := Apply(context.Background(), plan, journal, fs, nil, func(ev Event) { log = append(log, ev) }, nil); err != nil {
 		t.Fatal(err)
 	}
 	if fs.files["a.yml"] != "one\n" || fs.files["b.service"] != "two\n" {
 		t.Fatalf("files: %#v", fs.files)
 	}
 	log = nil
-	if err := Apply(context.Background(), plan, journal, fs, nil, func(ev Event) { log = append(log, ev) }); err != nil {
+	if err := Apply(context.Background(), plan, journal, fs, nil, func(ev Event) { log = append(log, ev) }, nil); err != nil {
 		t.Fatal(err)
 	}
 	if len(log) != 2 || log[0].Status != "skip" || log[1].Status != "skip" {
@@ -96,7 +96,7 @@ func TestApplyResumesAfterAFailure(t *testing.T) {
 	fs := newMem()
 	fs.fail = "b.yml"
 	journal := &memJournal{}
-	err := Apply(context.Background(), plan, journal, fs, nil, nil)
+	err := Apply(context.Background(), plan, journal, fs, nil, nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "b") {
 		t.Fatalf("got %v", err)
 	}
@@ -107,7 +107,7 @@ func TestApplyResumesAfterAFailure(t *testing.T) {
 		t.Fatal("failed step was recorded")
 	}
 	fs.fail = ""
-	if err := Apply(context.Background(), plan, journal, fs, nil, nil); err != nil {
+	if err := Apply(context.Background(), plan, journal, fs, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if fs.files["a.yml"] != "one\n" || fs.files["b.yml"] != "two\n" || fs.files["c.yml"] != "three\n" {
@@ -120,7 +120,7 @@ func TestApplyRefusesANonEmptyDataDir(t *testing.T) {
 	fs := newMem()
 	fs.files["pgdata/PG_VERSION"] = "17\n"
 	plan := Plan{Steps: []Step{{ID: "data", Kind: KindFile, Path: "pgdata", After: "", DataDir: true}}}
-	err := Apply(context.Background(), plan, &memJournal{}, fs, nil, nil)
+	err := Apply(context.Background(), plan, &memJournal{}, fs, nil, nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "non-empty") {
 		t.Fatalf("got %v", err)
 	}
@@ -130,7 +130,7 @@ func TestApplyDoesNotWriteASecret(t *testing.T) {
 	t.Parallel()
 	fs := newMem()
 	plan := Plan{Steps: []Step{{ID: "env", Kind: KindFile, Path: ".env", Secret: true, After: "PASSWORD=secret"}}}
-	err := Apply(context.Background(), plan, &memJournal{}, fs, nil, nil)
+	err := Apply(context.Background(), plan, &memJournal{}, fs, nil, nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "secret store") {
 		t.Fatalf("got %v", err)
 	}
@@ -139,10 +139,70 @@ func TestApplyDoesNotWriteASecret(t *testing.T) {
 	}
 }
 
+type memSecrets struct{ files map[string]string }
+
+func (m *memSecrets) WriteSecret(_ context.Context, path, content string) error {
+	if m.files == nil {
+		m.files = map[string]string{}
+	}
+	m.files[path] = content
+	return nil
+}
+
+func TestApplyWritesASecretOnlyToTheStore(t *testing.T) {
+	t.Parallel()
+	fs := newMem()
+	secrets := &memSecrets{}
+	plan := Plan{Steps: []Step{{ID: "env", Kind: KindFile, Path: ".env", Secret: true, After: "PASSWORD=secret"}}}
+	var log []Event
+	if err := Apply(context.Background(), plan, &memJournal{}, fs, nil, func(ev Event) { log = append(log, ev) }, secrets); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := fs.files[".env"]; ok {
+		t.Fatal("secret was written to the ordinary filesystem")
+	}
+	if secrets.files[".env"] != "PASSWORD=secret" {
+		t.Fatalf("store %#v", secrets.files)
+	}
+	for _, ev := range log {
+		if strings.Contains(ev.Text, "PASSWORD") || strings.Contains(ev.Text, "secret") {
+			t.Fatalf("log leaked the secret: %+v", ev)
+		}
+	}
+}
+
+type recordExec struct{ calls int }
+
+func (r *recordExec) Run(context.Context, Step) error {
+	r.calls++
+	return nil
+}
+
+func TestApplyRerunsACommand(t *testing.T) {
+	t.Parallel()
+	plan := Plan{Steps: []Step{{
+		ID: "up", Kind: KindCommand, Path: "up", After: "up",
+		Argv: []string{"docker", "compose", "up"}, Rerun: true,
+	}}}
+	exec := &recordExec{}
+	journal := &memJournal{}
+	for range 2 {
+		if err := Apply(context.Background(), plan, journal, newMem(), exec, nil, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if exec.calls != 2 {
+		t.Fatalf("calls %d", exec.calls)
+	}
+	if _, ok := journal.done["up"]; ok {
+		t.Fatal("a rerun step was journaled")
+	}
+}
+
 func TestApplyRefusesACommandWithoutAnExecutor(t *testing.T) {
 	t.Parallel()
 	plan := Plan{Steps: []Step{{ID: "up", Kind: KindCommand, Path: "compose", After: "docker compose up"}}}
-	err := Apply(context.Background(), plan, &memJournal{}, newMem(), nil, nil)
+	err := Apply(context.Background(), plan, &memJournal{}, newMem(), nil, nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "executor") {
 		t.Fatalf("got %v", err)
 	}

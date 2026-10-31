@@ -153,11 +153,14 @@ tl provision compose plan --name demo
 tl provision compose plan --name demo --pg 16 --nodes 1 --etcd 1 --pooler=false
 ```
 
-Prints the diff for a Patroni stack on one Docker host: `compose.yaml`, `haproxy.cfg`, `pgbackrest.conf` and a secret `.env`. Passwords are generated and redacted. The stack is labelled non-production and is not started.
+Prints the diff for a Patroni stack on one Docker host: `compose.yaml`, `haproxy.cfg`, `pgbackrest.conf` and a secret `.env`. Passwords are generated and redacted. The stack is labelled non-production.
+
+`up` prints the same diff, writes the files into `--dir`, and runs `docker compose up -d --wait`. etcd and Patroni must pass their health checks. Passwords are written as mode 0600 and are not printed. `--dir` must be missing, empty, or already hold only these generated files.
 
 | Flag | Meaning |
 |---|---|
 | `--name` | Cluster name. Lowercase letters, digits and hyphens. Required. |
+| `--dir` | Output directory. Required for `up`. |
 | `--pg` | PostgreSQL major, 14–18. The default is 17. |
 | `--nodes` | Postgres nodes, 1, 2 or 3. The default is 3. |
 | `--etcd` | etcd members, 1 or 3. The default is 1 for one Postgres node and 3 otherwise. |
@@ -190,7 +193,7 @@ The enrolment token is read from `TUSKLINE_AGENT_TOKEN` and never printed. The c
 | `tl snapshot` / `tl diff` | Workload snapshots and deltas (M2); richer comparison later | M2 |
 | `tl explain file.sql` | Plan with plain-English summary and warnings | M3 |
 | `tl config advise prod/orders` | postgresql.conf linter and tuning advisor, with diffs, marked reload or restart | M4 |
-| `tl provision compose plan` | Generate a non-production Compose plan. `up` is later | M5 |
+| `tl provision compose plan` / `up` | Generate a non-production Compose plan, or write it and start it | M5 |
 | `tl backup status\|verify\|restore --to <time>` | Read and drive pgBackRest and CNPG backups | M6 |
 | `tl ha status\|switchover` | Patroni and operator topology; guarded actions | M6 |
 | `tl migrate plan\|lint\|apply --env staging` | Run Flyway, Sqitch or SQL folders with lock analysis | M7 |

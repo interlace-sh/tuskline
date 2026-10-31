@@ -11,8 +11,7 @@ import (
 	"github.com/interlace-sh/tuskline/core/inventory"
 )
 
-// Published images for the non-production Compose preview. Starting them
-// is a later step.
+// Published images for the non-production Compose stack.
 const (
 	etcdImage      = "quay.io/coreos/etcd:v3.5.17"
 	haproxyImage   = "haproxy:3.0"
@@ -46,6 +45,16 @@ type ComposeSpec struct {
 // Compose builds a plan for compose.yaml, haproxy.cfg, pgBackRest config
 // and a secret env file. The plan is not production, and nothing is started.
 func Compose(spec ComposeSpec) (Plan, error) {
+	return composePlan(spec, false)
+}
+
+// ComposeStart is Compose plus a command that starts the stack and waits
+// until the health checks pass. The command has no passwords in it.
+func ComposeStart(spec ComposeSpec) (Plan, error) {
+	return composePlan(spec, true)
+}
+
+func composePlan(spec ComposeSpec, start bool) (Plan, error) {
 	spec, err := normaliseCompose(spec)
 	if err != nil {
 		return Plan{}, err
@@ -64,6 +73,14 @@ func Compose(spec ComposeSpec) (Plan, error) {
 		plan.Steps = append(plan.Steps, Step{
 			ID: "pgbouncer-users", Kind: KindFile, Path: "pgbouncer/userlist.txt", Secret: true,
 			After: fmt.Sprintf("\"postgres\" \"%s\"\n", spec.Superuser),
+		})
+	}
+	if start {
+		plan.Steps = append(plan.Steps, Step{
+			ID: "up", Kind: KindCommand, Path: "docker compose up",
+			After: "docker compose --env-file .env up -d --wait --wait-timeout 600",
+			Argv:  []string{"docker", "compose", "--env-file", ".env", "up", "-d", "--wait", "--wait-timeout", "600"},
+			Rerun: true,
 		})
 	}
 	return plan, nil
@@ -137,6 +154,7 @@ func composeYAML(spec ComposeSpec) string {
     image: %s
     environment:
       ETCD_NAME: etcd%d
+      ETCDCTL_API: "3"
       ETCD_DATA_DIR: /etcd-data
       ETCD_INITIAL_CLUSTER_STATE: new
       ETCD_INITIAL_CLUSTER_TOKEN: %s
@@ -148,6 +166,12 @@ func composeYAML(spec ComposeSpec) string {
     volumes:
       - etcd%d:/etcd-data
     command: [/usr/local/bin/etcd]
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
 `, i, etcdImage, i, spec.Name, i, i, cluster, i)
 	}
 	var etcdClients []string
@@ -170,9 +194,20 @@ func composeYAML(spec ComposeSpec) string {
 		if spec.Sync {
 			b.WriteString("      # Synchronous replication was requested. Starting the stack confirms the image honours it.\n")
 		}
-		fmt.Fprintf(&b, "    volumes:\n      - pg%d:/home/postgres/pgdata\n      - pgbackrest:/var/lib/pgbackrest\n      - ./pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro\n    depends_on:\n", i)
+		fmt.Fprintf(&b, `    volumes:
+      - pg%d:/home/postgres/pgdata
+      - pgbackrest:/var/lib/pgbackrest
+      - ./pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8008/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+    depends_on:
+`, i)
 		for e := 1; e <= spec.Etcd; e++ {
-			fmt.Fprintf(&b, "      - etcd%d\n", e)
+			fmt.Fprintf(&b, "      etcd%d: { condition: service_healthy }\n", e)
 		}
 	}
 	b.WriteString(`  haproxy:
@@ -182,7 +217,11 @@ func composeYAML(spec ComposeSpec) string {
       - "5001:5001"
     volumes:
       - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
 `)
+	for i := 1; i <= spec.Nodes; i++ {
+		fmt.Fprintf(&b, "      pg%d: { condition: service_healthy }\n", i)
+	}
 	if spec.Pooler {
 		b.WriteString(`  pgbouncer:
     image: ` + pgbouncerImage + `
@@ -197,6 +236,8 @@ func composeYAML(spec ComposeSpec) string {
       - "6432:6432"
     volumes:
       - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    depends_on:
+      - haproxy
 `)
 	}
 	b.WriteString("volumes:\n")

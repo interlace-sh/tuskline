@@ -29,10 +29,16 @@ type Step struct {
 	Before string
 	// After is the desired body. Command steps store the preview, not a shell line to run blindly.
 	After string
+	// Argv is the command to run. The engine does not split After into a shell command.
+	Argv []string
 	// DataDir refuses the step when Path is an existing non-empty directory.
 	DataDir bool
-	// Secret means the body is not shown and is not written to the filesystem.
+	// Secret means the body is not shown. It is written only when Apply is
+	// given a secret store.
 	Secret bool
+	// Rerun runs the step on every apply, including when the journal already
+	// has the same hash. docker compose up is idempotent and has to reconcile.
+	Rerun bool
 }
 
 // Plan is a preview. Apply is a separate call.
@@ -158,6 +164,6 @@ func cleanPath(p string) (string, error) {
 }
 
 func stepHash(step Step) string {
-	sum := sha256.Sum256([]byte(step.Kind + "\n" + step.Path + "\n" + step.After))
+	sum := sha256.Sum256([]byte(step.Kind + "\n" + step.Path + "\n" + step.After + "\n" + strings.Join(step.Argv, "\x00")))
 	return hex.EncodeToString(sum[:])
 }

@@ -110,7 +110,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 
 - [x] M5.1 `core/provision`: plan/apply engine with typed steps, a diff of every file, unit and manifest, resumable apply, and a streamed log. Compose cannot be marked production. Non-empty data directories are refused. Secrets are redacted and not written. Command steps do not start a shell. The Compose topology is M5.2.
 - [x] M5.2a Compose plan (R2): `tl provision compose plan` generates `compose.yaml`, a secret `.env`, `haproxy.cfg` and `pgbackrest.conf` for Patroni, etcd, PgBouncer, HAProxy and a local pgBackRest volume. The plan is labelled non-production and nothing is started.
-- [ ] M5.2b `tl provision compose up`: apply that plan and start it with a health gate. Still non-production.
+- [x] M5.2b `tl provision compose up`: write that plan into a chosen directory and start it with `docker compose up --wait`. etcd and Patroni have health checks. Passwords are mode 0600 files and are not printed. Still non-production.
 - [ ] M5.3 Pre-flight checks: ports, disk, Docker version, existing volumes. Refuse non-empty data directories.
 - [ ] M5.4 Hand-over: add the cluster to the inventory with a monitoring role, register the Patroni API and backup repository, and schedule the first restore drill.
 - [ ] M5.5 CloudNativePG target (R3): `Cluster`, `Pooler` and Barman Cloud plugin manifests, server-side apply, status read back.

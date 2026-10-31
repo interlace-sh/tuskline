@@ -75,7 +75,7 @@ The rules are [ADR 0014](adr/0014-config-advisor.md). PgTune supplies the candid
 
 | Target | What Tuskline deploys | How | Production HA? |
 |---|---|---|---|
-| Docker Compose (R2) | Patroni ×3, etcd ×3, PgBouncer, HAProxy, pgBackRest as containers | `tl provision compose plan` writes `compose.yaml`, a secret `.env`, `haproxy.cfg` and `pgbackrest.conf`. `up` is later | **No:** one host is a single point of failure. For dev, CI, staging and demos |
+| Docker Compose (R2) | Patroni ×3, etcd ×3, PgBouncer, HAProxy, pgBackRest as containers | `tl provision compose plan` prints the files. `tl provision compose up --dir` writes them and starts the stack, waiting for etcd and Patroni health checks | **No:** one host is a single point of failure. For dev, CI, staging and demos |
 | Kubernetes (R3) | CloudNativePG `Cluster` (failover through the Kubernetes API, so no Patroni or etcd), CNPG `Pooler`, Barman Cloud plugin or volume snapshots | Generated manifests or Helm values; server-side apply; status read back | Yes |
 | VMs and bare metal over SSH (R3) | Patroni + etcd (3 nodes) + PgBouncer + HAProxy or vip-manager + pgBackRest to S3, GCS, Azure or NFS | Go SSH executor running idempotent, versioned steps (PGDG packages, systemd units, templates); optional Autobase-playbook mode | Yes, with 3+ hosts across failure domains |
 
@@ -93,6 +93,6 @@ The rules are [ADR 0014](adr/0014-config-advisor.md). PgTune supplies the candid
 
 Safety: refuse to touch non-empty data directories, show diffs before applying, and label Compose as non-production.
 
-`tl provision compose plan` writes that preview: Patroni (Spilo), etcd, HAProxy, optional PgBouncer and a pgBackRest config for a local volume. Passwords stay in secret steps and are not printed. The stack is not started.
+`tl provision compose plan` prints that preview: Patroni (Spilo), etcd, HAProxy, optional PgBouncer and a pgBackRest config for a local volume. Passwords stay in secret steps and are not printed. `tl provision compose up --dir <path>` writes the files into that directory (passwords as mode 0600) and runs `docker compose up --wait`. The directory must be empty or left over from an earlier run.
 
 `deploy/compose/compose.yaml` in this repository is only for dev and test databases. It is not the generated HA topology.
