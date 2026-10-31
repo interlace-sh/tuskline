@@ -77,6 +77,31 @@ func TestClusterRoutesRejectUnknown(t *testing.T) {
 	}
 }
 
+func TestProbeDoesNotSave(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "inventory.yaml")
+	h := newHandler(&api{inventoryPath: path})
+	const secret = "tuskline-do-not-store"
+	rr := httptest.NewRecorder()
+	payload, err := json.Marshal(map[string]any{
+		"host": "127.0.0.1", "port": 1, "database": "postgres", "user": "postgres",
+		"tls": "disable", "password": secret,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.ServeHTTP(rr, httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/clusters/test", bytes.NewReader(payload)))
+	if rr.Code == http.StatusOK {
+		t.Fatalf("probe of a closed port succeeded: %s", rr.Body)
+	}
+	if strings.Contains(rr.Body.String(), secret) {
+		t.Fatalf("response leaked the password: %s", rr.Body)
+	}
+	raw, err := os.ReadFile(path)
+	if err == nil && strings.Contains(string(raw), secret) {
+		t.Fatalf("a failed probe was saved: %s", raw)
+	}
+}
+
 func TestAdviseRejectsBadMemory(t *testing.T) {
 	h, _ := handlerWithInventory(t)
 	rr := httptest.NewRecorder()

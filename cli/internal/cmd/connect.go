@@ -51,8 +51,9 @@ With --dsn, the server is probed directly. Give env/cluster (or --env and
 for anything missing. Without --dsn, env/cluster is looked up in the
 inventory and probed again.
 
-Passwords are never stored. A password in the DSN is used for this probe
-only; save a reference with --password-env, or use ~/.pgpass.`,
+A password in the DSN is saved in the OS keychain when the server is saved
+and --password-env is not set. The inventory stores only the keychain
+reference. Otherwise the password comes from --password-env or ~/.pgpass.`,
 		Example: `  tl connect --dsn "postgres://app@db.example.com/orders" prod/orders
   tl connect --dsn "postgres://tuskline@localhost:5417/tuskline?sslmode=disable" --env dev --name pg17
   tl connect prod/orders --output json`,
@@ -181,15 +182,29 @@ func (a *app) connectDSN(c *cobra.Command, ref inventory.Ref, o connectOpts) err
 			cl.Password = pwRef
 		}
 		cl.LastProbe = inventory.RecordProbe(info, a.now())
+		if dsnHadPassword && pwRef == nil {
+			stored, err := inventory.StorePassword(ref.Env, ref.Cluster, p.Secret())
+			if err != nil {
+				return err
+			}
+			pwRef = &stored
+		}
+		if pwRef != nil {
+			cl.Password = pwRef
+			res.PasswordRef = pwRef.String()
+		}
 		if err := inv.PutCluster(cl); err != nil {
 			return err
 		}
 		if err := inv.Save(path); err != nil {
+			if pwRef != nil && pwRef.Keychain != "" && dsnHadPassword {
+				_ = inventory.DeletePassword(pwRef.Keychain)
+			}
 			return err
 		}
 		res.Ref, res.Saved, res.Inventory, res.EnvKind = ref.String(), true, path, string(kind)
-		if dsnHadPassword && pwRef == nil {
-			fmt.Fprintln(c.ErrOrStderr(), "note: the password in the DSN was used for this probe only and was not saved; use ~/.pgpass or --password-env")
+		if pwRef != nil && pwRef.Keychain != "" {
+			fmt.Fprintln(c.ErrOrStderr(), "note: the password was saved in the OS keychain; the inventory stores only the reference")
 		}
 	}
 	return a.printConnect(c, o.output, res)

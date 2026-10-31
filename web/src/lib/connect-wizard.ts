@@ -66,16 +66,21 @@ export function detectProvider(draft: Pick<ConnectionDraft, 'host' | 'auth'>): W
 	return 'self';
 }
 
-/** Problems that block the test step. Empty means the draft can be tested. */
-export function draftProblems(draft: ConnectionDraft): string[] {
+/** Problems that block a probe. A display name is not one of them. */
+export function connectionProblems(draft: ConnectionDraft): string[] {
 	const problems: string[] = [];
-	if (!draft.name.trim()) problems.push('Name is required.');
-	if (!draft.host.trim()) problems.push('Host is required.');
+	const host = draft.host.trim();
+	if (!host) problems.push('Host is required.');
+	else if (host.includes('://') || host.includes('@')) {
+		problems.push(
+			'Host is the server name, such as localhost. Put the user, password and database in their own fields.'
+		);
+	}
 	if (!draft.database.trim()) problems.push('Database is required.');
 	if (!draft.user.trim()) problems.push('User is required.');
 	const port = Number(draft.port);
 	if (!Number.isInteger(port) || port < 1 || port > 65535) problems.push('Port must be 1–65535.');
-	if (draft.ssh) problems.push('SSH tunnels cannot be saved yet.');
+	if (draft.ssh) problems.push('SSH tunnels cannot be tested yet.');
 	if (draft.ssh && !draft.bastion.trim())
 		problems.push('Bastion host is required for an SSH tunnel.');
 	if (draft.passwordEnv.trim() && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(draft.passwordEnv.trim())) {
@@ -83,10 +88,26 @@ export function draftProblems(draft: ConnectionDraft): string[] {
 			'Password environment variable must be a name such as ORDERS_PASSWORD, not the password itself.'
 		);
 	}
-	if (!/^[a-z0-9](?:[a-z0-9-]{0,62})$/.test(draft.name.trim())) {
+	return problems;
+}
+
+/** Problems that block saving. Empty means Create can proceed. */
+export function draftProblems(draft: ConnectionDraft): string[] {
+	const problems = connectionProblems(draft);
+	if (!draft.name.trim()) problems.unshift('Name is required.');
+	else if (!/^[a-z0-9](?:[a-z0-9-]{0,62})$/.test(draft.name.trim())) {
 		problems.push('Name must be lowercase letters, digits and hyphens.');
 	}
 	return problems;
+}
+
+/** Why a local server with the default TLS mode will not answer. */
+export function localTlsHint(draft: Pick<ConnectionDraft, 'host' | 'tls'>): string | null {
+	const host = draft.host.trim().toLowerCase();
+	if (draft.tls === 'verify-full' && localHost(host)) {
+		return 'This host is local and TLS is verify-full. The usual PostgreSQL image does not speak TLS, so the test fails until you choose disable. The database for postgres@localhost with no database in the URL is postgres.';
+	}
+	return null;
 }
 
 function localHost(host: string): boolean {

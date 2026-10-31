@@ -38,7 +38,7 @@ type connectResponse struct {
 
 // saveCluster probes the server the operator named and, only after that
 // succeeds, writes the inventory the way `tl connect` does. A typed password
-// is not saved. password_env is stored as a reference.
+// is saved in the OS keychain. password_env is stored as a reference instead.
 func (a *api) saveCluster(w http.ResponseWriter, r *http.Request) {
 	var req connectRequest
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<10)
@@ -80,12 +80,117 @@ func (a *api) saveCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	view, note, err := a.recordCluster(ref, kind, profile, pwRef, info, secret != "" && pwRef == nil)
+	var keychainItem string
+	if secret != "" && pwRef == nil {
+		stored, err := inventory.StorePassword(ref.Env, ref.Cluster, secret)
+		if err != nil {
+			writeErr(w, http.StatusBadGateway, redact(err, secret))
+			return
+		}
+		pwRef = &stored
+		keychainItem = stored.Keychain
+	}
+
+	view, note, err := a.recordCluster(ref, kind, profile, pwRef, info, false)
 	if err != nil {
+		if keychainItem != "" {
+			_ = inventory.DeletePassword(keychainItem)
+		}
 		writeErr(w, http.StatusInternalServerError, redact(err, secret))
 		return
 	}
+	if keychainItem != "" {
+		note = "The password was saved in the OS keychain. The inventory stores only the reference."
+	}
 	writeJSON(w, http.StatusOK, connectResponse{clusterView: view, Saved: true, Note: note})
+}
+
+type testResponse struct {
+	Host       string `json:"host"`
+	Port       uint16 `json:"port"`
+	Database   string `json:"database"`
+	User       string `json:"user"`
+	TLS        string `json:"tls"`
+	Version    string `json:"version"`
+	VersionNum int    `json:"version_num"`
+	Provider   string `json:"provider"`
+	ReadOnly   bool   `json:"read_only"`
+	InRecovery bool   `json:"in_recovery"`
+}
+
+// testCluster probes the server and does not write the inventory.
+func (a *api) testCluster(w http.ResponseWriter, r *http.Request) {
+	var req connectRequest
+	r.Body = http.MaxBytesReader(w, r.Body, 8<<10)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		writeErr(w, http.StatusBadRequest, errors.New("invalid connection"))
+		return
+	}
+	secret := strings.TrimSpace(req.Password)
+	req.Password = ""
+
+	profile, pwRef, err := connectProfile(req)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, redact(err, secret))
+		return
+	}
+	profile, err = connectPassword(profile, secret, pwRef)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, redact(err, secret))
+		return
+	}
+	kind := inventory.EnvDev
+	if env := strings.TrimSpace(req.Environment); env != "" {
+		inv, err := a.inventory()
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, redact(err, secret))
+			return
+		}
+		kind, err = connectKind(inv, env)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, redact(err, secret))
+			return
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), clusterCallTimeout)
+	defer cancel()
+	info, err := conn.ProbeSession(ctx, profile, inventory.DefaultPolicy(kind).Session())
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, redact(err, secret))
+		return
+	}
+	writeJSON(w, http.StatusOK, testResponse{
+		Host: profile.Host, Port: profile.EffectivePort(), Database: info.Database, User: info.LoginRole,
+		TLS: string(profile.TLSMode()), Version: info.Version, VersionNum: info.VersionNum,
+		Provider: string(info.Provider), ReadOnly: info.ReadOnly, InRecovery: info.InRecovery,
+	})
+}
+
+func connectProfile(req connectRequest) (conn.Profile, *inventory.SecretRef, error) {
+	if strings.TrimSpace(req.Host) == "" || strings.TrimSpace(req.Database) == "" || strings.TrimSpace(req.User) == "" {
+		return conn.Profile{}, nil, errors.New("host, database and user are required")
+	}
+	if req.Port == 0 {
+		return conn.Profile{}, nil, errors.New("port must be 1–65535")
+	}
+	mode, err := conn.ParseTLSMode(req.TLS)
+	if err != nil {
+		return conn.Profile{}, nil, err
+	}
+	var pwRef *inventory.SecretRef
+	if env := strings.TrimSpace(req.PasswordEnv); env != "" {
+		pwRef = &inventory.SecretRef{Env: env}
+		if err := pwRef.Validate(); err != nil {
+			return conn.Profile{}, nil, err
+		}
+	}
+	return conn.Profile{
+		Host: strings.TrimSpace(req.Host), Port: req.Port,
+		Database: strings.TrimSpace(req.Database), User: strings.TrimSpace(req.User), TLS: mode,
+	}, pwRef, nil
 }
 
 func connectTarget(req connectRequest) (inventory.Ref, conn.Profile, *inventory.SecretRef, error) {
@@ -96,26 +201,9 @@ func connectTarget(req connectRequest) (inventory.Ref, conn.Profile, *inventory.
 	if err := inventory.ValidateName(ref.Cluster); err != nil {
 		return inventory.Ref{}, conn.Profile{}, nil, fmt.Errorf("cluster: %w", err)
 	}
-	if strings.TrimSpace(req.Host) == "" || strings.TrimSpace(req.Database) == "" || strings.TrimSpace(req.User) == "" {
-		return inventory.Ref{}, conn.Profile{}, nil, errors.New("host, database and user are required")
-	}
-	if req.Port == 0 {
-		return inventory.Ref{}, conn.Profile{}, nil, errors.New("port must be 1–65535")
-	}
-	mode, err := conn.ParseTLSMode(req.TLS)
+	profile, pwRef, err := connectProfile(req)
 	if err != nil {
 		return inventory.Ref{}, conn.Profile{}, nil, err
-	}
-	var pwRef *inventory.SecretRef
-	if env := strings.TrimSpace(req.PasswordEnv); env != "" {
-		pwRef = &inventory.SecretRef{Env: env}
-		if err := pwRef.Validate(); err != nil {
-			return inventory.Ref{}, conn.Profile{}, nil, err
-		}
-	}
-	profile := conn.Profile{
-		Host: strings.TrimSpace(req.Host), Port: req.Port,
-		Database: strings.TrimSpace(req.Database), User: strings.TrimSpace(req.User), TLS: mode,
 	}
 	return ref, profile, pwRef, nil
 }

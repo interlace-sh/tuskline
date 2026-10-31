@@ -107,6 +107,11 @@ func (p Profile) EffectivePort() uint16 {
 // HasPassword reports whether a password is held in memory.
 func (p Profile) HasPassword() bool { return p.password != "" }
 
+// Secret returns the in-memory password so the caller can place it in a
+// secret store. It is empty when the profile has none. Do not log it or
+// write it to the inventory.
+func (p Profile) Secret() string { return p.password }
+
 // WithPassword returns a copy of p holding password in memory.
 func (p Profile) WithPassword(password string) Profile {
 	p.password = password

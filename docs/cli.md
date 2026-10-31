@@ -52,7 +52,7 @@ Behaviour:
 
 - **Probe.** It prints the version, provider, primary or standby, session read-only status, TLS mode, login-role privileges, `shared_preload_libraries`, and recommended extensions that are missing with what each unlocks. Those five come from `core/catalog`, which also builds the setup steps (a merged preload list, or `patronictl edit-config` when Patroni owns the configuration). It refuses PostgreSQL older than 14. With a target environment, the probe runs under that environment's policy, so a prod probe is a read-only session with prod timeouts.
 - **Save.** With `--dsn` and a target, it adds or updates the entry and records the probe. Nothing is saved if the probe fails. On a terminal, missing values are asked for on stderr; leave them blank to only probe. When stdin is not a terminal, it never prompts.
-- **Passwords** are never stored or printed. The password is taken from the DSN, then the saved `--password-env` reference, then `~/.pgpass` (ignored if group- or world-readable). A DSN password is used for that probe only, with a note on stderr.
+- **Passwords** are never printed and never written into the inventory. A password in the DSN is saved in the OS keychain when the cluster is saved and `--password-env` is not set. Otherwise the password is taken from the saved reference (environment variable or keychain), then `~/.pgpass` (ignored if group- or world-readable).
 - **TLS.** A `sslmode` weaker than `verify-full` gives a warning on stderr.
 
 ### `tl ls`

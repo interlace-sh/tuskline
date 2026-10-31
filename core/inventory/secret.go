@@ -18,16 +18,12 @@ var ErrPlaintextSecret = errors.New("plaintext secrets are not allowed in the in
 // ErrSecretUnavailable is returned when a reference cannot be resolved.
 var ErrSecretUnavailable = errors.New("secret unavailable")
 
-// ErrKeychainNotImplemented is returned for keychain references until the OS
-// keychain provider lands (roadmap M8.3).
-var ErrKeychainNotImplemented = errors.New("OS keychain secrets are not implemented yet (roadmap M8.3)")
-
 // SecretRef points at a secret held elsewhere. Exactly one field is set.
 // The inventory stores only the reference, never the value.
 type SecretRef struct {
 	// Env names an environment variable holding the secret.
 	Env string `json:"env,omitempty" yaml:"env,omitempty"`
-	// Keychain names an OS keychain item (placeholder until M8.3).
+	// Keychain names an OS keychain item, tuskline/<env>/<cluster>.
 	Keychain string `json:"keychain,omitempty" yaml:"keychain,omitempty"`
 }
 
@@ -42,7 +38,11 @@ func (r SecretRef) Validate() error {
 		if !envNameRE.MatchString(r.Env) {
 			return fmt.Errorf("secret reference: %q is not a valid environment variable name", r.Env)
 		}
-	case r.Keychain == "":
+	case r.Keychain != "":
+		if !validKeychainItem(r.Keychain) {
+			return fmt.Errorf("secret reference: %q is not a tuskline/<env>/<cluster> keychain item", r.Keychain)
+		}
+	default:
 		return errors.New("secret reference: set env or keychain")
 	}
 	return nil
@@ -63,7 +63,7 @@ func (r SecretRef) Resolve() (string, error) {
 		return "", err
 	}
 	if r.Keychain != "" {
-		return "", fmt.Errorf("%s: %w", r, ErrKeychainNotImplemented)
+		return keychainGet(r.Keychain)
 	}
 	v, ok := os.LookupEnv(r.Env)
 	if !ok || v == "" {

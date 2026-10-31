@@ -1,15 +1,17 @@
 <script lang="ts">
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import PlugZap from '@lucide/svelte/icons/plug-zap';
-	import { ApiError, saveCluster } from '#lib/api.js';
+	import { ApiError, saveCluster, testCluster } from '#lib/api.js';
 	import { envPillClass, type EnvKind } from '#lib/env.js';
 	import { demoForced, type ShellCluster } from '#lib/fixtures/clusters.js';
 	import {
 		PROVIDER_LABEL,
 		RDS_PRESET,
 		SELF_PRESET,
+		connectionProblems,
 		detectProvider,
 		draftProblems,
+		localTlsHint,
 		verifyDraft,
 		type ConnectionDraft,
 		type TlsMode,
@@ -20,12 +22,16 @@
 	let draft = $state<ConnectionDraft>({ ...RDS_PRESET });
 	let password = $state('');
 	let verifying = $state(false);
+	let testing = $state(false);
 	let success = $state(false);
 	let error = $state('');
+	let tested = $state('');
 	let generation = 0;
 
 	const provider = $derived(detectProvider(draft));
 	const rehearsal = $derived(demoForced(typeof location === 'undefined' ? '' : location.search));
+	const busy = $derived(verifying || testing || success);
+	const tlsHint = $derived(localTlsHint(draft));
 	const envs: EnvKind[] = ['dev', 'staging', 'prod'];
 	const tlsModes: TlsMode[] = ['verify-full', 'require', 'disable'];
 
@@ -34,8 +40,10 @@
 		draft[key] = value;
 		if (key === 'host' || key === 'port' || key === 'database' || key === 'user') password = '';
 		verifying = false;
+		testing = false;
 		success = false;
 		error = '';
+		tested = '';
 	}
 
 	function usePreset(next: ConnectionDraft) {
@@ -43,8 +51,10 @@
 		draft = { ...next };
 		password = '';
 		verifying = false;
+		testing = false;
 		success = false;
 		error = '';
+		tested = '';
 	}
 
 	function wait(ms: number) {
@@ -73,9 +83,58 @@
 		shell.go('sql');
 	}
 
+	function payload() {
+		return {
+			environment: draft.env,
+			host: draft.host.trim(),
+			port: Number(draft.port),
+			database: draft.database.trim(),
+			user: draft.user.trim(),
+			tls: draft.tls,
+			password_env: draft.passwordEnv.trim() || undefined,
+			password: password || undefined
+		};
+	}
+
+	async function test() {
+		const ticket = ++generation;
+		error = '';
+		tested = '';
+		const invalid = connectionProblems(draft);
+		if (invalid.length) {
+			error = invalid[0];
+			return;
+		}
+		if (rehearsal) {
+			error = 'This demo does not dial out.';
+			return;
+		}
+		testing = true;
+		try {
+			const result = await testCluster(payload());
+			if (ticket !== generation) return;
+			const where = result.in_recovery
+				? 'standby'
+				: result.read_only
+					? 'read-only'
+					: 'writable primary';
+			tested = `Reached ${result.version} on ${result.host}:${result.port}, database ${result.database}, as ${result.user}. ${where}. Nothing was saved.`;
+		} catch (err) {
+			if (ticket !== generation) return;
+			const message = err instanceof ApiError ? err.message : 'Could not reach the server.';
+			error =
+				tlsHint && /tls|ssl|certificate|handshake/i.test(message)
+					? `${message} ${tlsHint}`
+					: message;
+		} finally {
+			if (ticket === generation) testing = false;
+		}
+	}
+
 	async function create() {
 		const ticket = ++generation;
 		error = '';
+		tested = '';
 		success = false;
 		const invalid = draftProblems(draft);
 		if (invalid.length) {
@@ -102,14 +161,8 @@
 		password = '';
 		try {
 			const saved = await saveCluster({
-				environment: draft.env,
+				...payload(),
 				name: draft.name.trim(),
-				host: draft.host.trim(),
-				port: Number(draft.port),
-				database: draft.database.trim(),
-				user: draft.user.trim(),
-				tls: draft.tls,
-				password_env: draft.passwordEnv.trim() || undefined,
 				password: once || undefined
 			});
 			if (ticket !== generation) return;
@@ -143,8 +196,8 @@
 			{#if rehearsal}
 				This demo checks the form and does not dial out or save anything.
 			{:else}
-				Create probes the server and saves it. A password is used for that probe only and is not
-				stored.
+				Test connection checks the server and saves nothing. Create does the same check, then saves.
+				A password is used for that probe only and is not stored.
 			{/if}
 		</p>
 	</div>
@@ -152,10 +205,8 @@
 	<div class="rounded-xl border border-tl-line bg-tl-elev p-4">
 		<div class="mb-3 flex flex-wrap items-center gap-2 text-[12px] text-tl-fg3">
 			Fill demo
-			<button class={btn} onclick={() => usePreset(RDS_PRESET)} disabled={verifying}
-				>Amazon RDS</button
-			>
-			<button class={btn} onclick={() => usePreset(SELF_PRESET)} disabled={verifying}
+			<button class={btn} onclick={() => usePreset(RDS_PRESET)} disabled={busy}>Amazon RDS</button>
+			<button class={btn} onclick={() => usePreset(SELF_PRESET)} disabled={busy}
 				>Self-managed</button
 			>
 		</div>
@@ -165,7 +216,7 @@
 				<input
 					class="{field} mt-1"
 					value={draft.name}
-					disabled={verifying || success}
+					disabled={busy}
 					oninput={(e) => patch('name', e.currentTarget.value)}
 				/>
 			</label>
@@ -174,7 +225,7 @@
 				<input
 					class="{field} mt-1"
 					value={draft.host}
-					disabled={verifying || success}
+					disabled={busy}
 					oninput={(e) => patch('host', e.currentTarget.value)}
 				/>
 			</label>
@@ -183,7 +234,7 @@
 				<input
 					class="{field} mt-1"
 					value={draft.port}
-					disabled={verifying || success}
+					disabled={busy}
 					oninput={(e) => patch('port', e.currentTarget.value)}
 				/>
 			</label>
@@ -192,7 +243,7 @@
 				<input
 					class="{field} mt-1"
 					value={draft.database}
-					disabled={verifying || success}
+					disabled={busy}
 					oninput={(e) => patch('database', e.currentTarget.value)}
 				/>
 			</label>
@@ -201,7 +252,7 @@
 				<input
 					class="{field} mt-1"
 					value={draft.user}
-					disabled={verifying || success}
+					disabled={busy}
 					oninput={(e) => patch('user', e.currentTarget.value)}
 				/>
 			</label>
@@ -210,7 +261,7 @@
 				<select
 					class="{field} mt-1"
 					value={draft.auth}
-					disabled={verifying || success}
+					disabled={busy}
 					onchange={(e) => patch('auth', e.currentTarget.value as WizardAuth)}
 				>
 					<option value="password">Password (~/.pgpass or an environment variable)</option>
@@ -228,7 +279,7 @@
 						autocomplete="off"
 						spellcheck="false"
 						placeholder="ORDERS_PASSWORD"
-						disabled={verifying || success}
+						disabled={busy}
 						oninput={(e) => patch('passwordEnv', e.currentTarget.value)}
 					/>
 				</label>
@@ -239,7 +290,7 @@
 						type="password"
 						value={password}
 						autocomplete="off"
-						disabled={verifying || success}
+						disabled={busy}
 						oninput={(e) => {
 							generation += 1;
 							password = e.currentTarget.value;
@@ -248,8 +299,9 @@
 					/>
 				</label>
 				<p class="text-[12px] text-tl-fg3 sm:col-span-2">
-					Leave both empty to use ~/.pgpass. The password is not written to the inventory or kept in
-					this page.
+					A typed password is saved in the OS keychain when you create the connection. The inventory
+					stores only the reference. Leave the password empty to use the environment variable or
+					~/.pgpass. It is not kept in this page.
 				</p>
 			{/if}
 		</div>
@@ -264,12 +316,14 @@
 								? 'border-tl-accent text-tl-accent'
 								: ''}"
 						aria-pressed={draft.tls === mode}
-						disabled={verifying || success}
+						disabled={busy}
 						onclick={() => patch('tls', mode)}>{mode}</button
 					>
 				{/each}
 			</div>
-			{#if draft.tls === 'disable'}
+			{#if tlsHint}
+				<p class="mt-1.5 text-[12px] text-tl-fg2">{tlsHint}</p>
+			{:else if draft.tls === 'disable'}
 				<p class="mt-1.5 text-[12px] text-env-prod">
 					Unencrypted. Only for a local disposable database.
 				</p>
@@ -291,7 +345,7 @@
 								? envPillClass(kind)
 								: 'text-tl-fg3 ring-1 ring-tl-line ring-inset'}"
 						aria-pressed={draft.env === kind}
-						disabled={verifying || success}
+						disabled={busy}
 						onclick={() => patch('env', kind)}>{kind}</button
 					>
 				{/each}
@@ -306,7 +360,7 @@
 			<input
 				type="checkbox"
 				checked={draft.ssh}
-				disabled={verifying || success}
+				disabled={busy}
 				onchange={(e) => patch('ssh', e.currentTarget.checked)}
 			/>
 			Connect through an SSH bastion
@@ -317,7 +371,7 @@
 				<input
 					class="{field} mt-1"
 					value={draft.bastion}
-					disabled={verifying || success}
+					disabled={busy}
 					oninput={(e) => patch('bastion', e.currentTarget.value)}
 				/>
 			</label>
@@ -327,17 +381,24 @@
 		</p>
 		{#if error}
 			<p class="mt-3 text-[13px] text-env-prod" role="alert">{error}</p>
+		{:else if tested}
+			<p class="mt-3 text-[13px] text-env-dev" role="status">{tested}</p>
 		{/if}
 	</div>
 
 	<div class="mt-4 flex items-center gap-2 border-t border-tl-line pt-4">
-		<button class={btn} onclick={() => shell.go('fleet')} disabled={verifying || success}
-			>Cancel</button
-		>
+		<button class={btn} onclick={() => shell.go('fleet')} disabled={busy}>Cancel</button>
+		<button class="{btn} ml-auto" onclick={test} disabled={busy}>
+			{#if testing}
+				<LoaderCircle size={14} class="animate-spin" /> Testing…
+			{:else}
+				Test connection
+			{/if}
+		</button>
 		<button
-			class="{btn} ml-auto border-transparent text-white {success ? 'bg-env-dev' : 'bg-brand'}"
+			class="{btn} border-transparent text-white {success ? 'bg-env-dev' : 'bg-brand'}"
 			onclick={create}
-			disabled={verifying || success}
+			disabled={busy}
 		>
 			{#if verifying}
 				<LoaderCircle size={14} class="animate-spin" /> Verifying…

@@ -301,8 +301,11 @@ func TestSecretRef(t *testing.T) {
 	if _, err := (SecretRef{Env: "TL_TEST_UNSET_VAR"}).Resolve(); !errors.Is(err, ErrSecretUnavailable) {
 		t.Errorf("unset env: err = %v, want ErrSecretUnavailable", err)
 	}
-	if _, err := (SecretRef{Keychain: "tuskline/prod/orders"}).Resolve(); !errors.Is(err, ErrKeychainNotImplemented) {
-		t.Errorf("keychain: err = %v, want ErrKeychainNotImplemented", err)
+	if err := (SecretRef{Keychain: "tuskline/prod/orders"}).Validate(); err != nil {
+		t.Errorf("keychain item: %v", err)
+	}
+	if _, err := (SecretRef{Keychain: "wallet"}).Resolve(); err == nil {
+		t.Error("odd keychain item was resolved")
 	}
 	if err := (SecretRef{Env: "A", Keychain: "b"}).Validate(); err == nil {
 		t.Error("both fields set: want an error")

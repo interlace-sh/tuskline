@@ -3,6 +3,7 @@ import {
 	RDS_PRESET,
 	detectProvider,
 	draftProblems,
+	localTlsHint,
 	verifyDraft,
 	type ConnectionDraft
 } from './connect-wizard';
@@ -31,7 +32,10 @@ describe('draftProblems', () => {
 			'Password environment variable must be a name such as ORDERS_PASSWORD, not the password itself.'
 		);
 		expect(draftProblems({ ...RDS_PRESET, ssh: true, bastion: 'bastion.example' })).toContain(
-			'SSH tunnels cannot be saved yet.'
+			'SSH tunnels cannot be tested yet.'
+		);
+		expect(draftProblems({ ...RDS_PRESET, host: 'postgres:postgres@localhost' })[0]).toMatch(
+			/Host is the server name/
 		);
 	});
 });
@@ -42,5 +46,7 @@ describe('verifyDraft', () => {
 		expect(verifyDraft({ ...RDS_PRESET, tls: 'disable' })).toMatch(/unencrypted/);
 		expect(verifyDraft({ ...RDS_PRESET, host: 'db.fail.example' })).toMatch(/Could not reach/);
 		expect(verifyDraft({ ...RDS_PRESET, tls: 'disable', host: '127.0.0.1' })).toBeNull();
+		expect(localTlsHint({ host: 'localhost', tls: 'verify-full' })).toMatch(/disable/);
+		expect(localTlsHint({ host: 'db.example', tls: 'verify-full' })).toBeNull();
 	});
 });

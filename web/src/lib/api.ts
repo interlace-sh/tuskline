@@ -205,6 +205,36 @@ export interface SavedCluster extends Cluster {
 	note?: string;
 }
 
+export interface TestedConnection {
+	host: string;
+	port: number;
+	database: string;
+	user: string;
+	tls: string;
+	version: string;
+	version_num: number;
+	provider: string;
+	read_only: boolean;
+	in_recovery: boolean;
+}
+
+/** Probe a server and do not save it. password is sent once and must not be kept. */
+export function testCluster(
+	body: {
+		environment?: string;
+		host: string;
+		port: number;
+		database: string;
+		user: string;
+		tls: string;
+		password_env?: string;
+		password?: string;
+	},
+	fetchImpl: typeof fetch = fetch
+): Promise<TestedConnection> {
+	return sendJSON('/api/v1/clusters/test', body, fetchImpl);
+}
+
 /** Probe and save a cluster. password is sent once and must not be kept by the caller. */
 export function saveCluster(
 	body: {

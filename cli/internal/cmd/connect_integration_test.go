@@ -12,12 +12,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/interlace-sh/tuskline/core/inventory"
 	"github.com/interlace-sh/tuskline/core/pgtest"
 )
 
 func TestConnectAgainstPostgres(t *testing.T) {
 	// Not parallel: t.Setenv, and one container at a time is enough.
 	t.Setenv("TL_TEST_PASSWORD", pgtest.Password)
+	inventory.UseKeyring(inventory.NewMemoryKeyring())
+	t.Cleanup(func() { inventory.UseKeyring(nil) })
 	for _, major := range pgtest.Versions(t) {
 		t.Run(fmt.Sprintf("pg%d", major), func(t *testing.T) {
 			srv := pgtest.Start(t, major)
@@ -72,14 +75,21 @@ func TestConnectAgainstPostgres(t *testing.T) {
 				t.Errorf("unexpected JSON: %+v", res)
 			}
 
-			// A dev entry for the same server gets a read-write session, and
-			// the DSN password is not saved without --password-env.
+			// A dev entry for the same server gets a read-write session. The
+			// DSN password is stored in the keychain, not the inventory.
 			out, errOut, err = runApp(t, &app{}, "connect", "--dsn", srv.DSN, "--env", "dev", "--name", "scratch", "--inventory", path)
 			if err != nil {
 				t.Fatalf("connect dev: %v\n%s", err, errOut)
 			}
-			if !strings.Contains(out, "read-write session") || !strings.Contains(errOut, "not saved") {
+			if !strings.Contains(out, "read-write session") || !strings.Contains(errOut, "OS keychain") {
 				t.Errorf("dev connect:\n%s\n%s", out, errOut)
+			}
+			saved, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(saved), pgtest.Password) || !strings.Contains(string(saved), "keychain: tuskline/dev/scratch") {
+				t.Fatalf("inventory:\n%s", saved)
 			}
 
 			// Roadmap M1 acceptance: tl ls shows what connect saved.

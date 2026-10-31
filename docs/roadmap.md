@@ -147,7 +147,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 
 - [ ] M8.1 Scaffold `desktop/` with Wails v3 and add it to `go.work`. Serve the web build and mount the server handler in-process.
 - [ ] M8.2 Local-first mode: SQLite in the user config directory, no login. Optional sign-in to a server or Cloud.
-- [ ] M8.3 Native extras: OS keychain secrets, SSH agent, `~/.pgpass` and `pg_service.conf` import, file dialogs.
+- [ ] M8.3 Native extras: OS keychain passwords are already stored by `tl connect` and Add connection (`password: {keychain: tuskline/<env>/<name>}`). Still to do: SSH agent, `~/.pgpass` and `pg_service.conf` import, file dialogs.
 - [ ] M8.4 Signed builds in CI: macOS (notarised, Intel and Apple Silicon), Windows x64/arm64, Linux x64/arm64. Updater.
 - [ ] M8.5 WebKitGTK and WebKit rendering checks (smoke tests in the webview).
 

@@ -94,6 +94,25 @@ func TestClusterAPIAgainstPostgres(t *testing.T) {
 			if rr := get("/api/v1/clusters/dev/pg/advise?memory=1GB&cpus=2&storage=ssd&workload=web"); rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"name":"track_io_timing"`) {
 				t.Fatalf("advise: %d %s", rr.Code, rr.Body)
 			}
+			before, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			tested := postJSON(t, h, "/api/v1/clusters/test", map[string]any{
+				"host": srv.Profile.Host, "port": srv.Profile.EffectivePort(),
+				"database": srv.Profile.Database, "user": srv.Profile.User, "tls": "disable",
+				"password": pgtest.Password,
+			})
+			if tested.Code != http.StatusOK || strings.Contains(tested.Body.String(), pgtest.Password) || !strings.Contains(tested.Body.String(), `"version"`) {
+				t.Fatalf("test connection: %d %s", tested.Code, tested.Body)
+			}
+			after, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(after) != string(before) {
+				t.Fatalf("test connection wrote the inventory")
+			}
 			saved := postJSON(t, h, "/api/v1/clusters", map[string]any{
 				"environment": "dev", "name": "added",
 				"host": srv.Profile.Host, "port": srv.Profile.EffectivePort(),

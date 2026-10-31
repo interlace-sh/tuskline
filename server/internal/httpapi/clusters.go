@@ -39,6 +39,7 @@ type api struct {
 func (a *api) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/clusters", a.listClusters)
 	mux.HandleFunc("POST /api/v1/clusters", a.saveCluster)
+	mux.HandleFunc("POST /api/v1/clusters/test", a.testCluster)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/queries", a.clusterQueries)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/activity", a.clusterActivity)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/health", a.clusterHealth)
