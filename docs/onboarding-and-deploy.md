@@ -89,6 +89,8 @@ The rules are [ADR 0014](adr/0014-config-advisor.md). PgTune supplies the candid
 6. **Apply:** streamed log, resumable on failure; secrets written to the chosen secret store.
 7. **Hand-over:** the cluster is added to the inventory with a monitoring role, the Patroni API and backup repository are registered, and the first restore drill is scheduled.
 
+`core/provision` is the plan and apply engine. `Changes` is the diff of every file, unit and manifest. `Apply` writes those paths, streams a log, and records each finished step so a later call resumes after a failure. A step whose body has changed runs again. Compose marked as production is refused. A step that names a data directory is refused when that directory already has files. A secret is redacted in the diff and is not written: there is no secret store in this engine yet. Nothing runs until `Apply` is called, and a command step does not start a shell unless the caller supplies an executor.
+
 Safety: refuse to touch non-empty data directories, show diffs before applying, and label Compose as non-production.
 
 `deploy/compose/compose.yaml` in this repository is only for dev and test databases. It is not the generated HA topology.
