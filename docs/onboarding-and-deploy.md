@@ -22,7 +22,7 @@ The fastest way to lose a new user is a dashboard full of "extension not install
 
 ## Generated setup (self-managed example)
 
-`core/catalog` holds the entries and builds the steps. The steps merge the current `shared_preload_libraries` value, because `ALTER SYSTEM` replaces the whole list, and they do not emit that statement when the current list could not be read. They switch to `patronictl edit-config` when Patroni manages the configuration.
+`core/catalog` holds the entries and builds the steps. The steps merge the current `shared_preload_libraries` value, because `ALTER SYSTEM` replaces the whole list, and they do not emit that statement when the current list could not be read. They switch to `patronictl edit-config` when Patroni manages the configuration. `InstallPlan` turns that into the package commands and the SQL preview.
 
 ```sql
 ALTER SYSTEM SET shared_preload_libraries = '<current>,pg_stat_statements,auto_explain';
@@ -33,9 +33,14 @@ ALTER SYSTEM SET auto_explain.log_format = 'json';
 -- restart, then in each monitored database:
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 CREATE EXTENSION IF NOT EXISTS hypopg;   -- optional
+```
 
--- Least-privilege monitoring role
-CREATE ROLE tuskline_monitor LOGIN CONNECTION LIMIT 5;   -- password via \password or IAM
+## Monitoring role
+
+`catalog.MonitorPlan` previews the collector role. The script does not set a password. On RDS and Aurora it is run as a member of `rds_superuser`, on Cloud SQL as `cloudsqlsuperuser`, on AlloyDB as `alloydbsuperuser`, and on Azure as `azure_pg_admin`. Extension parameter groups, Cloud SQL flags and `az postgres flexible-server parameter set` stay in `InstallPlan`; the role script does not repeat them.
+
+```sql
+CREATE ROLE tuskline_monitor LOGIN CONNECTION LIMIT 5; -- password via \password or IAM
 GRANT pg_monitor TO tuskline_monitor;
 ALTER ROLE tuskline_monitor SET default_transaction_read_only = on;
 ALTER ROLE tuskline_monitor SET statement_timeout = '5s';
