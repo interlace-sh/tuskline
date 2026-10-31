@@ -419,7 +419,11 @@
 				<div class="avatar" title="Account">TL</div>
 			</header>
 			<main class="flex min-h-0 flex-1 flex-col overflow-auto">
-				<div class="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col p-6">
+				<div
+					class="mx-auto flex min-h-0 w-full flex-1 flex-col {shell.screen === 'sql'
+						? 'max-w-none'
+						: 'max-w-[1600px] p-6'}"
+				>
 					{@render children()}
 				</div>
 			</main>
