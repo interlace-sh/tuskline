@@ -69,15 +69,7 @@ Managed services have no superuser and no `postgresql.conf`. Tuskline emits the 
 
 ## Config advisor (`tl config advise`, M4)
 
-| Area | Checks | Evidence |
-|---|---|---|
-| Memory | `shared_buffers`, `effective_cache_size`, `work_mem` against `max_connections`, `maintenance_work_mem`, huge pages | Host RAM, temp-file spills, cache hit ratio |
-| WAL and checkpoints | `max_wal_size`, `checkpoint_timeout`, `checkpoint_completion_target`, `wal_compression` | Requested versus timed checkpoints (`pg_stat_checkpointer` 17+, `pg_stat_bgwriter` before), `pg_stat_wal` |
-| Autovacuum | Workers, cost limit and delay, per-table scale factors, freeze settings | Dead tuples, last autovacuum, wraparound age |
-| Planner and I/O | `random_page_cost`, `effective_io_concurrency`, `track_io_timing` | Storage type, `pg_stat_io` 16+ |
-| Connections and safety | `max_connections` with or without a pooler, `idle_in_transaction_session_timeout`, logging | Peak sessions, idle-in-transaction counts |
-
-Each recommendation shows the reasoning, the evidence and a diff, and is marked reload or restart.
+The rules are [ADR 0014](adr/0014-config-advisor.md). PgTune supplies the candidate values from RAM, CPUs, storage and workload. The parameter reference supplies the reload or restart context, the 25% and 40% `shared_buffers` bounds, and the fact that `effective_cache_size` allocates nothing. Live statistics are quoted beside a change and are not a second formula. `wal_level = minimal` is never suggested, and `max_connections` is never raised. Without `--memory` the command still reports `autovacuum` off, `track_io_timing` off, a zero idle-in-transaction timeout, a low checkpoint target and `wal_compression` off. Per-table autovacuum scale factors are later work.
 
 ## Deploy targets (M5)
 

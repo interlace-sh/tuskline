@@ -1,0 +1,71 @@
+dev/pg17 · PostgreSQL 17 · 13 changes
+
+restart  shared_buffers
+  128MB → 4GB
+  shared_buffers = 4GB
+  25% of RAM is the starting point on a dedicated server. More than 40% is unlikely to help, because PostgreSQL also uses the operating system cache.
+  evidence: Cache hit ratio is 97%. That includes the operating system cache, so it is context, not proof.
+
+reload  effective_cache_size
+  4GB → 12GB
+  effective_cache_size = 12GB
+  This does not allocate memory. It tells the planner how large the cache is, including shared buffers and the operating system cache.
+
+reload  maintenance_work_mem
+  64MB → 1GB
+  maintenance_work_mem = 1GB
+  Maintenance memory is a fraction of RAM, capped so one rebuild cannot take the machine.
+
+reload  work_mem
+  4MB → 19MB
+  work_mem = 19MB
+  Sized from the RAM left after shared buffers, divided by connections and parallel workers, with a margin so a spike does not exhaust the machine.
+
+reload  random_page_cost
+  4 → 1.1
+  random_page_cost = 1.1
+  Solid-state storage does not pay a spinning-disk seek, so a random read is close to a sequential one.
+
+reload  effective_io_concurrency
+  1 → 200
+  effective_io_concurrency = 200
+  How many concurrent reads the planner may expect. Solid-state storage and a SAN can keep more than one in flight.
+
+reload  maintenance_io_concurrency
+  10 → 200
+  maintenance_io_concurrency = 200
+  Vacuum and index builds use the same storage, so they get the same concurrency as ordinary reads.
+
+reload  max_parallel_workers_per_gather
+  2 → 4
+  max_parallel_workers_per_gather = 4
+  How many workers one query may use. Extra workers past four rarely pay for themselves on short queries.
+
+reload  max_parallel_maintenance_workers
+  2 → 4
+  max_parallel_maintenance_workers = 4
+  Parallel vacuum and index builds. Capped at four, for the same reason as a single query.
+
+reload  jit
+  on → off
+  jit = off
+  JIT compilation spends more time planning a short query than it saves executing it. Leave it for a warehouse.
+
+reload  track_io_timing
+  off → on
+  track_io_timing = on
+  Block read and write times are what make I/O waits visible. The overhead on current hardware is small.
+
+reload  idle_in_transaction_session_timeout
+  0 → 5min
+  idle_in_transaction_session_timeout = 5min
+  A transaction left idle holds a snapshot and blocks vacuum. Five minutes is for application sessions. The collector role keeps its own 10 second timeout.
+
+reload  wal_compression
+  off → lz4
+  wal_compression = lz4
+  Compressing WAL cuts archive and replication volume. lz4 is the fast method on PostgreSQL 15 and newer. zstd, if already selected, is left as it is.
+
+Notes
+  Shared buffers are large. Reserve huge pages (vm.nr_hugepages) or each connection pays for its page tables. With the server stopped: postgres -D $PGDATA -C shared_memory_size_in_huge_pages
+  wal_compression = lz4 needs a build with lz4. SELECT enumvals FROM pg_settings WHERE name = 'wal_compression' lists it when the build has it.

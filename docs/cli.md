@@ -21,10 +21,11 @@ Conventions:
 | `tl top <ref>` | Live sessions, waits, locks and blocking chains; see [below](#tl-top) |
 | `tl snapshot <ref>`, `tl diff` | Workload snapshots; see [below](#tl-snapshot) |
 | `tl diagnose <ref>` | Health checks; see [below](#tl-diagnose) |
+| `tl config advise <ref>` | Configuration preview; see [below](#tl-config-advise) |
 | `tl serve [args]` | Runs the separate `tuskline serve`; see [below](#tl-serve) |
 | `tl agent` | Stub; see [below](#tl-agent) |
 
-Global flag: `--inventory <file>` (connect, ls, top, snapshot and diagnose) overrides the inventory location (default `$TUSKLINE_INVENTORY`, else `$XDG_CONFIG_HOME/tuskline/inventory.yaml`).
+Global flag: `--inventory <file>` (connect, ls, top, snapshot, diagnose and config advise) overrides the inventory location (default `$TUSKLINE_INVENTORY`, else `$XDG_CONFIG_HOME/tuskline/inventory.yaml`).
 
 ### `tl -v`
 
@@ -122,6 +123,28 @@ Connects with the environment's session policy and runs the health checks: missi
 |---|---|
 | `--output text\|json\|markdown`, `-o` | Report format. The default is `text`. JSON is `{ref, taken, server_version_num, findings}`. |
 | `--lag <d>` | Replay lag that counts as a finding. The default is `1m`. |
+
+### `tl config advise`
+
+```sh
+tl config advise dev/pg17
+tl config advise dev/pg17 --memory 16GB --cpus 8 --storage ssd --workload web
+tl config advise prod/orders --memory 64GB --cpus 16 --storage nvme --pooler --output json
+```
+
+Prints a preview. Nothing is changed. Each change has the current value, the proposed value, a `postgresql.conf` line, and whether it needs a reload or a restart. The rules, and the PgTune suggestions that are refused, are [ADR 0014](adr/0014-config-advisor.md).
+
+| Flag | Meaning |
+|---|---|
+| `--memory <size>` | RAM, for example `16GB`. Units are 1024-based. Without it, memory settings are omitted. |
+| `--cpus <n>` | CPUs PostgreSQL may use. Enables parallel-worker and, on a large machine, autovacuum-worker candidates. |
+| `--storage hdd\|ssd\|nvme\|san` | Storage. Enables the I/O cost candidates. |
+| `--workload web\|oltp\|dw\|desktop\|mixed` | Workload. With `--memory` and no workload, the workload is web. |
+| `--db-size less\|mid\|greater` | Whether the database is smaller than RAM, comparable, or larger. The default is mid. |
+| `--os linux\|windows\|mac` | Operating system. The default is linux. |
+| `--connections <n>` | Connection count used to size `work_mem`. The default is the larger of the live `max_connections` and the workload's count. |
+| `--pooler` | A connection pooler is already in front of this server. |
+| `--output text\|json`, `-o` | Text is the preview. JSON is `{ref, report}`. |
 
 ### `tl serve`
 

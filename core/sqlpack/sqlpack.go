@@ -66,5 +66,6 @@ func All() []Query {
 		StatsIO16, StatsIO18,
 		StatsStatements14, StatsStatements15, StatsStatements17,
 		DiagnoseStatementsInstalled, DiagnoseWraparound, DiagnoseIndexes, DiagnoseReplication,
+		AdviseSettings, AdviseCache, AdviseTemp, AdviseCheckpoints14, AdviseCheckpoints17,
 	}
 }

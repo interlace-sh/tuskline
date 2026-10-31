@@ -17,5 +17,6 @@ The eight product decisions below were recorded on 28 Oct 2026. Each one, and ea
 | [0011](adr/0011-frontend-sveltekit-spa.md) | Web stack | SvelteKit SPA + Svelte 5 + Tailwind + shadcn-svelte; React prototype is the spec | Accepted |
 | [0012](adr/0012-proto-and-moon.md) | Toolchain and tasks | proto pins Go, Node.js, npm, moon and golangci-lint; moon runs and caches every task; Makefile is a thin alias | Accepted |
 | [0013](adr/0013-metrics-storage.md) | Metrics history | Parquet segments in `core` (no cgo); 1 s for 1 h, 1 min for 14 days, 1 h for 13 months | Accepted |
+| [0014](adr/0014-config-advisor.md) | Config advisor | PgTune formulas as the candidate, the parameter reference for reload or restart, live statistics as evidence; no `wal_level = minimal`, no raising `max_connections` | Accepted |
 
 Template: [adr/0000-template.md](adr/0000-template.md).
