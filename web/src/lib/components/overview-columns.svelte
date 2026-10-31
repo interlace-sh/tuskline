@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Hash from '@lucide/svelte/icons/hash';
+	import { fitFlyout, flyoutAnchor } from '#lib/flyout.js';
 	import type { OverviewColumn } from '#lib/overview-stats.js';
 
 	let {
@@ -24,7 +25,7 @@
 		}
 		const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
 		selected = column.name;
-		anchor = { top: rect.top, left: rect.right + 8 };
+		anchor = flyoutAnchor(rect, window.innerWidth);
 	}
 
 	function fmtPct(value: number | null): string {
@@ -61,9 +62,10 @@
 
 {#if current && anchor}
 	<div
-		class="fixed z-40 w-64 rounded-lg border border-tl-line bg-tl-elev p-3"
+		class="fixed z-40 w-64 overflow-auto rounded-lg border border-tl-line bg-tl-elev p-3"
 		style:top="{anchor.top}px"
 		style:left="{anchor.left}px"
+		use:fitFlyout
 		style:box-shadow="var(--tl-shadow)"
 	>
 		<div class="font-mono text-[12px]">{current.name}</div>
