@@ -46,7 +46,6 @@
 	];
 	const setup: { id: Screen; label: string; keys: string }[] = [
 		{ id: 'setup', label: 'Overview', keys: 'g u' },
-		{ id: 'connect', label: 'Add connection', keys: 'n' },
 		{ id: 'deploy', label: 'Deploy cluster', keys: 'g d' },
 		{ id: 'deployments', label: 'Deployments', keys: 'g l' }
 	];
@@ -448,7 +447,7 @@
 		>
 			<h2 class="mb-3 text-sm font-semibold">Keyboard shortcuts</h2>
 			<div class="grid grid-cols-2 gap-x-8 gap-y-2 text-[13px]">
-				{#each [['⌘/Ctrl K', 'Command palette'], ['⌘/Ctrl ↵', 'Run statement'], ['⌘/Ctrl ⇧ ↵', 'EXPLAIN ANALYZE'], ['g f', 'Fleet'], ['g c', 'Cluster health'], ['g q', 'Query insights'], ['g s', 'SQL editor'], ['e', 'Switch environment'], ['t', 'Toggle theme'], ['[ ]', 'Step the time range'], ['?', 'This help']] as row (row[1])}
+				{#each [['⌘/Ctrl K', 'Command palette'], ['⌘/Ctrl ↵', 'Run statement'], ['⌘/Ctrl ⇧ ↵', 'EXPLAIN ANALYZE'], ['n', 'Add connection'], ['g f', 'Fleet'], ['g c', 'Cluster health'], ['g q', 'Query insights'], ['g s', 'SQL editor'], ['e', 'Switch environment'], ['t', 'Toggle theme'], ['[ ]', 'Step the time range'], ['?', 'This help']] as row (row[1])}
 					<div class="flex items-center justify-between border-b border-tl-line/60 py-1">
 						<span class="text-tl-fg2">{row[1]}</span>
 						<kbd>{row[0]}</kbd>

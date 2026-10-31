@@ -34,7 +34,7 @@ The design reference is the frozen React prototype in [`../prototype/`](../proto
 - **Left rail:** cluster-scoped sections: Overview/Health, Queries, SQL, HA, Backups, Migrations, Advisor.
 - **Breadcrumb:** Project › Environment › Cluster › Instance › Database.
 - **Time range:** one global time-range control that every chart obeys.
-- **Setup & deploy:** an area containing Setup overview, Add connection, Config advisor, Deploy and Deployments.
+- **Setup & deploy:** an area containing Setup overview, Config advisor, Deploy and Deployments. Add connection is the button on Fleet (`n`), not a sidebar item.
 
 ## Screens (port in this order)
 
@@ -70,7 +70,7 @@ Explain draws the plan with a D3 tree (`d3-hierarchy`), a plain-English summary 
 
 Result rows arrive as a stream and the grid virtualises them (TanStack Virtual), so only the visible window is in the DOM. The server has no sign-in; that is a later feature.
 
-Add connection (`n`) is one form. Create probes the server and saves it the way `tl connect` does: the button spins, an error stays on the form, and a success turns the action green before the SQL editor opens on that database. A typed password is used for that probe only. The inventory stores an environment-variable reference or relies on `~/.pgpass`, and the password is not kept in the browser or in SQLite. `?demo=1` checks the form locally and does not dial out.
+Add connection (`n`, or the Fleet button) is one form. Saved connections live in the inventory file. Saving the same environment and name again updates that entry. There is no separate editor, and Deployments is for clusters Tuskline provisions later, not this list. Create probes the server and saves it the way `tl connect` does: the button spins, an error stays on the form, and a success turns the action green before the SQL editor opens on that database. A typed password is used for that probe only. The inventory stores an environment-variable reference or relies on `~/.pgpass`, and the password is not kept in the browser or in SQLite. `?demo=1` checks the form locally and does not dial out.
 
 The SQL editor fills the page width. Narrower screens, such as Add connection, stay in a centred column. The database column lists extensions installed in the current database and those available to install, plus `shared_preload_libraries`. A saved cluster reads them from the server (`GET .../probe`). Demo mode shows a labelled sample instead. The database name is a menu for the other databases on that server. Tables and views share the schema tree, with a different icon for views. Selecting one opens an inspector. Overview and Indexes open to a set height, up to a maximum, and the divider resizes that panel. Overview loads counts, distinct values and nulls on its own: a saved cluster reads `pg_stats` (planner estimates, not a table scan), and the orders demo profiles its sample rows. A histogram is in the column detail, not on every row. Indexes lists that relation's indexes. Notebook snippets can be renamed. The results bar switches a page between one SQL script and a notebook. A snippet, and the SQL editor, can expand to fill the page. Escape leaves that full screen. The files control on the tab bar opens a panel that can attach a local folder and open its `.sql` files.
 
