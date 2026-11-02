@@ -1,7 +1,6 @@
-// Playwright checks for the shipped shell. Deploy, HA, backups and migrations
-// stay in prototype/scripts/smoke.mjs until those milestones land. The
-// connection check is the shipped one-step form. The advisor check is the
-// prototype's production confirmation.
+// Playwright checks for the shipped shell. Migrations stay in
+// prototype/scripts/smoke.mjs. The connection check is the shipped one-step
+// form. The advisor, deploy, switchover and backup checks follow the prototype.
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -111,11 +110,9 @@ try {
 
 	await page.keyboard.press('g');
 	await page.keyboard.press('d');
-	ok(
-		'g d -> deploy placeholder',
-		(await page.getByRole('heading', { name: 'Deploy cluster' }).isVisible()) &&
-			(await page.getByText('later milestone').isVisible())
-	);
+	ok('g d -> deploy', await page.getByRole('heading', { name: 'Deploy cluster' }).isVisible());
+	await page.keyboard.press('g');
+	await page.keyboard.press('f');
 
 	await page.keyboard.press('n');
 	ok(
@@ -169,6 +166,34 @@ try {
 	ok(
 		'advisor: apply does not run the change',
 		await page.getByText('Nothing was applied').isVisible()
+	);
+
+	await page.keyboard.press('g');
+	await page.keyboard.press('h');
+	ok('g h -> HA topology', await page.getByRole('heading', { name: 'HA topology' }).isVisible());
+	await page.getByRole('button', { name: 'Switchover…' }).click();
+	await page.locator('.fixed input.mono').fill('prod-eu-west');
+	await page.getByRole('button', { name: 'Switch over now' }).click();
+	ok('switchover done', await page.getByText(/is now leader/).isVisible());
+
+	await page.keyboard.press('g');
+	await page.keyboard.press('b');
+	await page.getByRole('button', { name: 'Latest' }).click();
+	ok('pitr latest', await page.getByText('Recoverable.').isVisible());
+
+	await page.keyboard.press('g');
+	await page.keyboard.press('d');
+	for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Continue' }).click();
+	await page.getByRole('button', { name: 'Deploy orders-demo' }).click();
+	await page.getByRole('button', { name: 'Fast-forward' }).click();
+	ok('deploy: completes', await page.getByText('Deployment complete', { exact: true }).isVisible());
+	await page.getByRole('button', { name: 'View in Fleet' }).click();
+	ok('deploy: cluster in Fleet', await page.getByText('orders-demo', { exact: true }).isVisible());
+	await page.keyboard.press('g');
+	await page.keyboard.press('l');
+	ok(
+		'deploy: recorded in history',
+		(await page.locator('table').innerText()).includes('orders-demo')
 	);
 
 	ok('no page errors', pageErrors.length === 0);

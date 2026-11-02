@@ -76,8 +76,8 @@ The rules are [ADR 0014](adr/0014-config-advisor.md). PgTune supplies the candid
 | Target | What Tuskline deploys | How | Production HA? |
 |---|---|---|---|
 | Docker Compose (R2) | Patroni ×3, etcd ×3, PgBouncer, HAProxy, pgBackRest as containers | `tl provision compose plan` prints the files. `tl provision compose up --dir` writes them and starts the stack, waiting for etcd and Patroni health checks | **No:** one host is a single point of failure. For dev, CI, staging and demos |
-| Kubernetes (R3) | CloudNativePG `Cluster` (failover through the Kubernetes API, so no Patroni or etcd), CNPG `Pooler`, Barman Cloud plugin or volume snapshots | Generated manifests or Helm values; server-side apply; status read back | Yes |
-| VMs and bare metal over SSH (R3) | Patroni + etcd (3 nodes) + PgBouncer + HAProxy or vip-manager + pgBackRest to S3, GCS, Azure or NFS | Go SSH executor running idempotent, versioned steps (PGDG packages, systemd units, templates); optional Autobase-playbook mode | Yes, with 3+ hosts across failure domains |
+| Kubernetes (R3) | CloudNativePG `Cluster` (failover through the Kubernetes API, so no Patroni or etcd), CNPG `Pooler`, Barman Cloud plugin | `tl provision cnpg plan` writes the manifests. Credentials are secret references. `kubectl apply` is a later command in the plan | Yes |
+| VMs and bare metal over SSH (R3) | Patroni + etcd + pgBackRest | `tl provision ssh plan` writes Patroni, a systemd unit, pgBackRest and the PGDG package list. `--autobase` writes an inventory and does not run the playbook. Apply uses `ssh -o BatchMode=yes` | Yes, with hosts across failure domains |
 
 ## Guided flow
 

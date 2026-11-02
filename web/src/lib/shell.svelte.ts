@@ -142,6 +142,11 @@ class Shell {
 		);
 	}
 
+	addCluster(cluster: ShellCluster) {
+		if (this.clusters.some((item) => item.id === cluster.id)) return;
+		this.clusters = [...this.clusters, cluster];
+	}
+
 	setCluster(id: string) {
 		const cluster = this.clusters.find((c) => c.id === id) ?? this.clusters[0];
 		this.clusterId = cluster.id;

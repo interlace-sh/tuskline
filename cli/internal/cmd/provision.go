@@ -24,6 +24,8 @@ func newProvisionCmd(a *app) *cobra.Command {
 		Short: "Plan a deployment",
 	}
 	cmd.AddCommand(newComposeCmd(a))
+	cmd.AddCommand(newCNPGCmd())
+	cmd.AddCommand(newSSHCmd())
 	return cmd
 }
 

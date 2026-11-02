@@ -20,7 +20,7 @@ func TestOpenMigratesAndRemembersTheCursor(t *testing.T) {
 		t.Fatal(err)
 	}
 	v, err := s.Version(ctx)
-	if err != nil || v != 2 {
+	if err != nil || v != 3 {
 		t.Fatalf("version %d, %v", v, err)
 	}
 	if _, ok, err := s.Cursor(ctx, "prod/orders", "stats.database"); err != nil || ok {
@@ -51,8 +51,32 @@ func TestOpenMigratesAndRemembersTheCursor(t *testing.T) {
 	if err != nil || !got.Equal(later) {
 		t.Fatalf("updated cursor %v err %v", got, err)
 	}
-	if v, err = s.Version(ctx); err != nil || v != 2 {
+	if v, err = s.Version(ctx); err != nil || v != 3 {
 		t.Fatalf("version after reopen %d, %v", v, err)
+	}
+}
+
+func TestActionAuditRoundTrip(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	s, err := Open(ctx, filepath.Join(t.TempDir(), "meta.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+	err = s.RecordAction(ctx, ActionAudit{
+		Actor: "local", Environment: "dev", Cluster: "demo", Action: "switchover",
+		Preview: "POST http://127.0.0.1:8008/switchover\nNothing has been sent.",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, err := s.ActionAuditCount(ctx)
+	if err != nil || n != 1 {
+		t.Fatalf("count %d %v", n, err)
+	}
+	if err := s.RecordAction(ctx, ActionAudit{Actor: "local"}); err == nil {
+		t.Fatal("an incomplete action was recorded")
 	}
 }
 

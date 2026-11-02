@@ -197,6 +197,13 @@ The enrolment token is read from `TUSKLINE_AGENT_TOKEN` and never printed. The c
 | `tl explain file.sql` | Plan with plain-English summary and warnings | M3 |
 | `tl config advise prod/orders` | postgresql.conf linter and tuning advisor, with diffs, marked reload or restart | M4 |
 | `tl provision compose plan` / `up` | Generate a non-production Compose plan, or write it and start it | M5 |
+| `tl provision cnpg plan` | Print CloudNativePG manifests. Nothing is applied | M5 |
+| `tl provision ssh plan` | Print Patroni files for VMs. Nothing is installed | M5 |
+| `tl ha status` | Print Patroni or CloudNativePG topology from `--file` or `--url` | M6 |
+| `tl ha switchover` / `restart` | Preview. `--apply` sends it; prod requires `--confirm` | M6 |
+| `tl backup status` | Print pgBackRest or CloudNativePG backups from `--file` | M6 |
+| `tl backup restore --to` | Preview a point-in-time restore. `--run` starts pgBackRest | M6 |
+| `tl backup verify` | Preview a scratch-container restore drill. `--run` starts it | M6 |
 | `tl backup status\|verify\|restore --to <time>` | Read and drive pgBackRest and CNPG backups | M6 |
 | `tl ha status\|switchover` | Patroni and operator topology; guarded actions | M6 |
 | `tl migrate plan\|lint\|apply --env staging` | Run Flyway, Sqitch or SQL folders with lock analysis | M7 |

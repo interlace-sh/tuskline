@@ -28,6 +28,24 @@ func TestComposeUpStopsWhenPreflightFails(t *testing.T) {
 	}
 }
 
+func TestGuardedActionsStayPreview(t *testing.T) {
+	out, err := run(t, "ha", "switchover", "--cluster", "orders", "--from", "pg1", "--to", "pg2", "--api", "http://127.0.0.1:9", "--prod", "--apply")
+	if err == nil || !strings.Contains(err.Error(), "cluster name") {
+		t.Fatalf("got %v", err)
+	}
+	if !strings.Contains(out, "Nothing has been sent") {
+		t.Fatalf("preview missing:\n%s", out)
+	}
+	out, err = run(t, "backup", "verify", "--stanza", "demo")
+	if err != nil || !strings.Contains(out, "Nothing has been started") {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	out, err = run(t, "provision", "cnpg", "plan", "--name", "demo", "--pooler=false")
+	if err != nil || !strings.Contains(out, "Nothing has been applied") || !strings.Contains(out, "kind: Cluster") {
+		t.Fatalf("%v\n%s", err, out)
+	}
+}
+
 func TestComposeRejectsProd(t *testing.T) {
 	_, err := run(t, "provision", "compose", "plan", "--name", "demo", "--env", "prod")
 	if err == nil || !strings.Contains(err.Error(), "prod") {

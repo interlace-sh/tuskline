@@ -113,9 +113,9 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [x] M5.2b `tl provision compose up`: write that plan into a chosen directory and start it with `docker compose up --wait`. etcd and Patroni have health checks. Passwords are mode 0600 files and are not printed. Still non-production.
 - [x] M5.3 Pre-flight checks before `tl provision compose up`: Docker Engine 24+ and Compose 2.20+, free disk (2 GiB per node plus 1 GiB), published ports, and leftover Compose volumes. A previous run of the same directory may keep its volumes and ports. A plan step that names a non-empty data directory is refused before anything is written.
 - [x] M5.4 Hand-over after `tl provision compose up`: create `tuskline_monitor` (password in the OS keychain, not in the inventory or the diff), save the cluster at `127.0.0.1:5000` with TLS disabled, register Patroni at `127.0.0.1:8008` and the local pgBackRest volume, and schedule `tl backup verify` seven days out. The drill is not run. `prod` is refused. A later `up` keeps the drill date.
-- [ ] M5.5 CloudNativePG target (R3): `Cluster`, `Pooler` and Barman Cloud plugin manifests, server-side apply, status read back.
-- [ ] M5.6 SSH/VM target (R3): Go SSH executor, PGDG packages (extension packages from the M4.2 catalog, Pigsty repo only when PGDG lacks the package), systemd units and config templates, idempotent versioned steps. Autobase-playbook mode.
-- [ ] M5.7 Port the Deploy and Deployments screens, including the prototype smoke steps for a completed deploy and its history row.
+- [x] M5.5 CloudNativePG target (R3): `tl provision cnpg plan` writes `Cluster`, `Pooler`, Barman `ObjectStore` and `ScheduledBackup` manifests. Credentials are `secretKeyRef`s, not values. `CNPGApply` adds `kubectl apply`. Status JSON is read by `ha.ParseCNPG`.
+- [x] M5.6 SSH/VM target (R3): `tl provision ssh plan` writes Patroni, a systemd unit, pgBackRest and the PGDG package list from the catalogue (Pigsty only when the catalogue says PGDG lacks the package). `--autobase` adds an inventory and does not run the playbook. `SSHApply` uses `ssh -o BatchMode=yes` with a single host token.
+- [x] M5.7 Deploy and Deployments screens, including the prototype smoke steps: three Continues, Deploy orders-demo, Fast-forward, Deployment complete, the cluster on Fleet, and the history table. The screen does not start Docker.
 
 **Acceptance:**
 - `tl provision compose up` brings up a 3-node cluster that Tuskline then monitors.
@@ -124,11 +124,11 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 
 ## M6: HA and backups (Patroni, pgBackRest) (about 4 weeks)
 
-- [ ] M6.1 Read-only (R2): Patroni REST topology, CNPG status, replication lag, timeline history.
-- [ ] M6.2 Read-only (R2): pgBackRest `info` timeline (full/diff/incr, WAL coverage band, gaps), CNPG backups. `tl backup status`.
-- [ ] M6.3 `tl ha status` and the HA and Backups screens ported from the prototype, including the prototype smoke steps for switchover and point-in-time recovery.
-- [ ] M6.4 Guarded actions (R3): switchover, restart and PITR restore (`tl ha switchover`, `tl backup restore --to <time>`). Each has a dry run, pre-flight checks, typed confirmation and an audit record. Actions go through Patroni and CNPG APIs, never around them.
-- [ ] M6.5 `tl backup verify`: restore drill into a scratch container.
+- [x] M6.1 Read-only (R2): `ha.ParsePatroni` and `ha.ParseCNPG` read members, role, timeline and lag. `tl ha status --file` or `--url` prints them.
+- [x] M6.2 Read-only (R2): `backup.ParseInfo` reads full/diff/incr backups, WAL spans and gaps. `backup.ParseCNPG` reads backup objects. `tl backup status --file`.
+- [x] M6.3 `tl ha status` and the HA and Backups screens. Production switchover stays disabled until the cluster name is typed. Latest recovery says Recoverable and does not restore.
+- [x] M6.4 Guarded actions (R3): `tl ha switchover`, `tl ha restart` and `tl backup restore --to`. The default is a preview. `--apply` requires the cluster name on prod, records `action_audit`, and for switchover and restart POSTs the HA API. Restore `--run` is the only path that starts pgBackRest.
+- [x] M6.5 `tl backup verify` prints a scratch-container `docker run` of `pgbackrest restore`. `--run` starts it. The original cluster is not the target.
 
 **Acceptance:**
 - Topology and backup views are correct against the M5 Compose stack.

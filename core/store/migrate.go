@@ -30,6 +30,18 @@ var migrations = []string{
 		row_count INTEGER,
 		error TEXT NOT NULL
 	)`,
+	// action_audit records a guarded HA or backup action. The preview is
+	// stored, not result rows or passwords.
+	`CREATE TABLE action_audit (
+		id INTEGER PRIMARY KEY,
+		at TEXT NOT NULL,
+		actor TEXT NOT NULL,
+		environment TEXT NOT NULL,
+		cluster TEXT NOT NULL,
+		action TEXT NOT NULL,
+		preview TEXT NOT NULL,
+		error TEXT NOT NULL
+	)`,
 }
 
 func migrate(ctx context.Context, db *sql.DB) error {

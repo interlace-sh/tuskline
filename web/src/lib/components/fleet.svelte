@@ -13,6 +13,7 @@
 	import { filterFleet, sortByScore, type FleetFilter } from '#lib/fixtures/fleet.js';
 	import { healthColor, healthDotClass } from '#lib/fixtures/clusters.js';
 	import { fmt, fmtBytes } from '#lib/format.js';
+	import { recordedDeployments } from '#lib/deploy-log.svelte.js';
 	import { shell } from '#lib/shell.svelte.js';
 	import ScoreRing from './score-ring.svelte';
 	import Sparkline from './sparkline.svelte';
@@ -156,6 +157,15 @@
 </div>
 
 {#if shell.demo}
+	{#if recordedDeployments().length}
+		<ul class="mb-4 flex flex-wrap gap-2">
+			{#each recordedDeployments() as item (item.name)}
+				<li class="rounded-xl border border-tl-line bg-tl-elev px-3 py-2 font-mono text-[13px]">
+					{item.name}
+				</li>
+			{/each}
+		</ul>
+	{/if}
 	{#if demoList.length === 0}
 		<div class="rounded-xl border border-tl-line bg-tl-elev px-6 py-12 text-center">
 			<div
