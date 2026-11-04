@@ -206,7 +206,7 @@ The enrolment token is read from `TUSKLINE_AGENT_TOKEN` and never printed. The c
 | `tl backup verify` | Preview a scratch-container restore drill. `--run` starts it | M6 |
 | `tl backup status\|verify\|restore --to <time>` | Read and drive pgBackRest and CNPG backups | M6 |
 | `tl ha status\|switchover` | Patroni and operator topology; guarded actions | M6 |
-| `tl migrate plan\|lint\|apply --env staging` | Run Flyway, Sqitch or SQL folders with lock analysis | M7 |
+| `tl migrate plan\|lint\|apply --env staging` | Run Flyway, Sqitch or SQL folders. Lock findings already live in `core/lint`; the command is still to come | M7 |
 | `tl inventory import --from aws,gcp,azure,k8s` | Discover clusters from clouds and Kubernetes | M9 |
 | `tl agent` | Outbound collector over mTLS | M9 |
 | `tl advise indexes` | Index candidates validated with hypopg | Later |

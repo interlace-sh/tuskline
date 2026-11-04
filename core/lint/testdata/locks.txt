@@ -1,0 +1,11 @@
+volatile-default: Adding token with default gen_random_uuid() rewrites orders because the default is volatile.
+ALTER TABLE orders ADD COLUMN token uuid DEFAULT gen_random_uuid()
+
+create-index: CREATE INDEX on orders locks writes. CONCURRENTLY builds it without that lock and cannot run inside a transaction.
+CREATE INDEX orders_note ON orders (note)
+
+alter-type: Changing the type of orders.note rewrites the table.
+ALTER TABLE orders ALTER COLUMN note TYPE varchar(40)
+
+set-not-null: SET NOT NULL on note scans orders under a lock: orders is 200MB and 3 sessions are using it.
+ALTER TABLE orders ALTER COLUMN note SET NOT NULL

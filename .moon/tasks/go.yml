@@ -25,6 +25,10 @@ tasks:
   build:
     description: 'Compile every package in the module'
     command: 'go build ./...'
+    env:
+      # Core, CLI, agent and server stay pure Go. CGO_ENABLED=1 would also
+      # compile the cgo files inside pg_query_go, which the linter does not use.
+      CGO_ENABLED: '0'
     inputs:
       - '@group(sources)'
       - 'project://^?group=sources'
@@ -33,6 +37,8 @@ tasks:
   test:
     description: 'Unit tests with the race detector'
     command: 'go test -race -count 1 ./...'
+    env:
+      CGO_ENABLED: '0'
     inputs:
       - '@group(sources)'
       - 'project://^?group=sources'
@@ -41,6 +47,8 @@ tasks:
   vet:
     description: 'go vet, with and without the integration build tag'
     script: 'go vet ./... && go vet -tags integration ./...'
+    env:
+      CGO_ENABLED: '0'
     inputs:
       - '@group(sources)'
       - 'project://^?group=sources'
@@ -56,6 +64,8 @@ tasks:
   golangci:
     description: 'golangci-lint with the shared root config'
     command: 'golangci-lint run --config $workspaceRoot/.golangci.yml ./...'
+    env:
+      CGO_ENABLED: '0'
     checks:
       # The proto plugin for golangci-lint only loads once the repo is trusted.
       - 'golangci-lint version >/dev/null 2>&1 || { echo "golangci-lint unavailable: run proto trust && proto install at the repository root" >&2; exit 1; }'

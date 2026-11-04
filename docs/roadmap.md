@@ -137,7 +137,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 
 ## M7: migrations (about 4 weeks, R3)
 
-- [ ] M7.1 `core/lint` on `pg_query_go`: lock-aware rules (for example `ADD COLUMN … DEFAULT` volatility, `CREATE INDEX` without `CONCURRENTLY`, `ALTER TYPE`, `SET NOT NULL` on big tables), using live table sizes and activity.
+- [x] M7.1 `core/lint` on `pg_query_go`: lock-aware rules (`ADD COLUMN … DEFAULT` volatility, `CREATE INDEX` without `CONCURRENTLY`, `ALTER TYPE`, `SET NOT NULL` when a table is at least 100MB, in use, or of unknown size). Parsing goes through the pure-Go build so core stays free of cgo. `lint.Check` does not connect or run SQL.
 - [ ] M7.2 `tl migrate lint|plan|apply --env staging`: drive Flyway, Sqitch or plain SQL folders. Prod needs approval.
 - [ ] M7.3 Drift detection: schema snapshot diff between environments.
 - [ ] M7.4 Migrations screen (PR-style review) ported from the prototype, including the prototype smoke step that approves a migration after its rewrite.
