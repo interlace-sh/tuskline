@@ -50,7 +50,7 @@ The design reference is the frozen React prototype in [`../prototype/`](../proto
 | 8 | HA topology, switchover modal | 05, 09 | M6 |
 | 9 | Backups and PITR | 06 | M6 |
 | 10 | Deploy (target, topology, sizing, review, running, complete), Deployments | 22–27, 29, 34 | M5 |
-| 11 | Migrations | 07 | M7 |
+| 11 | Migrations: sample review. Approve stays disabled until the rewrite; nothing is applied | 07 | M7 |
 
 ## Keyboard
 

@@ -1,5 +1,4 @@
-// Playwright checks for the shipped shell. Migrations stay in
-// prototype/scripts/smoke.mjs. The connection check is the shipped one-step
+// Playwright checks for the shipped shell. The connection check is the shipped one-step
 // form. The advisor, deploy, switchover and backup checks follow the prototype.
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -180,6 +179,16 @@ try {
 	await page.keyboard.press('b');
 	await page.getByRole('button', { name: 'Latest' }).click();
 	ok('pitr latest', await page.getByText('Recoverable.').isVisible());
+
+	await page.keyboard.press('g');
+	await page.keyboard.press('m');
+	ok('g m -> migrations', await page.getByRole('heading', { name: 'Migrations' }).isVisible());
+	const approve = page.getByRole('button', { name: 'Approve', exact: true });
+	ok('approve disabled pre-fix', await approve.isDisabled());
+	await page.getByRole('button', { name: 'Apply suggested rewrite' }).click();
+	ok('approve enabled after rewrite', await approve.isEnabled());
+	await approve.click();
+	ok('approved', await page.getByText('Approved #0142').isVisible());
 
 	await page.keyboard.press('g');
 	await page.keyboard.press('d');

@@ -141,7 +141,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [x] M7.2 `tl migrate lint|plan|apply --dir <folder> --env staging`: read a directory of SQL scripts, lint them, and print the order. Names sort numerically. Production apply requires `--approve`. Nothing is executed.
 - [x] M7.2b `--run` applies that directory on an inventory cluster. Checksums live in `tuskline.schema_migration`, an advisory lock excludes a second run, and a script that cannot run inside a transaction is run on its own. Production needs `--approve` and `--confirm`. The run is audited.
 - [x] M7.3 Drift detection: `tl migrate diff` compares columns, constraints, enums, indexes, views and routines from two clusters or two snapshot files. The `tuskline` schema and system catalogues are excluded. A difference exits 1. Rows are not read.
-- [ ] M7.4 Migrations screen (PR-style review) ported from the prototype, including the prototype smoke step that approves a migration after its rewrite.
+- [x] M7.4 Migrations screen: sample review of migration 0142. Approve stays disabled until the suggested rewrite is applied, then the screen shows Approved #0142. The screen does not run SQL.
 
 **Acceptance:** golden-file tests for lint rules; `migrate apply` on prod refuses without approval (test).
 

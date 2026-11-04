@@ -8,6 +8,7 @@
 	import DeploymentsScreen from '#lib/components/deployments-screen.svelte';
 	import Fleet from '#lib/components/fleet.svelte';
 	import HaScreen from '#lib/components/ha-screen.svelte';
+	import MigrationsScreen from '#lib/components/migrations-screen.svelte';
 	import Queries from '#lib/components/queries.svelte';
 	import SetupScreen from '#lib/components/setup-screen.svelte';
 	import SqlScreen from '#lib/components/sql-screen.svelte';
@@ -38,6 +39,8 @@
 	<HaScreen />
 {:else if shell.screen === 'backups'}
 	<BackupsScreen />
+{:else if shell.screen === 'migrations'}
+	<MigrationsScreen />
 {:else}
 	<h1 class="text-xl font-semibold tracking-tight">{SCREEN_LABEL[shell.screen]}</h1>
 	<p class="mt-1 max-w-xl text-sm text-tl-fg2">
