@@ -14,13 +14,37 @@
 	import { healthColor, healthDotClass } from '#lib/fixtures/clusters.js';
 	import { fmt, fmtBytes } from '#lib/format.js';
 	import { recordedDeployments } from '#lib/deploy-log.svelte.js';
-	import { deleteCluster } from '#lib/api.js';
+	import { clusterActivity, clusterHealth, deleteCluster, splitRef } from '#lib/api.js';
 	import { shell } from '#lib/shell.svelte.js';
 	import ScoreRing from './score-ring.svelte';
 	import Sparkline from './sparkline.svelte';
 
 	let query = $state('');
 	let filter = $state<FleetFilter>('all');
+	let pulse = $state<Record<string, { findings: number; sessions: number }>>({});
+
+	$effect(() => {
+		if (shell.demo) return;
+		const ids = shell.clusters.map((cluster) => cluster.id).filter((id) => id.includes('/'));
+		let cancelled = false;
+		for (const id of ids) {
+			const ref = splitRef(id);
+			void Promise.all([
+				clusterHealth(ref.env, ref.name)
+					.then((body) => body.findings?.length ?? 0)
+					.catch(() => null),
+				clusterActivity(ref.env, ref.name)
+					.then((body) => body.sessions?.length ?? 0)
+					.catch(() => null)
+			]).then(([findings, sessions]) => {
+				if (cancelled || findings === null || sessions === null) return;
+				pulse = { ...pulse, [id]: { findings, sessions } };
+			});
+		}
+		return () => {
+			cancelled = true;
+		};
+	});
 
 	const demoList = $derived(sortByScore(filterFleet(CLUSTERS, query, filter)));
 	const counts = $derived({
@@ -391,7 +415,12 @@
 									>
 								</div>
 								<p class="mt-3 text-[12px] text-tl-fg3">
-									Health, load and backups appear once this cluster is collected.
+									{#if pulse[cluster.id]}
+										{pulse[cluster.id].findings} health findings · {pulse[cluster.id].sessions} sessions.
+										Load history is not stored for this screen.
+									{:else}
+										Reading health and sessions…
+									{/if}
 								</p>
 							</div>
 						{/each}

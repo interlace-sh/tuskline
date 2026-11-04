@@ -14,18 +14,35 @@
 	</p>
 </div>
 
-<div class="mb-4 flex gap-2">
-	<button class={btn} onclick={() => (choice = 'latest')}>Latest</button>
-	<button class={btn} onclick={() => (choice = 'gap')}>Inside the gap</button>
-</div>
+{#if !shell.demo}
+	<section class="max-w-xl rounded-xl border border-tl-line bg-tl-elev p-4 text-[13px] text-tl-fg2">
+		<p>
+			{shell.cluster.backup
+				? `Registered repository: ${shell.cluster.backup}.`
+				: 'No backup repository is registered on this cluster.'}
+		</p>
+		{#if shell.cluster.restoreDrill}
+			<p class="mt-2">Restore drill: {shell.cluster.restoreDrill}.</p>
+		{/if}
+		<p class="mt-2">
+			Backup contents and WAL gaps are read by <code class="font-mono">tl backup status</code> from a
+			pgBackRest info file. This server does not run pgBackRest.
+		</p>
+	</section>
+{:else}
+	<div class="mb-4 flex gap-2">
+		<button class={btn} onclick={() => (choice = 'latest')}>Latest</button>
+		<button class={btn} onclick={() => (choice = 'gap')}>Inside the gap</button>
+	</div>
 
-{#if choice === 'latest'}
-	<p class="max-w-xl rounded-xl border border-tl-line bg-tl-elev p-4 text-[13px] text-tl-fg2">
-		Recoverable. Continuous WAL from the latest base backup to the target. Nothing has been
-		restored.
-	</p>
-{:else if choice === 'gap'}
-	<p class="max-w-xl rounded-xl border border-tl-line bg-tl-elev p-4 text-[13px] text-tl-fg2">
-		Target is inside a WAL gap. Pick a time before the gap or after it.
-	</p>
+	{#if choice === 'latest'}
+		<p class="max-w-xl rounded-xl border border-tl-line bg-tl-elev p-4 text-[13px] text-tl-fg2">
+			Recoverable. Continuous WAL from the latest base backup to the target. Nothing has been
+			restored.
+		</p>
+	{:else if choice === 'gap'}
+		<p class="max-w-xl rounded-xl border border-tl-line bg-tl-elev p-4 text-[13px] text-tl-fg2">
+			Target is inside a WAL gap. Pick a time before the gap or after it.
+		</p>
+	{/if}
 {/if}

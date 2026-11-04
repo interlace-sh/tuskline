@@ -46,7 +46,16 @@
 	</p>
 </div>
 
-{#if phase === 'form'}
+{#if !shell.demo}
+	<section class="max-w-xl rounded-xl border border-tl-line bg-tl-elev p-4">
+		<h2 class="text-[13px] font-semibold">Start the stack from the machine with Docker</h2>
+		<p class="mt-1 text-[13px] text-tl-fg2">
+			<code class="font-mono">tl provision compose plan</code> writes the files.
+			<code class="font-mono">tl provision compose up</code> starts them. This server does not launch
+			containers from the browser.
+		</p>
+	</section>
+{:else if phase === 'form'}
 	<ol class="mb-4 flex flex-wrap gap-2 text-[12px]">
 		{#each steps as label, index (label)}
 			<li

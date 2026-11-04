@@ -36,6 +36,10 @@ export interface Cluster {
 	auth?: string;
 	secret_env?: string;
 	last_probe?: Probe | null;
+	ha_engine?: string;
+	patroni_url?: string;
+	backup?: string;
+	restore_drill?: string;
 }
 
 export interface Statement {
@@ -466,4 +470,70 @@ export function clusterAdvise(
 	const qs = params.toString();
 	const path = clusterPath(env, name, 'advise') + (qs ? `?${qs}` : '');
 	return getJSON(path, fetchImpl);
+}
+
+export interface TopologyMember {
+	name: string;
+	role: string;
+	state?: string;
+	timeline?: number;
+	lag_bytes?: number;
+	host?: string;
+}
+
+export interface Topology {
+	source: string;
+	timeline?: number;
+	members: TopologyMember[];
+}
+
+/** Patroni or CloudNativePG members. Nothing is changed. */
+export function clusterTopology(
+	env: string,
+	name: string,
+	fetchImpl: typeof fetch = fetch
+): Promise<Topology> {
+	return getJSON(clusterPath(env, name, 'topology'), fetchImpl);
+}
+
+/** Preview a switchover, or send it when run is true. Production needs confirm. */
+export function requestSwitchover(
+	env: string,
+	name: string,
+	body: { from: string; to: string; confirm?: string; run: boolean },
+	fetchImpl: typeof fetch = fetch
+): Promise<{ preview: string; sent: boolean }> {
+	return sendJSON(clusterPath(env, name, 'switchover'), body, fetchImpl);
+}
+
+export interface SchemaChange {
+	op: string;
+	kind: string;
+	name: string;
+	from?: string;
+	to?: string;
+}
+
+/** Compare two clusters' catalogues. Rows are not read. */
+export function schemaDiff(
+	from: string,
+	to: string,
+	fetchImpl: typeof fetch = fetch
+): Promise<{ from: string; to: string; report: string; changes: SchemaChange[] }> {
+	const params = new URLSearchParams({ from, to });
+	return getJSON(`/api/v1/schema/diff?${params}`, fetchImpl);
+}
+
+export interface LintFinding {
+	rule: string;
+	summary: string;
+	statement: string;
+}
+
+/** Lock rules for one script. Nothing is applied. */
+export function lintSQL(
+	sql: string,
+	fetchImpl: typeof fetch = fetch
+): Promise<{ findings: LintFinding[]; report: string }> {
+	return sendJSON('/api/v1/lint', { sql }, fetchImpl);
 }

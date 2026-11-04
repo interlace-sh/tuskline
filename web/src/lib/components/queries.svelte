@@ -8,7 +8,14 @@
 	import TrendingUp from '@lucide/svelte/icons/trending-up';
 	import Zap from '@lucide/svelte/icons/zap';
 	import { ApiError, clusterQueries, runQuery, splitRef, type Statement } from '#lib/api.js';
-	import { PLAN_AFTER, PLAN_BEFORE, QUERIES, type Query } from '#lib/fixtures/demo.js';
+	import {
+		PLAN_AFTER,
+		PLAN_BEFORE,
+		QUERIES,
+		type PlanNode,
+		type Query
+	} from '#lib/fixtures/demo.js';
+	import { parseExplain, type ExplainPlan } from '#lib/explain.js';
 	import { fmt, fmtMs } from '#lib/format.js';
 	import { filterQueries, flattenPlan, sortQueries, type QuerySort } from '#lib/query-view.js';
 	import { shell } from '#lib/shell.svelte.js';
@@ -31,6 +38,7 @@
 	let loading = $state(false);
 	let liveId = $state<number | null>(null);
 	let explainText = $state('');
+	let explainPlan = $state<ExplainPlan | null>(null);
 	let explaining = $state(false);
 
 	const rows = $derived(sortQueries(filterQueries(QUERIES, text), sort));
@@ -77,11 +85,15 @@
 		const ref = splitRef(shell.cluster.id);
 		explaining = true;
 		explainText = '';
+		explainPlan = null;
 		try {
-			const result = await runQuery(ref.env, ref.name, `EXPLAIN\n${liveSelected.query}`);
-			explainText =
-				result.rows.map((row) => row.map((cell) => String(cell ?? '')).join(' ')).join('\n') ||
-				'No plan rows.';
+			const statement = liveSelected.query.trim().replace(/;\s*$/, '');
+			const sql = /^explain\b/i.test(statement) ? statement : `EXPLAIN (FORMAT JSON) ${statement}`;
+			const result = await runQuery(ref.env, ref.name, sql);
+			const cell = result.rows[0]?.[0];
+			const text = typeof cell === 'string' ? cell : JSON.stringify(cell ?? '');
+			explainPlan = parseExplain(text);
+			explainText = explainPlan ? '' : text || 'No plan rows.';
 		} catch (err) {
 			explainText = err instanceof ApiError ? err.message : 'Could not explain this statement.';
 		} finally {
@@ -410,12 +422,18 @@
 				onclick={explainLive}
 				disabled={explaining}>{explaining ? 'Explaining…' : 'EXPLAIN'}</button
 			>
-			{#if explainText}
+			{#if explainPlan}
+				<p class="mt-3 text-[13px] text-tl-fg2">{explainPlan.summary}</p>
+				<div class="mt-3">
+					<PlanView root={explainPlan.root as PlanNode} />
+				</div>
+			{:else if explainText}
 				<pre
 					class="mt-3 overflow-auto font-mono text-[12px] whitespace-pre-wrap">{explainText}</pre>
 			{/if}
 			<p class="mt-2 text-[12px] text-tl-fg3">
-				EXPLAIN only. Index advice validated with hypopg is not on this screen.
+				EXPLAIN only, without ANALYZE, so the statement is not executed. Index advice validated with
+				hypopg is not on this screen.
 			</p>
 		</section>
 	{/if}

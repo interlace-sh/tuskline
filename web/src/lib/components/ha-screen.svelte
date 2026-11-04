@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { shell } from '#lib/shell.svelte.js';
+	import HaLive from './ha-live.svelte';
 
 	interface Node {
 		id: string;
@@ -38,59 +39,63 @@
 	}
 </script>
 
-<div class="mb-5 flex flex-wrap items-end justify-between gap-3">
-	<div>
-		<h1 class="text-xl font-semibold tracking-tight">HA topology</h1>
-		<p class="mt-1 text-[13px] text-tl-fg2">
-			{shell.cluster.name} · {shell.cluster.ha} · timeline 7
-		</p>
-	</div>
-	<button class="{btn} border-transparent bg-brand text-white" onclick={() => (open = true)}
-		>Switchover…</button
-	>
-</div>
-
-{#if notice}
-	<p class="mb-3 text-[13px] text-tl-fg2">{notice}</p>
-{/if}
-
-<ul class="grid max-w-3xl gap-3 sm:grid-cols-3">
-	{#each nodes as node (node.id)}
-		<li class="rounded-xl border border-tl-line bg-tl-elev p-4">
-			<div class="font-mono text-[13px] font-medium">{node.id}</div>
-			<div class="mt-1 text-[12px] text-tl-fg3">{node.role}</div>
-		</li>
-	{/each}
-</ul>
-
-{#if open}
-	<div class="fixed inset-0 z-40 grid place-items-center bg-black/40 p-4">
-		<div
-			class="w-full max-w-md rounded-xl border border-tl-line bg-tl-elev p-4"
-			role="dialog"
-			aria-labelledby="switchover-title"
-		>
-			<h2 id="switchover-title" class="text-[15px] font-semibold">Switchover</h2>
+{#if !shell.demo && shell.cluster.id.includes('/')}
+	<HaLive />
+{:else}
+	<div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+		<div>
+			<h1 class="text-xl font-semibold tracking-tight">HA topology</h1>
 			<p class="mt-1 text-[13px] text-tl-fg2">
-				{leader.id} to {candidate.id}. This demo does not call Patroni.
+				{shell.cluster.name} · {shell.cluster.ha} · timeline 7
 			</p>
-			{#if needsName}
-				<label class="mt-3 block text-[12px] text-tl-fg3">
-					Type {shell.cluster.name}
-					<input
-						class="mono mt-1 w-full rounded-md border border-tl-line bg-tl-bg px-2 py-1"
-						bind:value={confirm}
-					/>
-				</label>
-			{/if}
-			<div class="mt-4 flex gap-2">
-				<button class={btn} onclick={() => (open = false)}>Cancel</button>
-				<button
-					class="{btn} border-transparent bg-brand text-white disabled:opacity-40"
-					disabled={!confirmed}
-					onclick={switchover}>Switch over now</button
-				>
+		</div>
+		<button class="{btn} border-transparent bg-brand text-white" onclick={() => (open = true)}
+			>Switchover…</button
+		>
+	</div>
+
+	{#if notice}
+		<p class="mb-3 text-[13px] text-tl-fg2">{notice}</p>
+	{/if}
+
+	<ul class="grid max-w-3xl gap-3 sm:grid-cols-3">
+		{#each nodes as node (node.id)}
+			<li class="rounded-xl border border-tl-line bg-tl-elev p-4">
+				<div class="font-mono text-[13px] font-medium">{node.id}</div>
+				<div class="mt-1 text-[12px] text-tl-fg3">{node.role}</div>
+			</li>
+		{/each}
+	</ul>
+
+	{#if open}
+		<div class="fixed inset-0 z-40 grid place-items-center bg-black/40 p-4">
+			<div
+				class="w-full max-w-md rounded-xl border border-tl-line bg-tl-elev p-4"
+				role="dialog"
+				aria-labelledby="switchover-title"
+			>
+				<h2 id="switchover-title" class="text-[15px] font-semibold">Switchover</h2>
+				<p class="mt-1 text-[13px] text-tl-fg2">
+					{leader.id} to {candidate.id}. This demo does not call Patroni.
+				</p>
+				{#if needsName}
+					<label class="mt-3 block text-[12px] text-tl-fg3">
+						Type {shell.cluster.name}
+						<input
+							class="mono mt-1 w-full rounded-md border border-tl-line bg-tl-bg px-2 py-1"
+							bind:value={confirm}
+						/>
+					</label>
+				{/if}
+				<div class="mt-4 flex gap-2">
+					<button class={btn} onclick={() => (open = false)}>Cancel</button>
+					<button
+						class="{btn} border-transparent bg-brand text-white disabled:opacity-40"
+						disabled={!confirmed}
+						onclick={switchover}>Switch over now</button
+					>
+				</div>
 			</div>
 		</div>
-	</div>
+	{/if}
 {/if}

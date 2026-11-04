@@ -1,5 +1,48 @@
 <script lang="ts">
+	import { ApiError, lintSQL, schemaDiff } from '#lib/api.js';
 	import { MIGRATIONS, type Migration } from '#lib/fixtures/demo.js';
+	import { shell } from '#lib/shell.svelte.js';
+
+	let sql = $state('CREATE INDEX orders_note ON orders (note);\n');
+	let lintReport = $state('');
+	let lintError = $state('');
+	let linting = $state(false);
+	let fromId = $state('');
+	let toId = $state('');
+	let driftReport = $state('');
+	let driftError = $state('');
+	let diffing = $state(false);
+
+	const liveClusters = $derived(shell.clusters.filter((cluster) => cluster.id.includes('/')));
+
+	async function lint() {
+		linting = true;
+		lintError = '';
+		lintReport = '';
+		try {
+			const result = await lintSQL(sql);
+			lintReport = result.report || 'No lock findings.';
+		} catch (err) {
+			lintError = err instanceof ApiError ? err.message : 'Could not lint the script.';
+		} finally {
+			linting = false;
+		}
+	}
+
+	async function compare() {
+		if (!fromId || !toId) return;
+		diffing = true;
+		driftError = '';
+		driftReport = '';
+		try {
+			const result = await schemaDiff(fromId, toId);
+			driftReport = result.report;
+		} catch (err) {
+			driftError = err instanceof ApiError ? err.message : 'Could not compare the schemas.';
+		} finally {
+			diffing = false;
+		}
+	}
 
 	let selectedId = $state('0142');
 	let rewritten = $state(false);
@@ -61,79 +104,140 @@ ALTER TABLE public.orders ALTER COLUMN currency SET NOT NULL;`;
 	}
 </script>
 
-<div class="mb-5">
-	<h1 class="text-xl font-semibold tracking-tight">Migrations</h1>
-	<p class="mt-1 max-w-2xl text-[13px] text-tl-fg2">
-		Sample review for orders. Approving here does not run SQL. Apply a directory with
-		<code class="font-mono">tl migrate apply --run</code>.
-	</p>
-</div>
-
-<div class="grid items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-	<ul class="space-y-2">
-		{#each MIGRATIONS as item (item.id)}
-			<li>
-				<button
-					class="w-full rounded-xl border px-3 py-2 text-left {item.id === selected.id
-						? 'border-tl-accent bg-tl-elev'
-						: 'border-tl-line bg-tl-elev hover:bg-tl-hover'}"
-					onclick={() => (selectedId = item.id)}
+{#if !shell.demo}
+	<div class="mb-5">
+		<h1 class="text-xl font-semibold tracking-tight">Migrations</h1>
+		<p class="mt-1 max-w-2xl text-[13px] text-tl-fg2">
+			Lint a script and compare two clusters. Applying a directory stays on
+			<code class="font-mono">tl migrate apply --run</code>, because the files live on the machine
+			that runs the command.
+		</p>
+	</div>
+	<div class="grid gap-4 lg:grid-cols-2">
+		<section class="rounded-xl border border-tl-line bg-tl-elev p-4">
+			<h2 class="text-[13px] font-semibold">Lock check</h2>
+			<textarea
+				class="mt-2 h-40 w-full rounded-md border border-tl-line bg-tl-bg p-2 font-mono text-[12px]"
+				bind:value={sql}></textarea>
+			<button
+				class="mt-2 inline-flex h-8 items-center rounded-md border border-tl-line px-3 text-[13px]"
+				onclick={lint}
+				disabled={linting}>{linting ? 'Checking…' : 'Lint'}</button
+			>
+			{#if lintError}<p class="mt-2 text-[13px] text-env-prod">{lintError}</p>{/if}
+			{#if lintReport}
+				<pre class="mt-2 overflow-auto font-mono text-[12px] whitespace-pre-wrap">{lintReport}</pre>
+			{/if}
+		</section>
+		<section class="rounded-xl border border-tl-line bg-tl-elev p-4">
+			<h2 class="text-[13px] font-semibold">Schema drift</h2>
+			<div class="mt-2 flex flex-wrap gap-2">
+				<select
+					class="h-8 rounded-md border border-tl-line bg-tl-bg px-2 text-[13px]"
+					bind:value={fromId}
 				>
-					<div class="font-mono text-[12px] text-tl-fg3">#{item.id}</div>
-					<div class="text-[13px] font-medium">{item.title}</div>
-					<div class="mt-0.5 text-[12px] text-tl-fg3">{statusOf(item)} · {item.age}</div>
-				</button>
-			</li>
-		{/each}
-	</ul>
-
-	<section class="min-w-0 space-y-3">
-		<div class="flex flex-wrap items-center justify-between gap-2">
-			<h2 class="text-[15px] font-semibold">#{selected.id} {selected.title}</h2>
-			<div class="flex gap-2">
-				{#if is142 && !rewritten}
-					<button class={btn} onclick={() => (rewritten = true)}>Apply suggested rewrite</button>
-				{/if}
-				{#if is142}
-					<button
-						class="{btn} border-transparent bg-brand text-white"
-						disabled={!canApprove}
-						onclick={() => (approved = true)}
-					>
-						Approve
-					</button>
-				{/if}
+					<option value="">From</option>
+					{#each liveClusters as cluster (cluster.id)}
+						<option value={cluster.id}>{cluster.id}</option>
+					{/each}
+				</select>
+				<select
+					class="h-8 rounded-md border border-tl-line bg-tl-bg px-2 text-[13px]"
+					bind:value={toId}
+				>
+					<option value="">To</option>
+					{#each liveClusters as cluster (cluster.id)}
+						<option value={cluster.id}>{cluster.id}</option>
+					{/each}
+				</select>
+				<button
+					class="inline-flex h-8 items-center rounded-md border border-tl-line px-3 text-[13px] disabled:opacity-40"
+					onclick={compare}
+					disabled={diffing || !fromId || !toId}>{diffing ? 'Comparing…' : 'Compare'}</button
+				>
 			</div>
-		</div>
+			{#if driftError}<p class="mt-2 text-[13px] text-env-prod">{driftError}</p>{/if}
+			{#if driftReport}
+				<pre
+					class="mt-2 overflow-auto font-mono text-[12px] whitespace-pre-wrap">{driftReport}</pre>
+			{/if}
+		</section>
+	</div>
+{:else}
+	<div class="mb-5">
+		<h1 class="text-xl font-semibold tracking-tight">Migrations</h1>
+		<p class="mt-1 max-w-2xl text-[13px] text-tl-fg2">
+			Sample review for orders. Approving here does not run SQL. Apply a directory with
+			<code class="font-mono">tl migrate apply --run</code>.
+		</p>
+	</div>
 
-		{#if is142 && approved}
-			<p class="text-[13px] font-medium">Approved #0142</p>
-		{/if}
+	<div class="grid items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+		<ul class="space-y-2">
+			{#each MIGRATIONS as item (item.id)}
+				<li>
+					<button
+						class="w-full rounded-xl border px-3 py-2 text-left {item.id === selected.id
+							? 'border-tl-accent bg-tl-elev'
+							: 'border-tl-line bg-tl-elev hover:bg-tl-hover'}"
+						onclick={() => (selectedId = item.id)}
+					>
+						<div class="font-mono text-[12px] text-tl-fg3">#{item.id}</div>
+						<div class="text-[13px] font-medium">{item.title}</div>
+						<div class="mt-0.5 text-[12px] text-tl-fg3">{statusOf(item)} · {item.age}</div>
+					</button>
+				</li>
+			{/each}
+		</ul>
 
-		{#if selected.envs.some((env) => env.state === 'drift')}
-			<p class="rounded-xl border border-tl-line bg-tl-subtle px-3 py-2 text-[13px] text-tl-fg2">
-				Drift detected on staging. Type <span class="font-mono">billing.refund_reason</span> has an
-				extra value <span class="font-mono">fraud</span> that is not in this migration. Compare the
-				schemas with
-				<code class="font-mono">tl migrate diff</code>.
-			</p>
-		{/if}
+		<section class="min-w-0 space-y-3">
+			<div class="flex flex-wrap items-center justify-between gap-2">
+				<h2 class="text-[15px] font-semibold">#{selected.id} {selected.title}</h2>
+				<div class="flex gap-2">
+					{#if is142 && !rewritten}
+						<button class={btn} onclick={() => (rewritten = true)}>Apply suggested rewrite</button>
+					{/if}
+					{#if is142}
+						<button
+							class="{btn} border-transparent bg-brand text-white"
+							disabled={!canApprove}
+							onclick={() => (approved = true)}
+						>
+							Approve
+						</button>
+					{/if}
+				</div>
+			</div>
 
-		<pre
-			class="overflow-x-auto rounded-xl border border-tl-line bg-tl-elev p-3 font-mono text-[12px] leading-5">{is142 &&
-			rewritten
-				? safeSql
-				: selected.sql}</pre>
+			{#if is142 && approved}
+				<p class="text-[13px] font-medium">Approved #0142</p>
+			{/if}
 
-		{#if is142}
-			<ul class="space-y-2">
-				{#each rewritten ? safeRisks : risks as risk (risk.stmt)}
-					<li class="rounded-xl border border-tl-line px-3 py-2">
-						<div class="font-mono text-[12px]">{risk.stmt}</div>
-						<p class="text-[13px] text-tl-fg2">{risk.note}</p>
-					</li>
-				{/each}
-			</ul>
-		{/if}
-	</section>
-</div>
+			{#if selected.envs.some((env) => env.state === 'drift')}
+				<p class="rounded-xl border border-tl-line bg-tl-subtle px-3 py-2 text-[13px] text-tl-fg2">
+					Drift detected on staging. Type <span class="font-mono">billing.refund_reason</span> has
+					an extra value <span class="font-mono">fraud</span> that is not in this migration. Compare
+					the schemas with
+					<code class="font-mono">tl migrate diff</code>.
+				</p>
+			{/if}
+
+			<pre
+				class="overflow-x-auto rounded-xl border border-tl-line bg-tl-elev p-3 font-mono text-[12px] leading-5">{is142 &&
+				rewritten
+					? safeSql
+					: selected.sql}</pre>
+
+			{#if is142}
+				<ul class="space-y-2">
+					{#each rewritten ? safeRisks : risks as risk (risk.stmt)}
+						<li class="rounded-xl border border-tl-line px-3 py-2">
+							<div class="font-mono text-[12px]">{risk.stmt}</div>
+							<p class="text-[13px] text-tl-fg2">{risk.note}</p>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</section>
+	</div>
+{/if}

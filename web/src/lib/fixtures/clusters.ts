@@ -17,6 +17,9 @@ export interface ShellCluster {
 	user?: string;
 	tls?: string;
 	auth?: string;
+	patroniUrl?: string;
+	backup?: string;
+	restoreDrill?: string;
 }
 
 const KINDS: readonly EnvKind[] = ['local', 'dev', 'staging', 'prod'];
@@ -62,7 +65,10 @@ export function clusterFromAPI(cluster: ApiCluster): ShellCluster {
 		database: cluster.database ?? '',
 		user: cluster.user,
 		tls: cluster.tls,
-		auth: cluster.auth
+		auth: cluster.auth,
+		patroniUrl: cluster.patroni_url,
+		backup: cluster.backup,
+		restoreDrill: cluster.restore_drill
 	};
 }
 

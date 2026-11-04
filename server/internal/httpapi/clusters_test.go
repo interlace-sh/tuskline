@@ -70,6 +70,8 @@ func TestClusterRoutesRejectUnknown(t *testing.T) {
 		"/api/v1/clusters/dev/missing/probe",
 		"/api/v1/clusters/dev/missing/setup",
 		"/api/v1/clusters/dev/missing/advise",
+		"/api/v1/clusters/dev/missing/topology",
+		"/api/v1/clusters/dev/missing/schema",
 	} {
 		rr := httptest.NewRecorder()
 		h.ServeHTTP(rr, httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, nil))

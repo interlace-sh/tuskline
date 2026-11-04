@@ -50,6 +50,11 @@ func (a *api) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/setup", a.clusterSetup)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/advise", a.clusterAdvise)
 	mux.HandleFunc("POST /api/v1/clusters/{env}/{name}/query", a.clusterQuery)
+	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/topology", a.clusterTopology)
+	mux.HandleFunc("POST /api/v1/clusters/{env}/{name}/switchover", a.clusterSwitchover)
+	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/schema", a.clusterSchema)
+	mux.HandleFunc("GET /api/v1/schema/diff", a.schemaDiff)
+	mux.HandleFunc("POST /api/v1/lint", a.lintSQL)
 }
 
 type clusterView struct {
