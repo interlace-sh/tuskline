@@ -36,9 +36,9 @@ tasks:
 
   test:
     description: 'Unit tests with the race detector'
+    # -race requires cgo, so this task does not set CGO_ENABLED=0.
+    # build, vet and golangci do, so a release build does not link libpg_query.
     command: 'go test -race -count 1 ./...'
-    env:
-      CGO_ENABLED: '0'
     inputs:
       - '@group(sources)'
       - 'project://^?group=sources'
