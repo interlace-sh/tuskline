@@ -19,33 +19,35 @@ func TestPlainLintAndApply(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write("002_index.sql", "CREATE INDEX orders_note ON orders (note);\n")
-	write("001_init.sql", "ALTER TABLE orders ADD COLUMN note text DEFAULT 'x';\n")
+	write("10_ten.sql", "SELECT 10;\n")
+	write("2_two.sql", "CREATE INDEX orders_note ON orders (note);\n")
+	write("1_one.sql", "ALTER TABLE orders ADD COLUMN note text DEFAULT 'x';\n")
+	write("notes.txt", "not a migration\n")
 	folder, err := Load(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if folder.Kind != KindPlain {
-		t.Fatalf("kind %s", folder.Kind)
+	if folder.Files[0].Name != "1_one.sql" || folder.Files[1].Name != "2_two.sql" || folder.Files[2].Name != "10_ten.sql" {
+		t.Fatalf("%+v", names(folder))
 	}
-	if folder.Files[0].Name != "001_init.sql" || folder.Files[1].Name != "002_index.sql" {
-		t.Fatalf("%+v", folder.Files)
+	if folder.Files[0].Checksum == "" || folder.Files[0].Checksum == folder.Files[1].Checksum {
+		t.Fatalf("checksums %+v", folder.Files)
 	}
 	report, err := folder.Lint()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(report, "002_index.sql") || !strings.Contains(report, "create-index") {
+	if !strings.Contains(report, "2_two.sql") || !strings.Contains(report, "create-index") {
 		t.Fatalf("%s", report)
 	}
-	if strings.Contains(report, "001_init.sql") {
+	if strings.Contains(report, "1_one.sql") {
 		t.Fatalf("constant default was flagged:\n%s", report)
 	}
 	text, err := folder.Apply("staging", false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(text, "Nothing has been applied.") || !strings.HasPrefix(text, "kind: plain\n") {
+	if !strings.Contains(text, "Nothing has been applied.") || !strings.Contains(text, "1_one.sql") {
 		t.Fatalf("%s", text)
 	}
 	if _, err := folder.Apply("prod", false); !errors.Is(err, ErrApproval) {
@@ -54,64 +56,6 @@ func TestPlainLintAndApply(t *testing.T) {
 	ok, err := folder.Apply("prod", true)
 	if err != nil || !strings.Contains(ok, "Nothing has been applied.") {
 		t.Fatalf("%s %v", ok, err)
-	}
-}
-
-func TestFlywayOrder(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	for _, name := range []string{"V10__ten.sql", "V2__two.sql", "V1__one.sql", "R__view.sql", "U1__undo.sql"} {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte("SELECT 1;\n"), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	folder, err := Load(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if folder.Kind != KindFlyway {
-		t.Fatal(folder.Kind)
-	}
-	var names []string
-	for _, f := range folder.Files {
-		names = append(names, f.Name)
-	}
-	want := []string{"V1__one.sql", "V2__two.sql", "V10__ten.sql", "R__view.sql"}
-	if strings.Join(names, ",") != strings.Join(want, ",") {
-		t.Fatalf("%v", names)
-	}
-}
-
-func TestSqitchPlanOrder(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	plan := "%project=orders\n\n# first\nusers 2026-01-01T00:00:00Z Mark <m@example.com>\norders 2026-01-02T00:00:00Z Mark <m@example.com>\n"
-	if err := os.WriteFile(filepath.Join(dir, "sqitch.plan"), []byte(plan), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Mkdir(filepath.Join(dir, "deploy"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	body := "CREATE INDEX orders_note ON orders (note);\n"
-	if err := os.WriteFile(filepath.Join(dir, "deploy", "orders.sql"), []byte(body), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	folder, err := Load(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if folder.Kind != KindSqitch || len(folder.Files) != 2 {
-		t.Fatalf("%+v", folder)
-	}
-	if folder.Files[0].Name != filepath.Join("deploy", "users.sql") || folder.Files[0].Err == nil {
-		t.Fatalf("users: %+v", folder.Files[0])
-	}
-	report, err := folder.Lint()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(report, "create-index") || !strings.Contains(report, "users.sql") {
-		t.Fatalf("%s", report)
 	}
 }
 
@@ -128,4 +72,69 @@ func TestUnknownEnvironment(t *testing.T) {
 	if _, err := folder.Apply("production", true); err == nil {
 		t.Fatal("expected an unknown environment")
 	}
+}
+
+func TestPendingRefusesDivergence(t *testing.T) {
+	t.Parallel()
+	files := []File{
+		{Name: "1.sql", Checksum: "a"},
+		{Name: "2.sql", Checksum: "b"},
+		{Name: "3.sql", Checksum: "c"},
+	}
+	pending, err := Pending(files, []Applied{{Name: "1.sql", Checksum: "a", Success: true}})
+	if err != nil || len(pending) != 2 || pending[0].Name != "2.sql" {
+		t.Fatalf("%v %+v", err, pending)
+	}
+	_, err = Pending(files, []Applied{{Name: "1.sql", Checksum: "changed", Success: true}})
+	if !errors.Is(err, ErrChecksumChanged) {
+		t.Fatalf("%v", err)
+	}
+	_, err = Pending(files, []Applied{{Name: "3.sql", Checksum: "c", Success: true}})
+	if !errors.Is(err, ErrOutOfOrder) {
+		t.Fatalf("%v", err)
+	}
+	_, err = Pending(files[:2], []Applied{{Name: "3.sql", Checksum: "c", Success: true}})
+	if !errors.Is(err, ErrMissingScript) {
+		t.Fatalf("%v", err)
+	}
+	_, err = Pending(files, []Applied{{Name: "2.sql", Checksum: "b", Success: false}})
+	if !errors.Is(err, ErrPreviousFailure) {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestScriptSplitting(t *testing.T) {
+	t.Parallel()
+	sql := "CREATE FUNCTION f() RETURNS int AS $$ SELECT 1; $$ LANGUAGE sql;\nSELECT 'a;b';\n"
+	parts, err := splitSQL(sql)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(parts) != 2 || !strings.Contains(parts[0], "SELECT 1;") || parts[1] != "SELECT 'a;b'" {
+		t.Fatalf("%#v", parts)
+	}
+	script, err := prepare(File{Name: "1.sql", SQL: "CREATE TABLE t (id int); INSERT INTO t VALUES (1);"})
+	if err != nil || script.outside || len(script.stmts) != 2 {
+		t.Fatalf("%+v %v", script, err)
+	}
+	script, err = prepare(File{Name: "2.sql", SQL: "CREATE INDEX CONCURRENTLY t_id ON t (id);"})
+	if err != nil || !script.outside {
+		t.Fatalf("%+v %v", script, err)
+	}
+	_, err = prepare(File{Name: "3.sql", SQL: "CREATE TABLE t (id int);\nCREATE INDEX CONCURRENTLY t_id ON t (id);"})
+	if !errors.Is(err, ErrMixedScript) {
+		t.Fatalf("%v", err)
+	}
+	script, err = prepare(File{Name: "4.sql", SQL: "VACUUM t;"})
+	if err != nil || !script.outside {
+		t.Fatalf("%+v %v", script, err)
+	}
+}
+
+func names(folder Folder) []string {
+	out := make([]string, len(folder.Files))
+	for i, file := range folder.Files {
+		out[i] = file.Name
+	}
+	return out
 }

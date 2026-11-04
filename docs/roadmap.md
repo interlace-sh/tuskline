@@ -138,8 +138,8 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 ## M7: migrations (about 4 weeks, R3)
 
 - [x] M7.1 `core/lint` on `pg_query_go`: lock-aware rules (`ADD COLUMN … DEFAULT` volatility, `CREATE INDEX` without `CONCURRENTLY`, `ALTER TYPE`, `SET NOT NULL` when a table is at least 100MB, in use, or of unknown size). Parsing goes through the pure-Go build so core stays free of cgo. `lint.Check` does not connect or run SQL.
-- [x] M7.2 `tl migrate lint|plan|apply --dir <folder> --env staging`: read a plain SQL folder, a Flyway directory or a Sqitch plan, lint the scripts, and print the order. Production apply requires `--approve`. Nothing is executed.
-- [ ] M7.2b Execute the preview: `--run` starts Flyway or Sqitch, or applies plain SQL on an inventory cluster. Prod still needs approval, and the run is audited.
+- [x] M7.2 `tl migrate lint|plan|apply --dir <folder> --env staging`: read a directory of SQL scripts, lint them, and print the order. Names sort numerically. Production apply requires `--approve`. Nothing is executed.
+- [x] M7.2b `--run` applies that directory on an inventory cluster. Checksums live in `tuskline.schema_migration`, an advisory lock excludes a second run, and a script that cannot run inside a transaction is run on its own. Production needs `--approve` and `--confirm`. The run is audited.
 - [ ] M7.3 Drift detection: schema snapshot diff between environments.
 - [ ] M7.4 Migrations screen (PR-style review) ported from the prototype, including the prototype smoke step that approves a migration after its rewrite.
 

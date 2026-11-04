@@ -52,7 +52,7 @@ type ActionAudit struct {
 	Error       string
 }
 
-// RecordAction appends an audit entry for a switchover, restart or restore.
+// RecordAction appends an audit entry for a switchover, restart, restore or migration.
 func (s *Store) RecordAction(ctx context.Context, entry ActionAudit) error {
 	if entry.Actor == "" || entry.Environment == "" || entry.Cluster == "" || entry.Action == "" || entry.Preview == "" {
 		return fmt.Errorf("store: action audit entry is incomplete")

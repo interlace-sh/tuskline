@@ -42,7 +42,7 @@ Tuskline is one open-source product that brings these together around one invent
 - Diagnoses, not dashboards: every finding has evidence, the SQL behind it and a fix.
 - Environment-aware safety is designed in, not bolted on.
 - Snapshots and history together: instant value with zero storage, and deeper value when left running.
-- Orchestrates the best open-source engines (Patroni, CNPG, pgBackRest, Flyway) rather than competing with them.
+- Orchestrates the best open-source engines (Patroni, CNPG, pgBackRest) rather than competing with them.
 - Truly open: AGPL-3.0 server and Apache-2.0 core, CLI and agent. Everything in Tuskline Cloud is in the self-hosted build.
 - Design quality on a par with Linear and Raycast.
 

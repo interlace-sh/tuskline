@@ -24,8 +24,9 @@ Conventions:
 | `tl config advise <ref>` | Configuration preview; see [below](#tl-config-advise) |
 | `tl serve [args]` | Runs the separate `tuskline serve`; see [below](#tl-serve) |
 | `tl agent` | Stub; see [below](#tl-agent) |
+| `tl migrate` | Lint, preview and apply a directory of SQL scripts; see [below](#tl-migrate) |
 
-Global flag: `--inventory <file>` (connect, ls, top, snapshot, diagnose and config advise) overrides the inventory location (default `$TUSKLINE_INVENTORY`, else `$XDG_CONFIG_HOME/tuskline/inventory.yaml`).
+Global flag: `--inventory <file>` (connect, ls, top, snapshot, diagnose, config advise and migrate) overrides the inventory location (default `$TUSKLINE_INVENTORY`, else `$XDG_CONFIG_HOME/tuskline/inventory.yaml`).
 
 ### `tl -v`
 
@@ -176,6 +177,22 @@ After the stack is healthy, `up` applies `monitor.sql` (the `tuskline_monitor` r
 
 Arguments after `serve` are the server's. `tl serve -h` prints this help; `tl serve -addr :8080` is passed through (`TUSKLINE_ADDR` also sets the listen address; the server default is `127.0.0.1:8080`). While the server runs, `SIGINT`, `SIGTERM` and `SIGHUP` sent to `tl` are passed on to it (`os.Interrupt` on Windows), and `tl` exits with the server's exit code.
 
+### `tl migrate`
+
+```sh
+tl migrate lint --dir db/migrate
+tl migrate plan --dir db/migrate
+tl migrate apply --dir db/migrate --env prod          # preview; prod needs --approve
+tl migrate apply --dir db/migrate --cluster dev/pg17 --run
+tl migrate apply --dir db/migrate --cluster prod/orders --run --approve --confirm orders
+```
+
+The directory is the `.sql` files in that directory, not in subdirectories. `2_two.sql` is applied before `10_ten.sql`. `lint` reports lock and rewrite risks and exits 1 when it finds any. `plan` and `apply` without `--run` print the order and a short checksum, and do not connect.
+
+`--run` connects to `--cluster` and applies scripts that `tuskline.schema_migration` does not already record with the same checksum. One transaction per script. `CREATE INDEX CONCURRENTLY`, `VACUUM`, and the other statements PostgreSQL refuses inside a transaction run outside one, and a file that mixes those with ordinary statements is refused. A session advisory lock means a second apply on the same database stops immediately. An edited script that was already applied is refused, as is a new script that sorts before one already applied.
+
+Production still starts read-only. `--run` is the write: it needs `--approve` and `--confirm` equal to the cluster name, then turns read-only off for that session only and clears the statement timeout so a long index build is not cancelled. The environment's lock timeout stays. The file list and the result are written to the action audit. Passwords are not.
+
 ### `tl agent`
 
 | Flag | Meaning |
@@ -206,7 +223,7 @@ The enrolment token is read from `TUSKLINE_AGENT_TOKEN` and never printed. The c
 | `tl backup verify` | Preview a scratch-container restore drill. `--run` starts it | M6 |
 | `tl backup status\|verify\|restore --to <time>` | Read and drive pgBackRest and CNPG backups | M6 |
 | `tl ha status\|switchover` | Patroni and operator topology; guarded actions | M6 |
-| `tl migrate lint\|plan\|apply --dir <folder> --env staging` | Lint a plain, Flyway or Sqitch folder and print the order. Production apply needs `--approve`. Nothing is executed | M7 |
+| `tl migrate lint\|plan\|apply --dir <folder>` | Lint and apply a directory of SQL scripts. `--run` executes on `--cluster`. Production needs `--approve` and `--confirm` | M7 |
 | `tl inventory import --from aws,gcp,azure,k8s` | Discover clusters from clouds and Kubernetes | M9 |
 | `tl agent` | Outbound collector over mTLS | M9 |
 | `tl advise indexes` | Index candidates validated with hypopg | Later |

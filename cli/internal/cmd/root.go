@@ -83,7 +83,7 @@ func newRoot(out, errOut io.Writer, a *app) *cobra.Command {
 	root.AddCommand(newProvisionCmd(a))
 	root.AddCommand(newHACmd(a))
 	root.AddCommand(newBackupCmd(a))
-	root.AddCommand(newMigrateCmd())
+	root.AddCommand(newMigrateCmd(a))
 	root.AddCommand(newDiffCmd())
 	root.AddCommand(newServeCmd())
 
