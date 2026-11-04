@@ -14,6 +14,7 @@
 //	advisor    postgresql.conf linter and tuning advisor
 //	lint       lock-aware migration linter
 //	migrate    ordered SQL scripts, checksum history, advisory lock
+//	schema     schema snapshots and drift between them
 //	provision  plan/apply provisioning planner (Compose, CNPG, SSH)
 //	store      embedded SQLite metadata store
 //

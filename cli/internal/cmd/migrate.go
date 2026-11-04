@@ -20,7 +20,7 @@ func newMigrateCmd(a *app) *cobra.Command {
 		Use:   "migrate",
 		Short: "Lint, preview and apply a folder of SQL migrations",
 	}
-	cmd.AddCommand(newMigrateLintCmd(), newMigratePlanCmd(), newMigrateApplyCmd(a))
+	cmd.AddCommand(newMigrateLintCmd(), newMigratePlanCmd(), newMigrateApplyCmd(a), newMigrateDiffCmd(a))
 	return cmd
 }
 

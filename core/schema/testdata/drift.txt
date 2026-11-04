@@ -1,0 +1,4 @@
+~ column public.orders.currency  character(3) nullable -> character(3) not null
++ column public.orders.note  text nullable
+~ enum billing.refund_reason  damaged, late, other -> damaged, late, other, fraud
+- index public.orders_note  CREATE INDEX orders_note ON public.orders USING btree (note)

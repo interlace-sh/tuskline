@@ -10,6 +10,7 @@ import (
 
 	"github.com/interlace-sh/tuskline/core/conn"
 	"github.com/interlace-sh/tuskline/core/inventory"
+	"github.com/interlace-sh/tuskline/core/schema"
 )
 
 func TestMigrateApplyRefusesProd(t *testing.T) {
@@ -65,6 +66,42 @@ func TestMigrateRunStopsBeforeConnect(t *testing.T) {
 	_, _, err = runApp(t, &app{}, append(args, "--approve")...)
 	if err == nil || !strings.Contains(err.Error(), "type the cluster name") {
 		t.Fatalf("%v", err)
+	}
+}
+
+func TestMigrateDiffFiles(t *testing.T) {
+	dir := t.TempDir()
+	before := schema.Snapshot{Objects: []schema.Object{
+		{Kind: schema.KindEnum, Name: "billing.refund_reason", Detail: "damaged, late, other"},
+	}}
+	after := schema.Snapshot{Objects: []schema.Object{
+		{Kind: schema.KindEnum, Name: "billing.refund_reason", Detail: "damaged, late, other, fraud"},
+	}}
+	from := filepath.Join(dir, "from.json")
+	to := filepath.Join(dir, "to.json")
+	writeSnapshot(t, from, before)
+	writeSnapshot(t, to, after)
+	out, err := run(t, "migrate", "diff", "--from-file", from, "--to-file", to)
+	if err == nil || !strings.Contains(err.Error(), "schema drift") {
+		t.Fatalf("%v", err)
+	}
+	if !strings.Contains(out, "~ enum billing.refund_reason") || !strings.Contains(out, "fraud") {
+		t.Fatalf("%s", out)
+	}
+	same, err := run(t, "migrate", "diff", "--from-file", from, "--to-file", from)
+	if err != nil || !strings.Contains(same, "No drift.") {
+		t.Fatalf("%v %s", err, same)
+	}
+}
+
+func writeSnapshot(t *testing.T, path string, snap schema.Snapshot) {
+	t.Helper()
+	raw, err := snap.JSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, raw, 0o644); err != nil {
+		t.Fatal(err)
 	}
 }
 

@@ -68,7 +68,7 @@ flowchart TB
 
 | Module | Path | Purpose |
 |---|---|---|
-| core | `core/` | `version`, `inventory`, `conn`, `activity` (live sessions, waits, locks, blocking chains), `collector`, `sqlpack`, `analyser`, `advisor`, `lint`, `migrate`, `provision`, `store`; `pgtest` (integration-test containers only) |
+| core | `core/` | `version`, `inventory`, `conn`, `activity` (live sessions, waits, locks, blocking chains), `collector`, `sqlpack`, `analyser`, `advisor`, `lint`, `migrate`, `schema`, `provision`, `store`; `pgtest` (integration-test containers only) |
 | cli | `cli/cmd/tl`, `cli/internal/cmd` | Cobra commands; TUI (Bubble Tea) for `tl top` |
 | agent | `agent/` | Outbound collector for networks the server cannot reach; OS metrics and log tailing |
 | server | `server/cmd/tuskline`, `server/internal/{httpapi,webui}` | Multi-user API, RBAC, history, alerting; embeds the web build |

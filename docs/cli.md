@@ -185,11 +185,15 @@ tl migrate plan --dir db/migrate
 tl migrate apply --dir db/migrate --env prod          # preview; prod needs --approve
 tl migrate apply --dir db/migrate --cluster dev/pg17 --run
 tl migrate apply --dir db/migrate --cluster prod/orders --run --approve --confirm orders
+tl migrate diff --from prod/orders --to staging/orders
+tl migrate diff --from-file before.json --to-file after.json
 ```
 
 The directory is the `.sql` files in that directory, not in subdirectories. `2_two.sql` is applied before `10_ten.sql`. `lint` reports lock and rewrite risks and exits 1 when it finds any. `plan` and `apply` without `--run` print the order and a short checksum, and do not connect.
 
 `--run` connects to `--cluster` and applies scripts that `tuskline.schema_migration` does not already record with the same checksum. One transaction per script. `CREATE INDEX CONCURRENTLY`, `VACUUM`, and the other statements PostgreSQL refuses inside a transaction run outside one, and a file that mixes those with ordinary statements is refused. A session advisory lock means a second apply on the same database stops immediately. An edited script that was already applied is refused, as is a new script that sorts before one already applied.
+
+`diff` compares two schemas. `--from` and `--to` are inventory clusters and are read with that environment's session policy, so a production target stays read-only. `--from-file` and `--to-file` are snapshot JSON files. The report lists definitions that were added, removed or changed. System catalogues and the `tuskline` migration schema are not compared, and table rows are not read. A difference exits 1.
 
 Production still starts read-only. `--run` is the write: it needs `--approve` and `--confirm` equal to the cluster name, then turns read-only off for that session only and clears the statement timeout so a long index build is not cancelled. The environment's lock timeout stays. The file list and the result are written to the action audit. Passwords are not.
 
@@ -223,7 +227,7 @@ The enrolment token is read from `TUSKLINE_AGENT_TOKEN` and never printed. The c
 | `tl backup verify` | Preview a scratch-container restore drill. `--run` starts it | M6 |
 | `tl backup status\|verify\|restore --to <time>` | Read and drive pgBackRest and CNPG backups | M6 |
 | `tl ha status\|switchover` | Patroni and operator topology; guarded actions | M6 |
-| `tl migrate lint\|plan\|apply --dir <folder>` | Lint and apply a directory of SQL scripts. `--run` executes on `--cluster`. Production needs `--approve` and `--confirm` | M7 |
+| `tl migrate lint\|plan\|apply\|diff` | Lint and apply a directory of SQL scripts, or diff two schemas. `--run` executes on `--cluster`. Production needs `--approve` and `--confirm` | M7 |
 | `tl inventory import --from aws,gcp,azure,k8s` | Discover clusters from clouds and Kubernetes | M9 |
 | `tl agent` | Outbound collector over mTLS | M9 |
 | `tl advise indexes` | Index candidates validated with hypopg | Later |

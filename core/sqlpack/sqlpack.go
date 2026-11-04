@@ -67,5 +67,6 @@ func All() []Query {
 		StatsStatements14, StatsStatements15, StatsStatements17,
 		DiagnoseStatementsInstalled, DiagnoseWraparound, DiagnoseIndexes, DiagnoseReplication,
 		AdviseSettings, AdviseCache, AdviseTemp, AdviseCheckpoints14, AdviseCheckpoints17,
+		SchemaColumns, SchemaEnums, SchemaIndexes, SchemaConstraints, SchemaViews, SchemaRoutines,
 	}
 }
