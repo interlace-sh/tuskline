@@ -32,6 +32,9 @@ export interface Cluster {
 	database?: string;
 	user?: string;
 	tls?: string;
+	/** keychain, env, or pgpass. Never a password. */
+	auth?: string;
+	secret_env?: string;
 	last_probe?: Probe | null;
 }
 
@@ -150,9 +153,14 @@ async function getJSON<T>(path: string, fetchImpl: typeof fetch): Promise<T> {
 	return body as T;
 }
 
-async function sendJSON<T>(path: string, payload: unknown, fetchImpl: typeof fetch): Promise<T> {
+async function sendJSON<T>(
+	path: string,
+	payload: unknown,
+	fetchImpl: typeof fetch,
+	method = 'POST'
+): Promise<T> {
 	const response = await fetchImpl(path, {
-		method: 'POST',
+		method,
 		headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
 		body: JSON.stringify(payload)
 	});
@@ -236,6 +244,48 @@ export function testCluster(
 }
 
 /** Probe and save a cluster. password is sent once and must not be kept by the caller. */
+export function getCluster(
+	env: string,
+	name: string,
+	fetchImpl: typeof fetch = fetch
+): Promise<Cluster> {
+	return getJSON(
+		`/api/v1/clusters/${encodeURIComponent(env)}/${encodeURIComponent(name)}`,
+		fetchImpl
+	);
+}
+
+export function deleteCluster(
+	env: string,
+	name: string,
+	confirm: string,
+	fetchImpl: typeof fetch = fetch
+): Promise<void> {
+	return sendJSON<void>(
+		`/api/v1/clusters/${encodeURIComponent(env)}/${encodeURIComponent(name)}`,
+		{ confirm },
+		fetchImpl,
+		'DELETE'
+	);
+}
+
+export interface SetupReport {
+	ref: string;
+	version: string;
+	provider: string;
+	missing: string[];
+	plan: string[];
+	probe: ServerProbe;
+}
+
+export function clusterSetup(
+	env: string,
+	name: string,
+	fetchImpl: typeof fetch = fetch
+): Promise<SetupReport> {
+	return getJSON(clusterPath(env, name, 'setup'), fetchImpl);
+}
+
 export function saveCluster(
 	body: {
 		environment: string;
@@ -247,6 +297,7 @@ export function saveCluster(
 		tls: string;
 		password_env?: string;
 		password?: string;
+		confirm?: string;
 	},
 	fetchImpl: typeof fetch = fetch
 ): Promise<SavedCluster> {

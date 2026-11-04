@@ -26,12 +26,47 @@
 	let success = $state(false);
 	let error = $state('');
 	let tested = $state('');
+	let confirmName = $state('');
 	let generation = 0;
+
+	const editing = $derived(shell.editing);
+	const prodBlocked = $derived(draft.env === 'prod' && confirmName.trim() !== draft.name.trim());
 
 	const provider = $derived(detectProvider(draft));
 	const rehearsal = $derived(demoForced(typeof location === 'undefined' ? '' : location.search));
 	const busy = $derived(verifying || testing || success);
 	const tlsHint = $derived(localTlsHint(draft));
+
+	$effect(() => {
+		const token = shell.connectToken;
+		const current = shell.editing;
+		if (!current) {
+			if (token > 0) usePreset(RDS_PRESET);
+			return;
+		}
+		const env = current.kind === 'staging' || current.kind === 'prod' ? current.kind : 'dev';
+		const tls =
+			current.tls === 'require' || current.tls === 'disable' ? current.tls : 'verify-full';
+		generation += 1;
+		draft = {
+			name: current.name,
+			host: current.host ?? '',
+			port: String(current.port || 5432),
+			database: current.database ?? 'postgres',
+			user: current.user ?? '',
+			auth: 'password',
+			tls,
+			ssh: false,
+			bastion: '',
+			env,
+			passwordEnv: current.secret_env ?? ''
+		};
+		password = '';
+		confirmName = '';
+		error = '';
+		tested = '';
+		success = false;
+	});
 	const envs: EnvKind[] = ['dev', 'staging', 'prod'];
 	const tlsModes: TlsMode[] = ['verify-full', 'require', 'disable'];
 
@@ -50,6 +85,7 @@
 		generation += 1;
 		draft = { ...next };
 		password = '';
+		confirmName = '';
 		verifying = false;
 		testing = false;
 		success = false;
@@ -163,7 +199,8 @@
 			const saved = await saveCluster({
 				...payload(),
 				name: draft.name.trim(),
-				password: once || undefined
+				password: once || undefined,
+				confirm: draft.env === 'prod' ? confirmName.trim() : undefined
 			});
 			if (ticket !== generation) return;
 			verifying = false;
@@ -190,14 +227,18 @@
 <div class="mx-auto max-w-[980px]">
 	<div class="mb-4">
 		<h1 class="flex items-center gap-2 text-xl font-semibold tracking-tight">
-			<PlugZap size={18} class="text-tl-accent" /> Add connection
+			<PlugZap size={18} class="text-tl-accent" />
+			{editing ? 'Edit connection' : 'Add connection'}
 		</h1>
 		<p class="mt-1 text-[13px] text-tl-fg2">
 			{#if rehearsal}
 				This demo checks the form and does not dial out or save anything.
+			{:else if editing}
+				Environment and name stay as they are. An empty password keeps the current one. Test
+				connection still saves nothing.
 			{:else}
-				Test connection checks the server and saves nothing. Create does the same check, then saves.
-				A password is used for that probe only and is not stored.
+				Test connection checks the server and saves nothing. Create does the same check, then saves
+				a typed password in the OS keychain.
 			{/if}
 		</p>
 	</div>
@@ -216,7 +257,7 @@
 				<input
 					class="{field} mt-1"
 					value={draft.name}
-					disabled={busy}
+					disabled={busy || editing !== null}
 					oninput={(e) => patch('name', e.currentTarget.value)}
 				/>
 			</label>
@@ -345,15 +386,24 @@
 								? envPillClass(kind)
 								: 'text-tl-fg3 ring-1 ring-tl-line ring-inset'}"
 						aria-pressed={draft.env === kind}
-						disabled={busy}
+						disabled={busy || editing !== null}
 						onclick={() => patch('env', kind)}>{kind}</button
 					>
 				{/each}
 			</div>
 			{#if draft.env === 'prod'}
 				<p class="mt-1.5 text-[12px] text-tl-fg2">
-					Production sessions open read-only. Writes need a typed confirmation.
+					Production sessions open read-only. Save stays disabled until the cluster name is typed.
 				</p>
+				<label class="mt-2 block text-[12px] text-tl-fg3"
+					>Type {draft.name || 'the cluster name'} to save
+					<input
+						class="{field} mt-1"
+						value={confirmName}
+						disabled={busy}
+						oninput={(e) => (confirmName = e.currentTarget.value)}
+					/>
+				</label>
 			{/if}
 		</div>
 		<label class="mt-4 flex items-center gap-2 text-[13px]">
@@ -398,14 +448,14 @@
 		<button
 			class="{btn} border-transparent text-white {success ? 'bg-env-dev' : 'bg-brand'}"
 			onclick={create}
-			disabled={busy}
+			disabled={busy || prodBlocked}
 		>
 			{#if verifying}
 				<LoaderCircle size={14} class="animate-spin" /> Verifying…
 			{:else if success}
 				Connected
 			{:else}
-				Create connection
+				{editing ? 'Save connection' : 'Create connection'}
 			{/if}
 		</button>
 	</div>

@@ -95,7 +95,7 @@
 		}
 		if (event.key === '[') shell.stepRange(-1);
 		if (event.key === ']') shell.stepRange(1);
-		if (event.key === 'n') shell.go('connect');
+		if (event.key === 'n') shell.startConnect();
 		if (event.key === 'g') {
 			chord = 'g';
 			return;
@@ -103,6 +103,7 @@
 		if (chord === 'g') {
 			const next: Partial<Record<string, Screen>> = {
 				f: 'fleet',
+				a: 'alerts',
 				c: 'cluster',
 				q: 'queries',
 				s: 'sql',
@@ -112,8 +113,7 @@
 				d: 'deploy',
 				v: 'advisor',
 				u: 'setup',
-				l: 'deployments',
-				a: 'fleet'
+				l: 'deployments'
 			};
 			if (next[event.key]) shell.go(next[event.key]!);
 			chord = '';
@@ -189,7 +189,12 @@
 					<span class="nav-label flex-1 text-left">Fleet</span>
 					<span class="keys"><kbd>g</kbd><kbd>f</kbd></span>
 				</button>
-				<button class="nav" onclick={() => shell.go('fleet')} title="Alerts (g a)">
+				<button
+					class="nav"
+					class:active={shell.screen === 'alerts'}
+					onclick={() => shell.go('alerts')}
+					title="Alerts (g a)"
+				>
 					<Bell size={15} />
 					<span class="nav-label flex-1 text-left">Alerts</span>
 					{#if shell.unhealthy}
@@ -272,7 +277,7 @@
 					<button class="nav min-w-0 flex-1" title="Settings" onclick={() => shell.go('fleet')}
 						><Settings size={14} /><span class="nav-label">Settings</span></button
 					>
-					<button class="nav icon" title="About Tuskline" onclick={() => (shell.helpOpen = true)}
+					<button class="nav icon" title="About Tuskline" onclick={() => (shell.aboutOpen = true)}
 						><Info size={14} /></button
 					>
 					<button class="nav icon" title="Toggle theme (t)" onclick={() => shell.toggleTheme()}>
@@ -431,6 +436,32 @@
 </div>
 
 <CommandPalette />
+
+{#if shell.aboutOpen}
+	<div class="fixed inset-0 z-50 grid place-items-center bg-black/50 p-6">
+		<button
+			class="absolute inset-0"
+			aria-label="Close about"
+			onclick={() => (shell.aboutOpen = false)}
+		></button>
+		<div
+			class="relative z-10 w-[440px] rounded-xl border border-tl-line bg-tl-elev p-4"
+			role="dialog"
+			aria-label="About"
+		>
+			<h2 class="text-sm font-semibold">About Tuskline</h2>
+			<p class="mt-2 text-[13px] text-tl-fg2">
+				A PostgreSQL workbench. The server on this machine is unauthenticated and the audit actor is
+				local. Production sessions stay read-only.
+			</p>
+			<p class="mt-2 text-[12px] text-tl-fg3">Press ? for keyboard shortcuts.</p>
+			<button
+				class="mt-4 inline-flex h-8 items-center rounded-md border border-tl-line px-3 text-[13px]"
+				onclick={() => (shell.aboutOpen = false)}>Close</button
+			>
+		</div>
+	</div>
+{/if}
 
 {#if shell.helpOpen}
 	<div class="fixed inset-0 z-50 grid place-items-center bg-black/50 p-6">

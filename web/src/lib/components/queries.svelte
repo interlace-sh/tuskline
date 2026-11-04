@@ -7,7 +7,7 @@
 	import Search from '@lucide/svelte/icons/search';
 	import TrendingUp from '@lucide/svelte/icons/trending-up';
 	import Zap from '@lucide/svelte/icons/zap';
-	import { clusterQueries, splitRef, type Statement } from '#lib/api.js';
+	import { ApiError, clusterQueries, runQuery, splitRef, type Statement } from '#lib/api.js';
 	import { PLAN_AFTER, PLAN_BEFORE, QUERIES, type Query } from '#lib/fixtures/demo.js';
 	import { fmt, fmtMs } from '#lib/format.js';
 	import { filterQueries, flattenPlan, sortQueries, type QuerySort } from '#lib/query-view.js';
@@ -29,6 +29,9 @@
 	let deltasReady = $state(false);
 	let error = $state('');
 	let loading = $state(false);
+	let liveId = $state<number | null>(null);
+	let explainText = $state('');
+	let explaining = $state(false);
 
 	const rows = $derived(sortQueries(filterQueries(QUERIES, text), sort));
 	const selected = $derived(QUERIES.find((query) => query.id === selectedId) ?? rows[0]);
@@ -38,6 +41,9 @@
 		(statements ?? []).filter((statement) =>
 			statement.query.toLowerCase().includes(text.trim().toLowerCase())
 		)
+	);
+	const liveSelected = $derived(
+		liveRows.find((statement) => statement.query_id === liveId) ?? null
 	);
 
 	$effect(() => {
@@ -65,6 +71,23 @@
 			cancelled = true;
 		};
 	});
+
+	async function explainLive() {
+		if (!liveSelected || shell.demo) return;
+		const ref = splitRef(shell.cluster.id);
+		explaining = true;
+		explainText = '';
+		try {
+			const result = await runQuery(ref.env, ref.name, `EXPLAIN\n${liveSelected.query}`);
+			explainText =
+				result.rows.map((row) => row.map((cell) => String(cell ?? '')).join(' ')).join('\n') ||
+				'No plan rows.';
+		} catch (err) {
+			explainText = err instanceof ApiError ? err.message : 'Could not explain this statement.';
+		} finally {
+			explaining = false;
+		}
+	}
 
 	function pick(query: Query) {
 		selectedId = query.id;
@@ -354,7 +377,10 @@
 			</thead>
 			<tbody>
 				{#each liveRows as statement (statement.query_id)}
-					<tr class="border-b border-tl-line last:border-0">
+					<tr
+						class="cursor-pointer border-b border-tl-line last:border-0"
+						onclick={() => (liveId = statement.query_id)}
+					>
 						<td class="max-w-[480px] truncate px-3 py-2 font-mono text-[11.5px]"
 							>{statement.query}</td
 						>
@@ -374,4 +400,23 @@
 			</tbody>
 		</table>
 	</div>
+	{#if liveSelected}
+		<section class="mt-4 rounded-xl border border-tl-line bg-tl-elev p-4">
+			<h2 class="text-[13px] font-semibold">Statement</h2>
+			<pre
+				class="mt-2 overflow-auto font-mono text-[12px] whitespace-pre-wrap">{liveSelected.query}</pre>
+			<button
+				class="mt-3 inline-flex h-8 items-center rounded-md border border-tl-line px-3 text-[13px]"
+				onclick={explainLive}
+				disabled={explaining}>{explaining ? 'Explaining…' : 'EXPLAIN'}</button
+			>
+			{#if explainText}
+				<pre
+					class="mt-3 overflow-auto font-mono text-[12px] whitespace-pre-wrap">{explainText}</pre>
+			{/if}
+			<p class="mt-2 text-[12px] text-tl-fg3">
+				EXPLAIN only. Index advice validated with hypopg is not on this screen.
+			</p>
+		</section>
+	{/if}
 {/if}

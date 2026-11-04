@@ -99,7 +99,7 @@
 			hint: 'tl connect add',
 			keys: ['n'],
 			icon: PlugZap,
-			run: () => shell.go('connect')
+			run: () => shell.startConnect()
 		},
 		{
 			id: 's-advisor',

@@ -1,9 +1,10 @@
 // App shell state. An empty inventory stays on the prototype fixtures (demo mode).
-import { listClusters } from '#lib/api.js';
+import { getCluster, listClusters, splitRef, type Cluster } from '#lib/api.js';
 import { defaultReadOnly, ENV_LABEL, type EnvKind } from '#lib/env.js';
 import {
 	clusterFromAPI,
 	demoForced,
+	emptyForced,
 	fixtureClusters,
 	selectClusters,
 	type Health,
@@ -23,6 +24,7 @@ export type Screen =
 	| 'advisor'
 	| 'setup'
 	| 'connect'
+	| 'alerts'
 	| 'deploy'
 	| 'deployments';
 
@@ -45,6 +47,7 @@ export const SCREEN_LABEL: Record<Screen, string> = {
 	advisor: 'Config advisor',
 	setup: 'Overview',
 	connect: 'Add connection',
+	alerts: 'Alerts',
 	deploy: 'Deploy cluster',
 	deployments: 'Deployments'
 };
@@ -91,18 +94,44 @@ class Shell {
 	paletteOpen = $state(false);
 	envMenuOpen = $state(false);
 	helpOpen = $state(false);
+	aboutOpen = $state(false);
+	/** Set while Add connection is editing a saved cluster. */
+	editing = $state<Cluster | null>(null);
+	connectToken = $state(0);
 	range = $state<Range>('1h');
 	/** Set when a production switch is waiting for confirmation. */
 	pendingProd = $state(false);
 
 	cluster = $derived(
-		this.clusters.find((c) => c.id === this.clusterId) ?? this.clusters[0] ?? fixtureClusters()[0]
+		this.clusters.find((c) => c.id === this.clusterId) ??
+			this.clusters[0] ?? {
+				id: '',
+				name: 'No cluster',
+				env: this.env,
+				health: 'unknown' as const,
+				version: '—',
+				ha: '',
+				region: '',
+				database: ''
+			}
 	);
 	clustersInEnv = $derived(this.clusters.filter((c) => c.env === this.env));
 	unhealthy = $derived(
 		this.clusters.filter((c) => c.health === 'warn' || c.health === 'crit').length
 	);
 	readOnly = $derived(defaultReadOnly(this.env));
+
+	startConnect() {
+		this.editing = null;
+		this.connectToken += 1;
+		this.go('connect');
+	}
+
+	async editConnection(id: string) {
+		const { env, name } = splitRef(id);
+		this.editing = await getCluster(env, name);
+		this.go('connect');
+	}
 
 	go(screen: Screen) {
 		this.screen = screen;
@@ -157,7 +186,14 @@ class Shell {
 
 	/** Load the inventory. An empty list, a failed request, or ?demo=1 stays on fixtures. */
 	async refresh(fetchImpl: typeof fetch = fetch) {
-		const force = demoForced(typeof location === 'undefined' ? '' : location.search);
+		const search = typeof location === 'undefined' ? '' : location.search;
+		if (emptyForced(search)) {
+			this.demo = false;
+			this.clusters = [];
+			this.clusterId = '';
+			return;
+		}
+		const force = demoForced(search);
 		let live: ShellCluster[] = [];
 		if (!force) {
 			try {

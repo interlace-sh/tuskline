@@ -28,6 +28,8 @@ type connectRequest struct {
 	TLS         string `json:"tls"`
 	PasswordEnv string `json:"password_env"`
 	Password    string `json:"password"`
+	// Confirm is the cluster name. Production refuses to save without it.
+	Confirm string `json:"confirm"`
 }
 
 type connectResponse struct {
@@ -71,6 +73,18 @@ func (a *api) saveCluster(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, redact(err, secret))
 		return
 	}
+	if kind == inventory.EnvProd && strings.TrimSpace(req.Confirm) != ref.Cluster {
+		writeErr(w, http.StatusBadRequest, errors.New("type the cluster name to confirm"))
+		return
+	}
+	existing, exists := inv.Cluster(ref)
+	var oldKeychain string
+	if exists && existing.Password != nil {
+		oldKeychain = existing.Password.Keychain
+		if secret == "" && strings.TrimSpace(req.PasswordEnv) == "" {
+			pwRef = existing.Password
+		}
+	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), clusterCallTimeout)
 	defer cancel()
@@ -93,11 +107,14 @@ func (a *api) saveCluster(w http.ResponseWriter, r *http.Request) {
 
 	view, note, err := a.recordCluster(ref, kind, profile, pwRef, info, false)
 	if err != nil {
-		if keychainItem != "" {
+		if keychainItem != "" && keychainItem != oldKeychain {
 			_ = inventory.DeletePassword(keychainItem)
 		}
 		writeErr(w, http.StatusInternalServerError, redact(err, secret))
 		return
+	}
+	if oldKeychain != "" && (pwRef == nil || pwRef.Keychain != oldKeychain) {
+		_ = inventory.DeletePassword(oldKeychain)
 	}
 	if keychainItem != "" {
 		note = "The password was saved in the OS keychain. The inventory stores only the reference."

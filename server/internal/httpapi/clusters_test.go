@@ -67,6 +67,8 @@ func TestClusterRoutesRejectUnknown(t *testing.T) {
 		"/api/v1/clusters/dev/missing/queries",
 		"/api/v1/clusters/dev/missing/activity",
 		"/api/v1/clusters/dev/missing/health",
+		"/api/v1/clusters/dev/missing/probe",
+		"/api/v1/clusters/dev/missing/setup",
 		"/api/v1/clusters/dev/missing/advise",
 	} {
 		rr := httptest.NewRecorder()
@@ -74,6 +76,55 @@ func TestClusterRoutesRejectUnknown(t *testing.T) {
 		if rr.Code != http.StatusNotFound {
 			t.Errorf("%s: %d %s", path, rr.Code, rr.Body)
 		}
+	}
+}
+
+func TestDeleteRequiresTheName(t *testing.T) {
+	h, path := handlerWithInventory(t)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/v1/clusters/dev/orders", bytes.NewBufferString(`{"confirm":"nope"}`))
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("%d %s", rr.Code, rr.Body)
+	}
+	inv, err := inventory.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := inv.Cluster(inventory.Ref{Env: "dev", Cluster: "orders"}); !ok {
+		t.Fatal("cluster was removed")
+	}
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/v1/clusters/dev/orders", bytes.NewBufferString(`{"confirm":"orders"}`))
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("%d %s", rr.Code, rr.Body)
+	}
+	inv, err = inventory.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := inv.Cluster(inventory.Ref{Env: "dev", Cluster: "orders"}); ok {
+		t.Fatal("cluster remained")
+	}
+}
+
+func TestGetClusterOmitsTheSecretValue(t *testing.T) {
+	h, _ := handlerWithInventory(t)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/clusters/dev/orders", nil))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("%d %s", rr.Code, rr.Body)
+	}
+	if strings.Contains(rr.Body.String(), "hunter2") {
+		t.Fatal(rr.Body.String())
+	}
+	var view clusterView
+	if err := json.Unmarshal(rr.Body.Bytes(), &view); err != nil {
+		t.Fatal(err)
+	}
+	if view.Auth != "env" || view.SecretEnv != "ORDERS_PASSWORD" {
+		t.Fatalf("%+v", view)
 	}
 }
 

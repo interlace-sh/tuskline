@@ -4,6 +4,7 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -40,25 +41,32 @@ func (a *api) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/clusters", a.listClusters)
 	mux.HandleFunc("POST /api/v1/clusters", a.saveCluster)
 	mux.HandleFunc("POST /api/v1/clusters/test", a.testCluster)
+	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}", a.getCluster)
+	mux.HandleFunc("DELETE /api/v1/clusters/{env}/{name}", a.deleteCluster)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/queries", a.clusterQueries)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/activity", a.clusterActivity)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/health", a.clusterHealth)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/probe", a.clusterProbe)
+	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/setup", a.clusterSetup)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/advise", a.clusterAdvise)
 	mux.HandleFunc("POST /api/v1/clusters/{env}/{name}/query", a.clusterQuery)
 }
 
 type clusterView struct {
-	ID           string                 `json:"id"`
-	Environment  string                 `json:"environment"`
-	Name         string                 `json:"name"`
-	Kind         string                 `json:"kind"`
-	Provider     string                 `json:"provider,omitempty"`
-	Host         string                 `json:"host,omitempty"`
-	Port         uint16                 `json:"port,omitempty"`
-	Database     string                 `json:"database,omitempty"`
-	User         string                 `json:"user,omitempty"`
-	TLS          string                 `json:"tls,omitempty"`
+	ID          string `json:"id"`
+	Environment string `json:"environment"`
+	Name        string `json:"name"`
+	Kind        string `json:"kind"`
+	Provider    string `json:"provider,omitempty"`
+	Host        string `json:"host,omitempty"`
+	Port        uint16 `json:"port,omitempty"`
+	Database    string `json:"database,omitempty"`
+	User        string `json:"user,omitempty"`
+	TLS         string `json:"tls,omitempty"`
+	// Auth is where the password comes from: keychain, env or pgpass.
+	// It is never the password.
+	Auth         string                 `json:"auth,omitempty"`
+	SecretEnv    string                 `json:"secret_env,omitempty"`
 	LastProbe    *inventory.ProbeRecord `json:"last_probe,omitempty"`
 	HAEngine     string                 `json:"ha_engine,omitempty"`
 	PatroniURL   string                 `json:"patroni_url,omitempty"`
@@ -79,7 +87,8 @@ func (a *api) listClusters(w http.ResponseWriter, r *http.Request) {
 		view := clusterView{
 			ID: cl.Ref().String(), Environment: cl.Environment, Name: cl.Name, Kind: string(env.Kind),
 			Provider: cl.Provider, Host: p.Host, Port: p.EffectivePort(), Database: p.Database,
-			User: p.User, TLS: string(p.TLSMode()), LastProbe: cl.LastProbe, HAEngine: cl.HAEngine,
+			User: p.User, TLS: string(p.TLSMode()), Auth: passwordAuth(cl), LastProbe: cl.LastProbe,
+			HAEngine: cl.HAEngine,
 		}
 		if cl.Patroni != nil {
 			view.PatroniURL = cl.Patroni.URL
@@ -93,6 +102,115 @@ func (a *api) listClusters(w http.ResponseWriter, r *http.Request) {
 		out = append(out, view)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"clusters": out})
+}
+
+func passwordAuth(cl inventory.Cluster) string {
+	if cl.Password == nil {
+		return "pgpass"
+	}
+	if cl.Password.Keychain != "" {
+		return "keychain"
+	}
+	if cl.Password.Env != "" {
+		return "env"
+	}
+	return ""
+}
+
+func (a *api) getCluster(w http.ResponseWriter, r *http.Request) {
+	inv, err := a.inventory()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err)
+		return
+	}
+	ref, err := inventory.ParseRef(r.PathValue("env") + "/" + r.PathValue("name"))
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err)
+		return
+	}
+	cl, ok := inv.Cluster(ref)
+	if !ok {
+		writeErr(w, http.StatusNotFound, fmt.Errorf("cluster %s: %w", ref, inventory.ErrNotFound))
+		return
+	}
+	env, _ := inv.Environment(cl.Environment)
+	p := cl.Profile
+	view := clusterView{
+		ID: cl.Ref().String(), Environment: cl.Environment, Name: cl.Name, Kind: string(env.Kind),
+		Provider: cl.Provider, Host: p.Host, Port: p.EffectivePort(), Database: p.Database,
+		User: p.User, TLS: string(p.TLSMode()), Auth: passwordAuth(cl), LastProbe: cl.LastProbe,
+		HAEngine: cl.HAEngine,
+	}
+	if cl.Password != nil {
+		view.SecretEnv = cl.Password.Env
+	}
+	if cl.Patroni != nil {
+		view.PatroniURL = cl.Patroni.URL
+	}
+	if cl.Backup != nil {
+		view.Backup = cl.Backup.Tool + " " + cl.Backup.Repo
+	}
+	if cl.RestoreDrill != nil {
+		view.RestoreDrill = cl.RestoreDrill.Status
+	}
+	writeJSON(w, http.StatusOK, view)
+}
+
+type deleteRequest struct {
+	Confirm string `json:"confirm"`
+}
+
+// deleteCluster removes the inventory entry. A Tuskline keychain item is
+// deleted with it. Nothing is dropped on the server.
+func (a *api) deleteCluster(w http.ResponseWriter, r *http.Request) {
+	var req deleteRequest
+	r.Body = http.MaxBytesReader(w, r.Body, 4<<10)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		writeErr(w, http.StatusBadRequest, errors.New("invalid delete"))
+		return
+	}
+	ref, err := inventory.ParseRef(r.PathValue("env") + "/" + r.PathValue("name"))
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err)
+		return
+	}
+	if req.Confirm != ref.Cluster {
+		writeErr(w, http.StatusBadRequest, errors.New("type the cluster name to confirm"))
+		return
+	}
+	path, err := a.inventoryFile()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err)
+		return
+	}
+	inv, err := inventory.Load(path)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err)
+		return
+	}
+	cl, ok := inv.Cluster(ref)
+	if !ok {
+		writeErr(w, http.StatusNotFound, fmt.Errorf("cluster %s: %w", ref, inventory.ErrNotFound))
+		return
+	}
+	var keychain string
+	if cl.Password != nil {
+		keychain = cl.Password.Keychain
+	}
+	if err := inv.RemoveCluster(ref); err != nil {
+		writeErr(w, http.StatusInternalServerError, err)
+		return
+	}
+	if err := inv.Save(path); err != nil {
+		writeErr(w, http.StatusInternalServerError, err)
+		return
+	}
+	if keychain != "" {
+		_ = inventory.DeletePassword(keychain)
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (a *api) clusterQueries(w http.ResponseWriter, r *http.Request) {

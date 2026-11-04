@@ -464,9 +464,31 @@
 			</div>
 		</div>
 	</div>
+	{#if activity && activity.waits.length > 0}
+		<section class="mb-4 rounded-xl border border-tl-line bg-tl-elev p-4">
+			<h3 class="text-[13px] font-semibold">Current waits</h3>
+			<p class="mb-3 text-[12px] text-tl-fg3">Sessions in pg_stat_activity right now</p>
+			<div class="space-y-2">
+				{#each activity.waits as wait (`${wait.type}:${wait.event}`)}
+					<div>
+						<div class="mb-1 flex justify-between text-[12px]">
+							<span class="font-mono text-tl-fg2">{wait.type}:{wait.event}</span>
+							<span class="tabular-nums">{wait.sessions}</span>
+						</div>
+						<div class="h-1.5 overflow-hidden rounded-full bg-tl-subtle">
+							<div
+								class="h-full rounded-full bg-brand"
+								style:width="{Math.min(100, wait.sessions * 12)}%"
+							></div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		</section>
+	{/if}
 	<p class="mb-4 max-w-xl text-[13px] text-tl-fg3">
-		Load charts use stored metric history, which this screen does not read yet. The findings and
-		sessions below are from this cluster.
+		These waits, findings and sessions are from this cluster. Stored load history is not on this
+		screen yet.
 	</p>
 	<div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
 		{@render sessions(liveSessions)}

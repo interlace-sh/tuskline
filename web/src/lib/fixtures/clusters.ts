@@ -14,6 +14,9 @@ export interface ShellCluster {
 	ha: string;
 	region: string;
 	database: string;
+	user?: string;
+	tls?: string;
+	auth?: string;
 }
 
 const KINDS: readonly EnvKind[] = ['local', 'dev', 'staging', 'prod'];
@@ -56,7 +59,10 @@ export function clusterFromAPI(cluster: ApiCluster): ShellCluster {
 		version: formatPgVersion(cluster.last_probe?.version_num ?? 0),
 		ha: cluster.provider || 'unknown',
 		region,
-		database: cluster.database ?? ''
+		database: cluster.database ?? '',
+		user: cluster.user,
+		tls: cluster.tls,
+		auth: cluster.auth
 	};
 }
 
@@ -71,6 +77,11 @@ export function selectClusters(
 
 export function demoForced(search: string): boolean {
 	return new URLSearchParams(search).get('demo') === '1';
+}
+
+/** ?empty=1 shows the fleet with no clusters, instead of the prototype fixtures. */
+export function emptyForced(search: string): boolean {
+	return new URLSearchParams(search).get('empty') === '1';
 }
 
 export function healthDotClass(health: Health): string {

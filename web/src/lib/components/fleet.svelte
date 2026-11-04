@@ -14,6 +14,7 @@
 	import { healthColor, healthDotClass } from '#lib/fixtures/clusters.js';
 	import { fmt, fmtBytes } from '#lib/format.js';
 	import { recordedDeployments } from '#lib/deploy-log.svelte.js';
+	import { deleteCluster } from '#lib/api.js';
 	import { shell } from '#lib/shell.svelte.js';
 	import ScoreRing from './score-ring.svelte';
 	import Sparkline from './sparkline.svelte';
@@ -41,9 +42,33 @@
 		})
 	);
 
+	let removing = $state<string | null>(null);
+	let removeName = $state('');
+	let removeError = $state('');
+
 	function openCluster(id: string) {
 		shell.setCluster(id);
 		shell.go('cluster');
+	}
+
+	async function remove() {
+		if (!removing) return;
+		const cluster = shell.clusters.find((item) => item.id === removing);
+		if (!cluster || removeName.trim() !== cluster.name) return;
+		removeError = '';
+		try {
+			const slash = cluster.id.indexOf('/');
+			await deleteCluster(
+				cluster.id.slice(0, slash),
+				cluster.id.slice(slash + 1),
+				removeName.trim()
+			);
+			removing = null;
+			removeName = '';
+			await shell.refresh();
+		} catch (err) {
+			removeError = err instanceof Error ? err.message : 'Could not remove the connection.';
+		}
 	}
 </script>
 
@@ -70,7 +95,7 @@
 		<button
 			class="inline-flex h-7 items-center gap-1.5 rounded-md bg-brand px-2.5 text-[12.5px] font-medium text-white"
 			title="Add connection (n)"
-			onclick={() => shell.go('connect')}
+			onclick={() => shell.startConnect()}
 		>
 			<Plus size={13} /> Add connection
 		</button>
@@ -298,6 +323,17 @@
 			{/each}
 		</div>
 	{/if}
+{:else if shell.clusters.length === 0}
+	<div class="rounded-xl border border-tl-line bg-tl-elev px-6 py-12 text-center">
+		<h1 class="text-[24px] font-semibold tracking-tight">Your fleet is empty</h1>
+		<p class="mx-auto mt-2 max-w-sm text-[13px] text-tl-fg2">
+			Add a connection to a PostgreSQL server you already run.
+		</p>
+		<button
+			class="mt-4 inline-flex h-8 items-center rounded-md border-transparent bg-brand px-3 text-[13px] font-medium text-white"
+			onclick={() => shell.startConnect()}>Add connection</button
+		>
+	</div>
 {:else if liveList.length === 0}
 	<div class="rounded-xl border border-tl-line bg-tl-elev px-6 py-12 text-center">
 		<div class="font-medium">No clusters match</div>
@@ -316,33 +352,84 @@
 					</div>
 					<div class="grid grid-cols-[repeat(auto-fill,minmax(330px,1fr))] gap-3">
 						{#each list as cluster (cluster.id)}
-							<button
-								class="rounded-xl border border-tl-line bg-tl-elev p-4 text-left hover:border-tl-line2"
-								onclick={() => openCluster(cluster.id)}
-							>
-								<div class="flex items-center gap-2">
-									<span class="size-1.5 rounded-full {healthDotClass(cluster.health)}"></span>
-									<span class="truncate font-mono text-[13px] font-medium">{cluster.name}</span>
-								</div>
-								<div class="mt-1 truncate text-[11.5px] text-tl-fg3">
-									{cluster.ha} · {cluster.region || 'no host yet'}
-								</div>
-								<div class="mt-3 flex flex-wrap gap-1.5 text-[11px] font-medium">
-									<span class="rounded-[5px] bg-tl-subtle px-1.5 py-0.5">PG {cluster.version}</span>
-									{#if cluster.database}
-										<span class="rounded-[5px] bg-tl-subtle px-1.5 py-0.5 font-mono"
-											>{cluster.database}</span
+							<div class="rounded-xl border border-tl-line bg-tl-elev p-4">
+								<button class="w-full text-left" onclick={() => openCluster(cluster.id)}>
+									<div class="flex items-center gap-2">
+										<span class="size-1.5 rounded-full {healthDotClass(cluster.health)}"></span>
+										<span class="truncate font-mono text-[13px] font-medium">{cluster.name}</span>
+									</div>
+									<div class="mt-1 truncate text-[11.5px] text-tl-fg3">
+										{cluster.user ? `${cluster.user}@` : ''}{cluster.region || 'no host yet'}
+										{#if cluster.tls}
+											· {cluster.tls}{/if}
+										{#if cluster.auth}
+											· {cluster.auth}{/if}
+									</div>
+									<div class="mt-3 flex flex-wrap gap-1.5 text-[11px] font-medium">
+										<span class="rounded-[5px] bg-tl-subtle px-1.5 py-0.5"
+											>PG {cluster.version}</span
 										>
-									{/if}
+										{#if cluster.database}
+											<span class="rounded-[5px] bg-tl-subtle px-1.5 py-0.5 font-mono"
+												>{cluster.database}</span
+											>
+										{/if}
+									</div>
+								</button>
+								<div class="mt-3 flex gap-2">
+									<button
+										class="inline-flex h-7 items-center rounded-md border border-tl-line px-2 text-[12px]"
+										onclick={() => shell.editConnection(cluster.id)}>Edit</button
+									>
+									<button
+										class="inline-flex h-7 items-center rounded-md border border-tl-line px-2 text-[12px] text-env-prod"
+										onclick={() => {
+											removing = cluster.id;
+											removeName = '';
+											removeError = '';
+										}}>Delete</button
+									>
 								</div>
 								<p class="mt-3 text-[12px] text-tl-fg3">
 									Health, load and backups appear once this cluster is collected.
 								</p>
-							</button>
+							</div>
 						{/each}
 					</div>
 				</section>
 			{/if}
 		{/each}
+	</div>
+{/if}
+
+{#if removing}
+	{@const cluster = shell.clusters.find((item) => item.id === removing)}
+	<div class="fixed inset-0 z-40 grid place-items-center bg-black/40 p-4">
+		<div class="w-full max-w-md rounded-xl border border-tl-line bg-tl-elev p-4" role="dialog">
+			<h2 class="text-[15px] font-semibold">Delete {cluster?.name}</h2>
+			<p class="mt-1 text-[13px] text-tl-fg2">
+				This removes the inventory entry and a Tuskline keychain item. It does not drop the
+				database.
+			</p>
+			<label class="mt-3 block text-[12px] text-tl-fg3">
+				Type {cluster?.name}
+				<input
+					class="mt-1 h-8 w-full rounded-md border border-tl-line bg-tl-bg px-2 font-mono"
+					bind:value={removeName}
+				/>
+			</label>
+			{#if removeError}<p class="mt-2 text-[13px] text-env-prod">{removeError}</p>{/if}
+			<div class="mt-4 flex gap-2">
+				<button
+					class="inline-flex h-8 items-center rounded-md border border-tl-line px-3 text-[13px]"
+					onclick={() => (removing = null)}>Cancel</button
+				>
+				<button
+					class="inline-flex h-8 items-center rounded-md bg-env-prod px-3 text-[13px] text-white disabled:opacity-40"
+					disabled={removeName.trim() !== cluster?.name}
+					onclick={remove}>Delete</button
+				>
+			</div>
+		</div>
 	</div>
 {/if}

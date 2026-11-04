@@ -74,6 +74,7 @@ func newRoot(out, errOut io.Writer, a *app) *cobra.Command {
 	root.PersistentFlags().StringVar(&a.inventoryPath, "inventory", "", "inventory file (default $TUSKLINE_INVENTORY or $XDG_CONFIG_HOME/tuskline/inventory.yaml)")
 
 	root.AddCommand(newConnectCmd(a))
+	root.AddCommand(newRmCmd(a))
 	root.AddCommand(newLsCmd(a))
 	root.AddCommand(newTopCmd(a))
 	root.AddCommand(newSnapshotCmd(a))

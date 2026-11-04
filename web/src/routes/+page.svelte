@@ -1,5 +1,6 @@
 <script lang="ts">
 	import AdvisorScreen from '#lib/components/advisor-screen.svelte';
+	import AlertsScreen from '#lib/components/alerts-screen.svelte';
 	import BackupsScreen from '#lib/components/backups-screen.svelte';
 	import ClusterHealth from '#lib/components/cluster-health.svelte';
 	import ConnectScreen from '#lib/components/connect-screen.svelte';
@@ -23,6 +24,8 @@
 	<SqlScreen />
 {:else if shell.screen === 'connect'}
 	<ConnectScreen />
+{:else if shell.screen === 'alerts'}
+	<AlertsScreen />
 {:else if shell.screen === 'advisor'}
 	<AdvisorScreen />
 {:else if shell.screen === 'setup'}
