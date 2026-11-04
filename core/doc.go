@@ -13,6 +13,7 @@
 //	analyser   health checks and diagnoses with evidence
 //	advisor    postgresql.conf linter and tuning advisor
 //	lint       lock-aware migration linter
+//	migrate    read a SQL, Flyway or Sqitch folder; preview only
 //	provision  plan/apply provisioning planner (Compose, CNPG, SSH)
 //	store      embedded SQLite metadata store
 //
