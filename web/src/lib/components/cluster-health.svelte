@@ -53,7 +53,7 @@
 	const liveFindings = $derived(findingsFromReport(report?.findings ?? []));
 	const liveSessions = $derived(sessionsFromActivity(activity?.sessions ?? []));
 	let sessionSeries = $state<number[]>([]);
-	let storedSeries = $state<number[]>([]);
+	let storedSamples = $state<{ name: string; value: number }[]>([]);
 	let cancelPid = $state<number | null>(null);
 	let cancelName = $state('');
 	let cancelTerminate = $state(false);
@@ -80,10 +80,10 @@
 			);
 		void clusterMetrics(ref.env, ref.name)
 			.then((body) => {
-				if (!cancelled) storedSeries = (body.samples ?? []).map((sample) => sample.value);
+				if (!cancelled) storedSamples = body.samples ?? [];
 			})
 			.catch(() => {
-				if (!cancelled) storedSeries = [];
+				if (!cancelled) storedSamples = [];
 			});
 		void load()
 			.then(() => undefined)
@@ -546,12 +546,19 @@
 				The line appears after the next sample, about 15 seconds.
 			</p>
 		{/if}
-		{#if storedSeries.length > 1}
-			<p class="mt-3 text-[12px] text-tl-fg3">Stored samples</p>
-			<Sparkline data={storedSeries} w={280} h={48} color="var(--env-dev)" />
-		{:else}
-			<p class="mt-2 text-[12px] text-tl-fg3">No stored metric samples for this cluster yet.</p>
-		{/if}
+		{#each [['sessions', 'Sessions'], ['cache_hit_ratio', 'Cache hit ratio'], ['replica_lag_seconds', 'Replica lag (seconds)']] as item (item[0])}
+			{@const points = storedSamples
+				.filter((sample) => sample.name === item[0])
+				.map((sample) => sample.value)}
+			<p class="mt-3 text-[12px] text-tl-fg3">{item[1]}</p>
+			{#if points.length > 1}
+				<Sparkline data={points} w={280} h={36} />
+			{:else}
+				<p class="text-[12px] text-tl-fg3">
+					No stored samples yet. They are written when this cluster is read.
+				</p>
+			{/if}
+		{/each}
 	</section>
 	{#if signalNotice}<p class="mb-3 text-[13px] text-tl-fg2">{signalNotice}</p>{/if}
 	<div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">

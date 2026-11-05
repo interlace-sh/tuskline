@@ -14,14 +14,20 @@
 	import { healthColor, healthDotClass } from '#lib/fixtures/clusters.js';
 	import { fmt, fmtBytes } from '#lib/format.js';
 	import { recordedDeployments } from '#lib/deploy-log.svelte.js';
-	import { clusterActivity, clusterHealth, deleteCluster, splitRef } from '#lib/api.js';
+	import {
+		clusterActivity,
+		clusterHealth,
+		clusterMetrics,
+		deleteCluster,
+		splitRef
+	} from '#lib/api.js';
+	import Sparkline from './sparkline.svelte';
 	import { shell } from '#lib/shell.svelte.js';
 	import ScoreRing from './score-ring.svelte';
-	import Sparkline from './sparkline.svelte';
 
 	let query = $state('');
 	let filter = $state<FleetFilter>('all');
-	let pulse = $state<Record<string, { findings: number; sessions: number }>>({});
+	let pulse = $state<Record<string, { findings: number; sessions: number; series: number[] }>>({});
 
 	$effect(() => {
 		if (shell.demo) return;
@@ -35,10 +41,17 @@
 					.catch(() => null),
 				clusterActivity(ref.env, ref.name)
 					.then((body) => body.sessions?.length ?? 0)
-					.catch(() => null)
-			]).then(([findings, sessions]) => {
+					.catch(() => null),
+				clusterMetrics(ref.env, ref.name, '1m')
+					.then((body) =>
+						(body.samples ?? [])
+							.filter((sample) => sample.name === 'sessions')
+							.map((sample) => sample.value)
+					)
+					.catch(() => [] as number[])
+			]).then(([findings, sessions, series]) => {
 				if (cancelled || findings === null || sessions === null) return;
-				pulse = { ...pulse, [id]: { findings, sessions } };
+				pulse = { ...pulse, [id]: { findings, sessions, series } };
 			});
 		}
 		return () => {
@@ -414,14 +427,20 @@
 										}}>Delete</button
 									>
 								</div>
-								<p class="mt-3 text-[12px] text-tl-fg3">
+								<div class="mt-3 flex items-center justify-between gap-2 text-[12px] text-tl-fg3">
 									{#if pulse[cluster.id]}
-										{pulse[cluster.id].findings} health findings · {pulse[cluster.id].sessions} sessions.
-										Load history is not stored for this screen.
+										<span>
+											Score {Math.max(0, 100 - pulse[cluster.id].findings * 15)} · {pulse[
+												cluster.id
+											].sessions} sessions · {cluster.backup ?? 'no backup registered'}
+										</span>
+										{#if pulse[cluster.id].series.length > 1}
+											<Sparkline data={pulse[cluster.id].series} />
+										{/if}
 									{:else}
-										Reading health and sessions…
+										<span>Reading health and sessions…</span>
 									{/if}
-								</p>
+								</div>
 							</div>
 						{/each}
 					</div>

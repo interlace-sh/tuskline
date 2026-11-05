@@ -1,13 +1,34 @@
 <script lang="ts">
 	import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
 	import Unplug from '@lucide/svelte/icons/unplug';
-	import { ApiError, clusterSetup, splitRef, type SetupReport } from '#lib/api.js';
+	import { ApiError, applySetup, clusterSetup, splitRef, type SetupReport } from '#lib/api.js';
 	import { DEMO_PROBE, partitionExtensions } from '#lib/extensions.js';
 	import { shell } from '#lib/shell.svelte.js';
 
 	let report = $state<SetupReport | null>(null);
 	let error = $state('');
 	let loading = $state(false);
+	let confirm = $state('');
+	let appliedNote = $state('');
+
+	const needsName = $derived(shell.env === 'prod' || shell.env === 'staging');
+
+	async function install() {
+		if (!shell.cluster.id.includes('/')) return;
+		const ref = splitRef(shell.cluster.id);
+		appliedNote = '';
+		try {
+			const result = await applySetup(ref.env, ref.name, confirm.trim());
+			appliedNote =
+				result.note +
+				(result.applied.length
+					? '\n' + result.applied.join('\n')
+					: '\nNothing needed CREATE EXTENSION.');
+			report = await clusterSetup(ref.env, ref.name);
+		} catch (err) {
+			appliedNote = err instanceof ApiError ? err.message : 'Extensions were not created.';
+		}
+	}
 
 	const sample = partitionExtensions(DEMO_PROBE.extensions);
 	const btn =
@@ -98,7 +119,27 @@
 					class="mt-3 overflow-auto rounded-md border border-tl-line bg-tl-subtle p-3 font-mono text-[11.5px] whitespace-pre-wrap">{report.plan.join(
 						'\n'
 					)}</pre>
-				<p class="mt-2 text-[12px] text-tl-fg3">Preview only. Nothing has been installed.</p>
+				<p class="mt-2 text-[12px] text-tl-fg3">
+					Create extension runs only the CREATE EXTENSION lines. Package and preload steps stay in
+					the preview.
+				</p>
+				{#if needsName}
+					<input
+						class="mt-2 h-8 rounded-md border border-tl-line bg-tl-bg px-2 font-mono text-[13px]"
+						placeholder={shell.cluster.name}
+						bind:value={confirm}
+					/>
+				{/if}
+				<button
+					class="{btn} mt-3"
+					disabled={needsName && confirm.trim() !== shell.cluster.name}
+					onclick={install}
+				>
+					Create extensions
+				</button>
+				{#if appliedNote}
+					<pre class="mt-2 font-mono text-[12px] whitespace-pre-wrap">{appliedNote}</pre>
+				{/if}
 			{/if}
 		</section>
 	{/if}

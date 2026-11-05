@@ -1,12 +1,35 @@
 <script lang="ts">
+	import { listDeployments, type DeploymentRow } from '#lib/api.js';
 	import { recordedDeployments } from '#lib/deploy-log.svelte.js';
+	import { shell } from '#lib/shell.svelte.js';
 
-	const rows = $derived(recordedDeployments());
+	let remote = $state<DeploymentRow[]>([]);
+
+	$effect(() => {
+		if (shell.demo) return;
+		let cancelled = false;
+		listDeployments()
+			.then((body) => {
+				if (!cancelled) remote = body.deployments ?? [];
+			})
+			.catch(() => {
+				if (!cancelled) remote = [];
+			});
+		return () => {
+			cancelled = true;
+		};
+	});
+
+	const rows = $derived(shell.demo ? recordedDeployments() : remote);
 </script>
 
 <div class="mb-5">
 	<h1 class="text-xl font-semibold tracking-tight">Deployments</h1>
-	<p class="mt-1 text-[13px] text-tl-fg2">Clusters recorded from Deploy in this session.</p>
+	<p class="mt-1 text-[13px] text-tl-fg2">
+		{shell.demo
+			? 'Clusters recorded from Deploy in this session.'
+			: 'Clusters handed over with a Patroni URL or a backup repository.'}
+	</p>
 </div>
 
 <table class="w-full text-left text-[13px]">

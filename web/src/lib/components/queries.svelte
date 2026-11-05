@@ -101,14 +101,14 @@
 		}
 	}
 
-	async function explainLive() {
-		if (!liveSelected || shell.demo) return;
+	async function explainLive(selected = liveSelected) {
+		if (!selected || shell.demo) return;
 		const ref = splitRef(shell.cluster.id);
 		explaining = true;
 		explainText = '';
 		explainPlan = null;
 		try {
-			const statement = liveSelected.query.trim().replace(/;\s*$/, '');
+			const statement = selected.query.trim().replace(/;\s*$/, '');
 			const sql = /^explain\b/i.test(statement) ? statement : `EXPLAIN (FORMAT JSON) ${statement}`;
 			const result = await runQuery(ref.env, ref.name, sql);
 			const cell = result.rows[0]?.[0];
@@ -412,7 +412,10 @@
 				{#each liveRows as statement (statement.query_id)}
 					<tr
 						class="cursor-pointer border-b border-tl-line last:border-0"
-						onclick={() => (liveId = statement.query_id)}
+						onclick={() => {
+							liveId = statement.query_id;
+							void explainLive(statement);
+						}}
 					>
 						<td class="max-w-[480px] truncate px-3 py-2 font-mono text-[11.5px]"
 							>{statement.query}</td
@@ -440,7 +443,7 @@
 				class="mt-2 overflow-auto font-mono text-[12px] whitespace-pre-wrap">{liveSelected.query}</pre>
 			<button
 				class="mt-3 inline-flex h-8 items-center rounded-md border border-tl-line px-3 text-[13px]"
-				onclick={explainLive}
+				onclick={() => explainLive()}
 				disabled={explaining}>{explaining ? 'Explaining…' : 'EXPLAIN'}</button
 			>
 			{#if explainPlan}

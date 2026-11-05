@@ -61,6 +61,10 @@ func (a *api) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/clusters/{env}/{name}/migrate", a.clusterMigrate)
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/metrics", a.clusterMetrics)
 	mux.HandleFunc("POST /api/v1/backups/parse", a.parseBackup)
+	mux.HandleFunc("POST /api/v1/clusters/{env}/{name}/advise", a.applyAdvice)
+	mux.HandleFunc("POST /api/v1/clusters/{env}/{name}/setup", a.applySetup)
+	mux.HandleFunc("GET /api/v1/provision/plan", a.provisionPlan)
+	mux.HandleFunc("GET /api/v1/deployments", a.listDeployments)
 }
 
 type clusterView struct {
@@ -290,6 +294,7 @@ func (a *api) clusterHealth(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusBadGateway, err)
 			return
 		}
+		a.sampleCluster(ctx, ref, db)
 		writeJSON(w, http.StatusOK, struct {
 			Ref   string    `json:"ref"`
 			Taken time.Time `json:"taken"`

@@ -1,10 +1,27 @@
 <script lang="ts">
+	import { ApiError, provisionPlan, type PlanChange } from '#lib/api.js';
 	import { recordDeployment } from '#lib/deploy-log.svelte.js';
 	import { shell } from '#lib/shell.svelte.js';
 
 	const steps = ['Target', 'Topology', 'Sizing & backups', 'Review'];
 	let step = $state(0);
 	let phase = $state<'form' | 'running' | 'done'>('form');
+	let target = $state<'compose' | 'cnpg' | 'ssh'>('compose');
+	let planName = $state('demo');
+	let hosts = $state('db1,db2');
+	let plan = $state<PlanChange[]>([]);
+	let planError = $state('');
+
+	async function generate() {
+		planError = '';
+		plan = [];
+		try {
+			const body = await provisionPlan(target, planName.trim() || 'demo', hosts);
+			plan = body.changes ?? [];
+		} catch (err) {
+			planError = err instanceof ApiError ? err.message : 'Could not build the plan.';
+		}
+	}
 
 	const btn =
 		'inline-flex h-8 items-center rounded-md border border-tl-line bg-tl-elev px-3 text-[13px] font-medium hover:bg-tl-hover';
@@ -50,10 +67,35 @@
 	<section class="max-w-xl rounded-xl border border-tl-line bg-tl-elev p-4">
 		<h2 class="text-[13px] font-semibold">Start the stack from the machine with Docker</h2>
 		<p class="mt-1 text-[13px] text-tl-fg2">
-			<code class="font-mono">tl provision compose plan</code> writes the files.
-			<code class="font-mono">tl provision compose up</code> starts them. This server does not launch
-			containers from the browser.
+			Generate a Compose, CloudNativePG or SSH plan. Secrets are redacted. Starting Docker stays on
+			<code class="font-mono">tl provision compose up</code>.
 		</p>
+		<div class="mt-3 flex flex-wrap gap-2">
+			<select
+				class="h-8 rounded-md border border-tl-line bg-tl-bg px-2 text-[13px]"
+				bind:value={target}
+			>
+				<option value="compose">Compose</option>
+				<option value="cnpg">CloudNativePG</option>
+				<option value="ssh">SSH</option>
+			</select>
+			<input
+				class="h-8 rounded-md border border-tl-line bg-tl-bg px-2 font-mono text-[13px]"
+				bind:value={planName}
+			/>
+			{#if target === 'ssh'}
+				<input
+					class="h-8 rounded-md border border-tl-line bg-tl-bg px-2 font-mono text-[13px]"
+					bind:value={hosts}
+				/>
+			{/if}
+			<button class={btn} onclick={generate}>Generate plan</button>
+		</div>
+		{#if planError}<p class="mt-2 text-[13px] text-env-prod">{planError}</p>{/if}
+		{#each plan as change (change.ID)}
+			<pre
+				class="mt-3 overflow-auto font-mono text-[11px] whitespace-pre-wrap">{change.Path}{'\n'}{change.Diff}</pre>
+		{/each}
 	</section>
 {:else if phase === 'form'}
 	<ol class="mb-4 flex flex-wrap gap-2 text-[12px]">

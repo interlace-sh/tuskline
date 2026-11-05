@@ -451,7 +451,69 @@ export interface AdviseQuery {
 	pooler?: boolean;
 }
 
-/** Preview configuration changes. The server does not apply them. */
+/** Run ALTER SYSTEM for settings that are in the current advice. */
+export function applyAdvice(
+	env: string,
+	name: string,
+	body: { names: string[]; confirm?: string; ticket?: string },
+	query: AdviseQuery = {},
+	fetchImpl: typeof fetch = fetch
+): Promise<{ applied: string[]; note: string }> {
+	const params = new URLSearchParams();
+	if (query.memory) params.set('memory', query.memory);
+	if (query.cpus) params.set('cpus', String(query.cpus));
+	if (query.storage) params.set('storage', query.storage);
+	if (query.workload) params.set('workload', query.workload);
+	if (query.dbSize) params.set('db_size', query.dbSize);
+	if (query.os) params.set('os', query.os);
+	if (query.connections) params.set('connections', String(query.connections));
+	if (query.pooler) params.set('pooler', '1');
+	const qs = params.toString();
+	return sendJSON(clusterPath(env, name, 'advise') + (qs ? `?${qs}` : ''), body, fetchImpl);
+}
+
+/** Create looked-for extensions that are missing. Package installs stay in the preview. */
+export function applySetup(
+	env: string,
+	name: string,
+	confirm: string,
+	fetchImpl: typeof fetch = fetch
+): Promise<{ applied: string[]; note: string }> {
+	return sendJSON(clusterPath(env, name, 'setup'), { confirm }, fetchImpl);
+}
+
+export interface PlanChange {
+	ID: string;
+	Kind: string;
+	Path: string;
+	Diff: string;
+}
+
+export function provisionPlan(
+	target: 'compose' | 'cnpg' | 'ssh',
+	name: string,
+	hosts = '',
+	fetchImpl: typeof fetch = fetch
+): Promise<{ target: string; changes: PlanChange[] }> {
+	const params = new URLSearchParams({ target, name });
+	if (hosts) params.set('hosts', hosts);
+	return getJSON(`/api/v1/provision/plan?${params}`, fetchImpl);
+}
+
+export interface DeploymentRow {
+	name: string;
+	target: string;
+	env: string;
+	when: string;
+}
+
+export function listDeployments(
+	fetchImpl: typeof fetch = fetch
+): Promise<{ deployments: DeploymentRow[] }> {
+	return getJSON('/api/v1/deployments', fetchImpl);
+}
+
+/** Preview configuration changes. The server does not apply them until applyAdvice. */
 export function clusterAdvise(
 	env: string,
 	name: string,

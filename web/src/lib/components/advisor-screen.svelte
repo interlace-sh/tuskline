@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Shield from '@lucide/svelte/icons/shield';
 	import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
-	import { clusterAdvise, splitRef, type AdviceItem } from '#lib/api.js';
+	import { ApiError, applyAdvice, clusterAdvise, splitRef, type AdviceItem } from '#lib/api.js';
 	import { DEMO_ADVICE, DEMO_NOTES } from '#lib/advisor-demo.js';
 	import { shell } from '#lib/shell.svelte.js';
 
@@ -80,11 +80,34 @@
 		picked = current.includes(name) ? current.filter((item) => item !== name) : [...current, name];
 	}
 
-	function confirmApply() {
+	async function confirmApply() {
 		modal = false;
+		if (shell.demo || !shell.cluster.id.includes('/')) {
+			result = 'Nothing was applied. The preview is the change; run it yourself.';
+			ticket = '';
+			typed = '';
+			return;
+		}
+		const ref = splitRef(shell.cluster.id);
+		try {
+			const applied = await applyAdvice(
+				ref.env,
+				ref.name,
+				{ names: picked ?? advice.map((item) => item.name), confirm: typed, ticket },
+				{
+					memory: memory.trim() || undefined,
+					cpus: Number(cpus) || undefined,
+					storage: storage || undefined,
+					workload: workload || undefined,
+					pooler
+				}
+			);
+			result = applied.note;
+		} catch (err) {
+			result = err instanceof ApiError ? err.message : 'The change was not recorded.';
+		}
 		ticket = '';
 		typed = '';
-		result = 'Nothing was applied. The preview is the change; run it yourself.';
 	}
 
 	const field =

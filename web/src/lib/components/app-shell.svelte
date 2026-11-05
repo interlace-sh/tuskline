@@ -34,6 +34,25 @@
 	import CommandPalette from '#lib/components/command-palette.svelte';
 
 	let { children }: { children: Snippet } = $props();
+	let splash = $state(false);
+
+	$effect(() => {
+		try {
+			const demo = new URLSearchParams(location.search).get('demo') === '1';
+			splash = !demo && localStorage.getItem('tuskline-splash') !== 'seen';
+		} catch {
+			splash = false;
+		}
+	});
+
+	function dismissSplash() {
+		splash = false;
+		try {
+			localStorage.setItem('tuskline-splash', 'seen');
+		} catch {
+			/* private mode */
+		}
+	}
 
 	const nav: { id: Screen; label: string; keys: string }[] = [
 		{ id: 'cluster', label: 'Health', keys: 'g c' },
@@ -304,7 +323,7 @@
 					class="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden text-[12.5px] whitespace-nowrap text-tl-fg3"
 					aria-label="Breadcrumb"
 				>
-					<span>Acme Retail</span>
+					<span>{shell.demo ? 'Acme Retail' : 'Inventory'}</span>
 					<ChevronRight size={12} />
 					{#if shell.screen === 'fleet'}
 						<span class="text-tl-fg">Fleet</span>
@@ -436,6 +455,26 @@
 </div>
 
 <CommandPalette />
+
+{#if splash}
+	<div class="fixed inset-0 z-50 grid place-items-center bg-black/50 p-6">
+		<div
+			class="w-[440px] rounded-xl border border-tl-line bg-tl-elev p-5"
+			role="dialog"
+			aria-label="Welcome"
+		>
+			<h2 class="text-lg font-semibold">Tuskline</h2>
+			<p class="mt-2 text-[13px] text-tl-fg2">
+				PostgreSQL workbench. Production stays read-only. Add a connection to begin, or press ? for
+				the keyboard shortcuts.
+			</p>
+			<button
+				class="mt-4 inline-flex h-8 items-center rounded-md bg-brand px-3 text-[13px] font-medium text-white"
+				onclick={dismissSplash}>Continue</button
+			>
+		</div>
+	</div>
+{/if}
 
 {#if shell.aboutOpen}
 	<div class="fixed inset-0 z-50 grid place-items-center bg-black/50 p-6">
