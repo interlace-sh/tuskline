@@ -530,6 +530,76 @@ export interface LintFinding {
 	statement: string;
 }
 
+/** Cancel or terminate one backend. run false is the preview. */
+export function signalBackend(
+	env: string,
+	name: string,
+	body: { pid: number; terminate?: boolean; confirm?: string; run: boolean },
+	fetchImpl: typeof fetch = fetch
+): Promise<{ preview: string; sent: boolean }> {
+	return sendJSON(clusterPath(env, name, 'signal'), body, fetchImpl);
+}
+
+/** Restart replicas through the registered HA API. */
+export function requestRestart(
+	env: string,
+	name: string,
+	body: { confirm?: string; run: boolean },
+	fetchImpl: typeof fetch = fetch
+): Promise<{ preview: string; sent: boolean }> {
+	return sendJSON(clusterPath(env, name, 'restart'), body, fetchImpl);
+}
+
+export interface MetricSample {
+	at: string;
+	name: string;
+	value: number;
+}
+
+/** Stored metric samples for the last day. An empty list means nothing has been collected. */
+export function clusterMetrics(
+	env: string,
+	name: string,
+	res = '1m',
+	fetchImpl: typeof fetch = fetch
+): Promise<{ samples: MetricSample[] }> {
+	return getJSON(clusterPath(env, name, 'metrics') + `?res=${encodeURIComponent(res)}`, fetchImpl);
+}
+
+/** Planner cost with and without a hypothetical index. No real index is created. */
+export function hypoCompare(
+	env: string,
+	name: string,
+	index: string,
+	query: string,
+	fetchImpl: typeof fetch = fetch
+): Promise<{ before: number; after: number }> {
+	return sendJSON(clusterPath(env, name, 'hypopg'), { index, query }, fetchImpl);
+}
+
+export interface BackupReport {
+	Stanzas?: { Name: string; Backups?: { Label: string; Type: string }[]; Gaps?: unknown[] }[];
+}
+
+/** Parse a pgBackRest info JSON document. Nothing is restored. */
+export function parseBackup(raw: string, fetchImpl: typeof fetch = fetch): Promise<BackupReport> {
+	return fetchImpl('/api/v1/backups/parse', {
+		method: 'POST',
+		headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+		body: raw
+	}).then(async (response) => {
+		const body: unknown = await response.json();
+		if (!response.ok) {
+			const message =
+				body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
+					? body.error
+					: response.statusText;
+			throw new ApiError(response.status, message);
+		}
+		return body as BackupReport;
+	});
+}
+
 /** Lock rules for one script. Nothing is applied. */
 export function lintSQL(
 	sql: string,

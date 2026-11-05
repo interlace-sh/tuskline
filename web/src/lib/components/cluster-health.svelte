@@ -9,6 +9,8 @@
 		ApiError,
 		clusterActivity,
 		clusterHealth,
+		clusterMetrics,
+		signalBackend,
 		splitRef,
 		type ActivityResponse,
 		type HealthResponse
@@ -20,6 +22,7 @@
 	import { fmt, fmtBytes } from '#lib/format.js';
 	import { shell } from '#lib/shell.svelte.js';
 	import SeriesChart from './series-chart.svelte';
+	import Sparkline from './sparkline.svelte';
 
 	const fixture = $derived(CLUSTERS.find((cluster) => cluster.id === shell.cluster.id));
 	const series = $derived.by(() => {
@@ -49,6 +52,14 @@
 
 	const liveFindings = $derived(findingsFromReport(report?.findings ?? []));
 	const liveSessions = $derived(sessionsFromActivity(activity?.sessions ?? []));
+	let sessionSeries = $state<number[]>([]);
+	let storedSeries = $state<number[]>([]);
+	let cancelPid = $state<number | null>(null);
+	let cancelName = $state('');
+	let cancelTerminate = $state(false);
+	let signalNotice = $state('');
+
+	const needsSignalName = $derived(shell.env === 'prod' || shell.env === 'staging');
 
 	$effect(() => {
 		const id = shell.cluster.id;
@@ -56,13 +67,26 @@
 		let cancelled = false;
 		loading = true;
 		error = '';
+		sessionSeries = [];
 		const ref = splitRef(id);
-		Promise.all([clusterHealth(ref.env, ref.name), clusterActivity(ref.env, ref.name)])
-			.then(([health, snapshot]) => {
-				if (cancelled) return;
-				report = health;
-				activity = snapshot;
+		const load = () =>
+			Promise.all([clusterHealth(ref.env, ref.name), clusterActivity(ref.env, ref.name)]).then(
+				([health, snapshot]) => {
+					if (cancelled) return;
+					report = health;
+					activity = snapshot;
+					sessionSeries = [...sessionSeries, snapshot.sessions?.length ?? 0].slice(-60);
+				}
+			);
+		void clusterMetrics(ref.env, ref.name)
+			.then((body) => {
+				if (!cancelled) storedSeries = (body.samples ?? []).map((sample) => sample.value);
 			})
+			.catch(() => {
+				if (!cancelled) storedSeries = [];
+			});
+		void load()
+			.then(() => undefined)
 			.catch((err: unknown) => {
 				if (cancelled) return;
 				report = null;
@@ -72,10 +96,32 @@
 			.finally(() => {
 				if (!cancelled) loading = false;
 			});
+		const timer = setInterval(() => void load().catch(() => undefined), 15000);
 		return () => {
 			cancelled = true;
+			clearInterval(timer);
 		};
 	});
+
+	async function sendSignal() {
+		if (cancelPid === null) return;
+		const ref = splitRef(shell.cluster.id);
+		try {
+			const result = await signalBackend(ref.env, ref.name, {
+				pid: cancelPid,
+				terminate: cancelTerminate,
+				confirm: cancelName.trim(),
+				run: true
+			});
+			signalNotice = result.sent
+				? `Backend ${cancelPid} ${cancelTerminate ? 'terminated' : 'cancelled'}.`
+				: 'The server did not signal that backend.';
+			cancelPid = null;
+			cancelName = '';
+		} catch (err) {
+			signalNotice = err instanceof ApiError ? err.message : 'The signal was not sent.';
+		}
+	}
 
 	function toggleWait(key: string) {
 		hidden = hidden.includes(key) ? hidden.filter((item) => item !== key) : [...hidden, key];
@@ -225,6 +271,11 @@
 							<td class="max-w-[300px] truncate px-4 py-2 font-mono text-[11.5px] text-tl-fg2"
 								>{row.query}</td
 							>
+							{#if !shell.demo}
+								<td class="px-2 py-2">
+									<button class={btn} onclick={() => (cancelPid = row.pid)}>Cancel</button>
+								</td>
+							{/if}
 						</tr>
 					{:else}
 						<tr><td class="px-4 py-6 text-tl-fg3" colspan="6">No client sessions.</td></tr>
@@ -237,7 +288,7 @@
 				{#each rows.filter((row) => row.blocking > 0) as row (row.pid)}
 					pid {row.pid} is blocking {row.blocking}.
 				{/each}
-				Cancelling a backend needs a preview and a confirmation. That is a later milestone.
+				Cancel asks PostgreSQL to stop that query. Terminate ends the session.
 			</p>
 		{/if}
 	</section>
@@ -486,12 +537,58 @@
 			</div>
 		</section>
 	{/if}
-	<p class="mb-4 max-w-xl text-[13px] text-tl-fg3">
-		These waits, findings and sessions are from this cluster. Stored load history is not on this
-		screen yet.
-	</p>
+	<section class="mb-4 rounded-xl border border-tl-line bg-tl-elev p-4">
+		<h3 class="text-[13px] font-semibold">Sessions while this page is open</h3>
+		{#if sessionSeries.length > 1}
+			<Sparkline data={sessionSeries} w={280} h={48} />
+		{:else}
+			<p class="mt-1 text-[12px] text-tl-fg3">
+				The line appears after the next sample, about 15 seconds.
+			</p>
+		{/if}
+		{#if storedSeries.length > 1}
+			<p class="mt-3 text-[12px] text-tl-fg3">Stored samples</p>
+			<Sparkline data={storedSeries} w={280} h={48} color="var(--env-dev)" />
+		{:else}
+			<p class="mt-2 text-[12px] text-tl-fg3">No stored metric samples for this cluster yet.</p>
+		{/if}
+	</section>
+	{#if signalNotice}<p class="mb-3 text-[13px] text-tl-fg2">{signalNotice}</p>{/if}
 	<div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
 		{@render sessions(liveSessions)}
 		{@render diagnosis(liveFindings)}
+	</div>
+{/if}
+
+{#if cancelPid !== null}
+	<div class="fixed inset-0 z-40 grid place-items-center bg-black/40 p-4">
+		<div class="w-full max-w-md rounded-xl border border-tl-line bg-tl-elev p-4" role="dialog">
+			<h2 class="text-[15px] font-semibold">Signal backend {cancelPid}</h2>
+			<p class="mt-1 text-[13px] text-tl-fg2">
+				Cancel stops the current query. Terminate ends the session. Nothing is sent until you
+				confirm.
+			</p>
+			<label class="mt-3 flex items-center gap-2 text-[13px]">
+				<input type="checkbox" bind:checked={cancelTerminate} />
+				Terminate the session
+			</label>
+			{#if needsSignalName}
+				<label class="mt-3 block text-[12px] text-tl-fg3">
+					Type {shell.cluster.name}
+					<input
+						class="mt-1 h-8 w-full rounded-md border border-tl-line bg-tl-bg px-2 font-mono"
+						bind:value={cancelName}
+					/>
+				</label>
+			{/if}
+			<div class="mt-4 flex gap-2">
+				<button class={btn} onclick={() => (cancelPid = null)}>Close</button>
+				<button
+					class="{btn} border-transparent bg-brand text-white"
+					disabled={needsSignalName && cancelName.trim() !== shell.cluster.name}
+					onclick={sendSignal}>Send</button
+				>
+			</div>
+		</div>
 	</div>
 {/if}

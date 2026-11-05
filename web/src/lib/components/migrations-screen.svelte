@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ApiError, lintSQL, schemaDiff } from '#lib/api.js';
+	import { ApiError, lintSQL, schemaDiff, splitRef } from '#lib/api.js';
 	import { MIGRATIONS, type Migration } from '#lib/fixtures/demo.js';
 	import { shell } from '#lib/shell.svelte.js';
 
@@ -12,6 +12,41 @@
 	let driftReport = $state('');
 	let driftError = $state('');
 	let diffing = $state(false);
+	let migrateNote = $state('');
+	let migrateConfirm = $state('');
+
+	async function upload(run: boolean) {
+		const input = document.getElementById('migrate-files') as HTMLInputElement | null;
+		const files = input?.files;
+		if (!files?.length || !shell.cluster.id.includes('/')) return;
+		const ref = splitRef(shell.cluster.id);
+		const body = new FormData();
+		for (const file of files) body.append('file', file);
+		body.set('run', run ? 'true' : 'false');
+		body.set('approve', 'true');
+		body.set('confirm', migrateConfirm.trim());
+		migrateNote = '';
+		try {
+			const response = await fetch(
+				`/api/v1/clusters/${encodeURIComponent(ref.env)}/${encodeURIComponent(ref.name)}/migrate`,
+				{ method: 'POST', body }
+			);
+			const payload = (await response.json()) as {
+				error?: string;
+				preview?: string;
+				lint?: string;
+				applied?: string[];
+			};
+			if (!response.ok) {
+				migrateNote = payload.error ?? response.statusText;
+				return;
+			}
+			migrateNote =
+				`${payload.lint ?? ''}\n${payload.preview ?? ''}\n${(payload.applied ?? []).map((name) => `applied ${name}`).join('\n')}`.trim();
+		} catch {
+			migrateNote = 'Could not upload the scripts.';
+		}
+	}
 
 	const liveClusters = $derived(shell.clusters.filter((cluster) => cluster.id.includes('/')));
 
@@ -160,6 +195,35 @@ ALTER TABLE public.orders ALTER COLUMN currency SET NOT NULL;`;
 			{#if driftReport}
 				<pre
 					class="mt-2 overflow-auto font-mono text-[12px] whitespace-pre-wrap">{driftReport}</pre>
+			{/if}
+		</section>
+		<section class="rounded-xl border border-tl-line bg-tl-elev p-4 lg:col-span-2">
+			<h2 class="text-[13px] font-semibold">Apply a directory to {shell.cluster.name}</h2>
+			<p class="mt-1 text-[13px] text-tl-fg2">
+				Upload the .sql files. Preview does not connect. Apply writes them in name order after the
+				environment's confirmation.
+			</p>
+			<input id="migrate-files" class="mt-3 block text-[13px]" type="file" accept=".sql" multiple />
+			{#if shell.env === 'prod' || shell.env === 'staging'}
+				<input
+					class="mt-2 h-8 rounded-md border border-tl-line bg-tl-bg px-2 font-mono text-[13px]"
+					placeholder={shell.cluster.name}
+					bind:value={migrateConfirm}
+				/>
+			{/if}
+			<div class="mt-3 flex gap-2">
+				<button
+					class="inline-flex h-8 items-center rounded-md border border-tl-line px-3 text-[13px]"
+					onclick={() => upload(false)}>Preview</button
+				>
+				<button
+					class="inline-flex h-8 items-center rounded-md border border-tl-line px-3 text-[13px]"
+					onclick={() => upload(true)}>Apply</button
+				>
+			</div>
+			{#if migrateNote}
+				<pre
+					class="mt-3 overflow-auto font-mono text-[12px] whitespace-pre-wrap">{migrateNote}</pre>
 			{/if}
 		</section>
 	</div>

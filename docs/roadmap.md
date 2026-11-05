@@ -171,7 +171,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 
 - [ ] Sign-in and sessions. Low priority. Leave the server unauthenticated until this is built; the loopback actor stays `local`. Desktop sign-in to a server or Cloud stays in M8.2, and organisation RBAC stays in M9.
 - [ ] Tier 2 systems with documented gaps: AlloyDB, Neon (frequent snapshots), TimescaleDB, Citus.
-- [ ] hypopg-validated index advisor (`tl advise indexes`); per-table autovacuum tuning.
+- [ ] hypopg-validated index advisor (`tl advise indexes`); per-table autovacuum tuning. The web can already compare one CREATE INDEX with hypopg on a saved cluster. The command and per-table autovacuum are still open.
 - [ ] **DuckDB / DuckLake:** DuckLake catalogue browser (`ducklake_*` tables); DuckDB as a second engine in the desktop IDE; explore DuckLake for the metrics archive; `pg_duckdb` awareness.
 - [ ] **interlace.sh integration:**
   - Query attribution by `interlace_model` / `run_id` comments (the dbt comment format works too).

@@ -2,6 +2,7 @@
 	import {
 		ApiError,
 		clusterTopology,
+		requestRestart,
 		requestSwitchover,
 		splitRef,
 		type Topology
@@ -43,6 +44,26 @@
 		};
 	});
 
+	async function restart() {
+		if (!confirmed) {
+			notice = `Type ${shell.cluster.name} before restarting.`;
+			return;
+		}
+		const ref = splitRef(shell.cluster.id);
+		busy = true;
+		try {
+			const result = await requestRestart(ref.env, ref.name, {
+				confirm: confirm.trim(),
+				run: true
+			});
+			notice = result.sent ? 'Restart sent for replicas.' : result.preview;
+		} catch (err) {
+			notice = err instanceof ApiError ? err.message : 'Restart was not sent.';
+		} finally {
+			busy = false;
+		}
+	}
+
 	async function send() {
 		if (!leader || !candidate || !confirmed) return;
 		const ref = splitRef(shell.cluster.id);
@@ -80,11 +101,23 @@
 			{/if}
 		</p>
 	</div>
-	<button
-		class="{btn} border-transparent bg-brand text-white"
-		disabled={!leader || !candidate}
-		onclick={() => (open = true)}>Switchover…</button
-	>
+	{#if needsName}
+		<label class="text-[12px] text-tl-fg3">
+			Type {shell.cluster.name}
+			<input
+				class="mt-1 block h-8 rounded-md border border-tl-line bg-tl-bg px-2 font-mono"
+				bind:value={confirm}
+			/>
+		</label>
+	{/if}
+	<div class="flex gap-2">
+		<button class={btn} disabled={busy} onclick={restart}>Restart replicas</button>
+		<button
+			class="{btn} border-transparent bg-brand text-white"
+			disabled={!leader || !candidate}
+			onclick={() => (open = true)}>Switchover…</button
+		>
+	</div>
 </div>
 
 {#if error}

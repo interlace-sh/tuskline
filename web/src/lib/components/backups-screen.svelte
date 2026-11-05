@@ -1,7 +1,23 @@
 <script lang="ts">
+	import { ApiError, parseBackup, type BackupReport } from '#lib/api.js';
 	import { shell } from '#lib/shell.svelte.js';
 
 	let choice = $state<'none' | 'latest' | 'gap'>('none');
+	let parsed = $state<BackupReport | null>(null);
+	let parseError = $state('');
+
+	async function onFile(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+		parseError = '';
+		parsed = null;
+		try {
+			parsed = await parseBackup(await file.text());
+		} catch (err) {
+			parseError = err instanceof ApiError ? err.message : 'Could not parse that file.';
+		}
+	}
 
 	const btn =
 		'inline-flex h-8 items-center rounded-md border border-tl-line bg-tl-elev px-3 text-[13px] font-medium hover:bg-tl-hover';
@@ -25,9 +41,24 @@
 			<p class="mt-2">Restore drill: {shell.cluster.restoreDrill}.</p>
 		{/if}
 		<p class="mt-2">
-			Backup contents and WAL gaps are read by <code class="font-mono">tl backup status</code> from a
-			pgBackRest info file. This server does not run pgBackRest.
+			Choose a <code class="font-mono">pgbackrest info --output=json</code> file. Nothing is restored.
 		</p>
+		<input
+			class="mt-3 block text-[13px]"
+			type="file"
+			accept="application/json,.json"
+			onchange={onFile}
+		/>
+		{#if parseError}<p class="mt-2 text-env-prod">{parseError}</p>{/if}
+		{#if parsed}
+			<ul class="mt-3 space-y-1 font-mono text-[12px]">
+				{#each parsed.Stanzas ?? [] as stanza (stanza.Name)}
+					<li>
+						{stanza.Name}: {stanza.Backups?.length ?? 0} backups, {stanza.Gaps?.length ?? 0} WAL gaps
+					</li>
+				{/each}
+			</ul>
+		{/if}
 	</section>
 {:else}
 	<div class="mb-4 flex gap-2">

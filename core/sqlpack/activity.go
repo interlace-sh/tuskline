@@ -99,3 +99,22 @@ WHERE l.pid IS DISTINCT FROM pg_backend_pid()
 ORDER BY l.granted, l.waitstart NULLS LAST, l.pid
 LIMIT $1`,
 }
+
+// CancelBackend asks the server to cancel the query on a backend. The
+// caller chooses the pid. It does not drop the session.
+var CancelBackend = Query{
+	Name:       "activity.cancel",
+	Doc:        "Cancel the current query of one backend. The pid is a parameter.",
+	Sources:    []string{"pg_cancel_backend()"},
+	MinVersion: PG14,
+	SQL:        `SELECT pg_cancel_backend($1)`,
+}
+
+// TerminateBackend asks the server to end a backend. The caller chooses the pid.
+var TerminateBackend = Query{
+	Name:       "activity.terminate",
+	Doc:        "Terminate one backend. The pid is a parameter.",
+	Sources:    []string{"pg_terminate_backend()"},
+	MinVersion: PG14,
+	SQL:        `SELECT pg_terminate_backend($1)`,
+}

@@ -7,7 +7,14 @@
 	import Search from '@lucide/svelte/icons/search';
 	import TrendingUp from '@lucide/svelte/icons/trending-up';
 	import Zap from '@lucide/svelte/icons/zap';
-	import { ApiError, clusterQueries, runQuery, splitRef, type Statement } from '#lib/api.js';
+	import {
+		ApiError,
+		clusterQueries,
+		hypoCompare,
+		runQuery,
+		splitRef,
+		type Statement
+	} from '#lib/api.js';
 	import {
 		PLAN_AFTER,
 		PLAN_BEFORE,
@@ -40,6 +47,8 @@
 	let explainText = $state('');
 	let explainPlan = $state<ExplainPlan | null>(null);
 	let explaining = $state(false);
+	let hypoIndex = $state('CREATE INDEX ON orders (id)');
+	let hypoResult = $state('');
 
 	const rows = $derived(sortQueries(filterQueries(QUERIES, text), sort));
 	const selected = $derived(QUERIES.find((query) => query.id === selectedId) ?? rows[0]);
@@ -79,6 +88,18 @@
 			cancelled = true;
 		};
 	});
+
+	async function testHypo() {
+		if (!liveSelected) return;
+		const ref = splitRef(shell.cluster.id);
+		hypoResult = '';
+		try {
+			const result = await hypoCompare(ref.env, ref.name, hypoIndex, liveSelected.query);
+			hypoResult = `Planner cost ${result.before} → ${result.after}. No real index was created.`;
+		} catch (err) {
+			hypoResult = err instanceof ApiError ? err.message : 'hypopg did not run.';
+		}
+	}
 
 	async function explainLive() {
 		if (!liveSelected || shell.demo) return;
@@ -432,9 +453,19 @@
 					class="mt-3 overflow-auto font-mono text-[12px] whitespace-pre-wrap">{explainText}</pre>
 			{/if}
 			<p class="mt-2 text-[12px] text-tl-fg3">
-				EXPLAIN only, without ANALYZE, so the statement is not executed. Index advice validated with
-				hypopg is not on this screen.
+				EXPLAIN only, without ANALYZE, so the statement is not executed.
 			</p>
+			<label class="mt-3 block text-[12px] text-tl-fg3">
+				Hypothetical index
+				<textarea
+					class="mt-1 h-16 w-full rounded-md border border-tl-line bg-tl-bg p-2 font-mono text-[12px]"
+					bind:value={hypoIndex}></textarea>
+			</label>
+			<button
+				class="mt-2 inline-flex h-8 items-center rounded-md border border-tl-line px-3 text-[13px]"
+				onclick={testHypo}>Test with hypopg</button
+			>
+			{#if hypoResult}<p class="mt-2 text-[13px] text-tl-fg2">{hypoResult}</p>{/if}
 		</section>
 	{/if}
 {/if}

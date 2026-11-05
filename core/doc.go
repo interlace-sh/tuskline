@@ -15,6 +15,7 @@
 //	lint       lock-aware migration linter
 //	migrate    ordered SQL scripts, checksum history, advisory lock
 //	schema     schema snapshots and drift between them
+	hypo       hypothetical index cost comparison when hypopg is installed
 //	provision  plan/apply provisioning planner (Compose, CNPG, SSH)
 //	store      embedded SQLite metadata store
 //

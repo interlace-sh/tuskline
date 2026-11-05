@@ -55,6 +55,12 @@ func (a *api) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/schema", a.clusterSchema)
 	mux.HandleFunc("GET /api/v1/schema/diff", a.schemaDiff)
 	mux.HandleFunc("POST /api/v1/lint", a.lintSQL)
+	mux.HandleFunc("POST /api/v1/clusters/{env}/{name}/signal", a.clusterSignal)
+	mux.HandleFunc("POST /api/v1/clusters/{env}/{name}/restart", a.clusterRestart)
+	mux.HandleFunc("POST /api/v1/clusters/{env}/{name}/hypopg", a.clusterHypo)
+	mux.HandleFunc("POST /api/v1/clusters/{env}/{name}/migrate", a.clusterMigrate)
+	mux.HandleFunc("GET /api/v1/clusters/{env}/{name}/metrics", a.clusterMetrics)
+	mux.HandleFunc("POST /api/v1/backups/parse", a.parseBackup)
 }
 
 type clusterView struct {
