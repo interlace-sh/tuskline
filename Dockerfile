@@ -10,7 +10,7 @@
 # Base image versions follow .prototools (Node.js, Go); Dependabot bumps them.
 
 # --- web: SvelteKit static build -------------------------------------------
-FROM node:26.13.0-alpine AS web
+FROM node:26.13.1-alpine AS web
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json web/.npmrc ./
 RUN npm ci --no-audit --no-fund
