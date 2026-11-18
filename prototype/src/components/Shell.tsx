@@ -9,17 +9,22 @@ export const NAV: { id: Screen; label: string; icon: typeof Activity; keys: stri
   { id: "cluster", label: "Health", icon: Activity, keys: "g c" },
   { id: "queries", label: "Query insights", icon: Zap, keys: "g q" },
   { id: "sql", label: "SQL editor", icon: Terminal, keys: "g s" },
+  { id: "migrations", label: "Migrations", icon: GitPullRequestArrow, keys: "g m" },
+];
+
+export const CLUSTER_NAV: { id: Screen; label: string; icon: typeof Activity; keys: string }[] = [
   { id: "ha", label: "HA topology", icon: Network, keys: "g h" },
   { id: "backups", label: "Backups", icon: Archive, keys: "g b" },
-  { id: "migrations", label: "Migrations", icon: GitPullRequestArrow, keys: "g m" },
+  { id: "deploy", label: "Deploy cluster", icon: Rocket, keys: "g d" },
+  { id: "deployments", label: "Deployments", icon: History, keys: "g l" },
 ];
 
 export const SETUP_NAV: { id: Screen; label: string; icon: typeof Activity; keys: string }[] = [
   { id: "setup", label: "Overview", icon: Wrench, keys: "g u" },
   { id: "connect", label: "Add connection", icon: PlugZap, keys: "n" },
-  { id: "deploy", label: "Deploy cluster", icon: Rocket, keys: "g d" },
-  { id: "deployments", label: "Deployments", icon: History, keys: "g l" },
 ];
+
+const HA_ENGINES = new Set(["Patroni", "CloudNativePG", "RDS Multi-AZ", "Crunchy PGO"]);
 
 /** Kept for compatibility with earlier imports: now the Tusk Arc tile. */
 export function Logo({ size = 22 }: { size?: number }) { return <TuskMark size={size} />; }
@@ -53,10 +58,10 @@ function Sidebar() {
         {item("fleet", "Fleet", LayoutGrid, "g f")}
         {item("fleet", "Alerts", Bell, "g a", freshInstall ? undefined : <span className="text-[10.5px] px-1.5 rounded-full tnum" style={{ background: tint("var(--crit)", 18), color: "var(--crit)" }}>{crit}</span>, true)}
       </nav>
-      <div className="px-4 pt-2 pb-1.5"><span className="label">Setup &amp; deploy</span></div>
-      <div className="px-2 space-y-0.5">{SETUP_NAV.map((n) => item(n.id, n.label, n.icon, n.keys, n.id === "deployments" && running ? <span className="text-[10.5px] px-1.5 rounded-full tnum" style={{ background: tint("var(--accent)", 18), color: "var(--accent)" }}>{running}</span> : undefined))}</div>
+      <div className="px-4 pt-2 pb-1.5"><span className="label">Setup</span></div>
+      <div className="px-2 space-y-0.5">{SETUP_NAV.map((n) => item(n.id, n.label, n.icon, n.keys))}</div>
       {!freshInstall && <><div className="px-4 pt-3 pb-1.5 flex items-center justify-between">
-        <span className="label">Cluster</span>
+        <span className="label">Database</span>
         <EnvBadge env={env} />
       </div>
       <div className="px-2">
@@ -68,6 +73,10 @@ function Sidebar() {
           </div>
         </div>
         <div className="space-y-0.5">{NAV.map((n) => item(n.id, n.label, n.icon, n.keys))}{item("advisor", "Config advisor", SlidersHorizontal, "g v")}</div>
+        {HA_ENGINES.has(cluster.ha) && <div className="px-2 pt-3 space-y-0.5">
+          <div className="px-2 pb-1.5"><span className="label">Cluster</span></div>
+          {CLUSTER_NAV.map((n) => item(n.id, n.label, n.icon, n.keys, n.id === "deployments" && running ? <span className="text-[10.5px] px-1.5 rounded-full tnum" style={{ background: tint("var(--accent)", 18), color: "var(--accent)" }}>{running}</span> : undefined))}
+        </div>}
       </div></>}
       <div className="mt-auto p-3 space-y-2">
         <div className="rounded-lg border border-line bg-subtle p-3">

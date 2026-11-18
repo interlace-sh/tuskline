@@ -2,11 +2,13 @@
 
 Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo-founder-scope.md)). Durations are planning estimates, not commitments. Work top to bottom: see `AGENTS.md` § 4. Tick a box in the same PR that completes the task. Tasks marked *(parallel)* may start before earlier milestones close.
 
-| Release | Milestones | Theme |
+| Phase | What it is | Milestone |
 |---|---|---|
-| R1: developer door | M0–M4, M8 | Core, CLI, SQL IDE, onboarding, desktop |
-| R2: fleet door and Cloud | M2 history, M5 (Compose), M6 (read-only), M9 | History, fleet, teams, Cloud beta, Compose HA |
-| R3: guarded actions | M5 (CNPG, SSH), M6 actions, M7, Later | Switchover/restore, VM provisioning, migrations, lakehouse |
+| Base | Connections, fleet by environment, health, query insights, SQL editor, migrations, setup and config. This is the CLI and web app to finish and test. | M0–M4, M7 |
+| Cluster lifecycle | Deploy, deployments, HA topology and backups. The UI appears only when the connection has an HA engine or a backup repository ([0016](adr/0016-base-and-cluster-lifecycle.md)). | M5–M6 |
+| Platform | Desktop, agent, alerting, audit export and cloud discovery. Sign-in stays out until it is explicitly scheduled. | M8–M9, Later |
+
+The older release names still map onto those phases: R1 is the base, R2 adds history and the fleet door, R3 is the cluster-lifecycle actions. One inventory throughout. There is no second product.
 
 ---
 
@@ -84,6 +86,7 @@ Milestones are sized for one founder with AI coding agents ([0008](adr/0008-solo
 - [x] M3.6a Query API: one statement, the environment policy (production stays read-only), the policy row limit, and an audit row for each production statement. The actor is `local`. Result rows are not stored.
 - [x] M3.6b Streamed results and a virtualised grid. The query API writes rows as newline-delimited JSON, and the grid windows them so a large result does not create a DOM node per row. The server stays unauthenticated; the actor stays `local`.
 - [x] M3.7 Playwright smoke checks for the shipped shell (fleet, health, queries, SQL, theme, environment, command palette and keyboard) against `tuskline serve` in CI (`moon run server:smoke`). The prototype steps for connect, advisor, deploy, HA, backups and migrations move with those screens.
+- [x] M3.8 Base rail ([0016](adr/0016-base-and-cluster-lifecycle.md)): Fleet, alerts, setup, health, query insights, SQL, migrations and config. Deploy, deployments, HA and backups stay off that rail until the connection has an HA engine or a backup repository. Demo clusters that have an engine still show them.
 
 **Acceptance:**
 - The ported smoke checks pass.

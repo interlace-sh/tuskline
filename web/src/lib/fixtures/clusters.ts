@@ -72,6 +72,18 @@ export function clusterFromAPI(cluster: ApiCluster): ShellCluster {
 	};
 }
 
+const HA_ENGINES = new Set(['Patroni', 'CloudNativePG', 'RDS Multi-AZ', 'Crunchy PGO']);
+
+/** Deploy, HA and backups belong to the cluster-lifecycle phase. */
+export function showsClusterLifecycle(cluster: {
+	ha?: string;
+	patroniUrl?: string;
+	backup?: string;
+}): boolean {
+	if (cluster.patroniUrl || cluster.backup) return true;
+	return HA_ENGINES.has(cluster.ha ?? '');
+}
+
 /** Empty inventory, a failed fetch, or ?demo=1 keeps the prototype fixtures. */
 export function selectClusters(
 	live: ShellCluster[],

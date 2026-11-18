@@ -17,7 +17,7 @@
 	import type { Component } from 'svelte';
 	import iconDark from '#lib/assets/tusk-arc-icon-dark.svg';
 	import iconLight from '#lib/assets/tusk-arc-icon-light.svg';
-	import { healthDotClass } from '#lib/fixtures/clusters.js';
+	import { healthDotClass, showsClusterLifecycle } from '#lib/fixtures/clusters.js';
 	import { filterCommands, shell, type Command } from '#lib/shell.svelte.js';
 
 	type Row = Command & { icon: Component };
@@ -26,6 +26,7 @@
 	let index = $state(0);
 	let input = $state<HTMLInputElement | null>(null);
 
+	const lifecycle = $derived(showsClusterLifecycle(shell.cluster));
 	const commands = $derived<Row[]>([
 		{
 			id: 'n-fleet',
@@ -146,7 +147,14 @@
 		}))
 	]);
 
-	const filtered = $derived(filterCommands(commands, query));
+	const filtered = $derived(
+		filterCommands(
+			commands.filter(
+				(command) => lifecycle || !['n-ha', 'n-backups', 's-deploy'].includes(command.id)
+			),
+			query
+		)
+	);
 
 	function healthDot(id: string): string {
 		const health = shell.clusters.find((cluster) => `c-${cluster.id}` === id)?.health;

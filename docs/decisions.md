@@ -19,5 +19,6 @@ The eight product decisions below were recorded on 28 Oct 2026. Each one, and ea
 | [0013](adr/0013-metrics-storage.md) | Metrics history | Parquet segments in `core` (no cgo); 1 s for 1 h, 1 min for 14 days, 1 h for 13 months | Accepted |
 | [0014](adr/0014-config-advisor.md) | Config advisor | PgTune formulas as the candidate, the parameter reference for reload or restart, live statistics as evidence; no `wal_level = minimal`, no raising `max_connections` | Accepted |
 | [0015](adr/0015-sql-migrations.md) | Migrations | Tuskline applies its own SQL directory. No external migration runner | Accepted |
+| [0016](adr/0016-base-and-cluster-lifecycle.md) | Product phases | Base workbench first. Deploy, HA and backups appear only when the connection has them | Accepted |
 
 Template: [adr/0000-template.md](adr/0000-template.md).

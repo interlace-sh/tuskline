@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { filterCommands, prodSwitchNeedsConfirm, stepRange, type Command } from './shell.svelte';
+import {
+	filterCommands,
+	prodSwitchNeedsConfirm,
+	screenAvailable,
+	stepRange,
+	type Command
+} from './shell.svelte';
 
 const commands: Command[] = [
 	{ id: '1', group: 'Navigate', label: 'Fleet overview', run: () => {} },
@@ -25,6 +31,13 @@ describe('shell commands', () => {
 		expect(prodSwitchNeedsConfirm('dev', 'prod')).toBe(true);
 		expect(prodSwitchNeedsConfirm('prod', 'prod')).toBe(false);
 		expect(prodSwitchNeedsConfirm('prod', 'dev')).toBe(false);
+	});
+	it('keeps the base screens when the cluster has no HA or backup', () => {
+		expect(screenAvailable('sql', false)).toBe(true);
+		expect(screenAvailable('migrations', false)).toBe(true);
+		expect(screenAvailable('ha', false)).toBe(false);
+		expect(screenAvailable('deploy', false)).toBe(false);
+		expect(screenAvailable('ha', true)).toBe(true);
 	});
 	it('steps the time range and stops at the ends', () => {
 		expect(stepRange('1h', 1)).toBe('6h');

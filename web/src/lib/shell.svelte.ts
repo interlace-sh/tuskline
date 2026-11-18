@@ -33,6 +33,14 @@ export type Theme = 'dark' | 'light';
 export const RANGES = ['15m', '1h', '6h', '24h', '7d', '30d'] as const;
 export type Range = (typeof RANGES)[number];
 
+/** Deploy, deployments, HA and backups. Hidden until the connection has them. */
+export const CLUSTER_SCREENS: Screen[] = ['ha', 'backups', 'deploy', 'deployments'];
+
+/** A base screen is always available. A cluster-lifecycle screen needs that phase. */
+export function screenAvailable(screen: Screen, lifecycle: boolean): boolean {
+	return lifecycle || !CLUSTER_SCREENS.includes(screen);
+}
+
 /** Screens that are not inside one environment, so the rail shows every colour. */
 export const GLOBAL_SCREENS: Screen[] = ['fleet', 'setup', 'connect', 'deploy', 'deployments'];
 

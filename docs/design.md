@@ -31,10 +31,11 @@ The design reference is the frozen React prototype in [`../prototype/`](../proto
 ## Information architecture
 
 - **Top bar:** organisation and environment switcher, global search, command palette.
-- **Left rail:** cluster-scoped sections: Overview/Health, Queries, SQL, HA, Backups, Migrations, Advisor.
-- **Breadcrumb:** Project › Environment › Cluster › Instance › Database.
+- **Left rail, base:** Fleet, Alerts, Setup overview, then a Database group: Health, Query insights, SQL, Migrations and Config advisor.
+- **Left rail, cluster lifecycle:** Deploy, Deployments, HA topology and Backups. Shown only when the open connection has an HA engine or a registered backup repository ([0016](adr/0016-base-and-cluster-lifecycle.md)). Demo clusters that already have an engine still show them.
+- **Breadcrumb:** Inventory (or the demo organisation) › Environment › Cluster › Database.
 - **Time range:** one global time-range control that every chart obeys.
-- **Setup & deploy:** an area containing Setup overview, Config advisor, Deploy and Deployments. Add connection is the button on Fleet (`n`), not a sidebar item.
+- **Add connection** is the button on Fleet (`n`), not a sidebar item.
 
 ## Screens (port in this order)
 

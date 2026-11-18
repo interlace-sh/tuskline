@@ -4,7 +4,8 @@ import {
 	demoForced,
 	fixtureClusters,
 	formatPgVersion,
-	selectClusters
+	selectClusters,
+	showsClusterLifecycle
 } from './clusters';
 
 describe('fixture clusters', () => {
@@ -17,6 +18,14 @@ describe('fixture clusters', () => {
 			database: 'orders',
 			version: '17.2'
 		});
+	});
+
+	it('shows deploy, HA and backups only when the connection has them', () => {
+		expect(showsClusterLifecycle({ ha: 'Patroni' })).toBe(true);
+		expect(showsClusterLifecycle({ ha: 'Standalone' })).toBe(false);
+		expect(showsClusterLifecycle({ ha: 'local', patroniUrl: 'http://127.0.0.1:8008' })).toBe(true);
+		expect(showsClusterLifecycle({ ha: 'local', backup: 'pgbackrest local-volume' })).toBe(true);
+		expect(showsClusterLifecycle({ ha: 'unknown' })).toBe(false);
 	});
 
 	it('formats server_version_num and leaves an unprobed cluster unknown', () => {

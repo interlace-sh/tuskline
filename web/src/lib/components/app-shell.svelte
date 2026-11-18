@@ -29,8 +29,15 @@
 	import iconDark from '#lib/assets/tusk-arc-icon-dark.svg';
 	import iconLight from '#lib/assets/tusk-arc-icon-light.svg';
 	import { ENV_LABEL, envPillClass, envRailClass, envTextClass, type EnvKind } from '#lib/env.js';
-	import { healthDotClass } from '#lib/fixtures/clusters.js';
-	import { GLOBAL_SCREENS, SCREEN_LABEL, shell, type Screen } from '#lib/shell.svelte.js';
+	import { healthDotClass, showsClusterLifecycle } from '#lib/fixtures/clusters.js';
+	import {
+		CLUSTER_SCREENS,
+		GLOBAL_SCREENS,
+		SCREEN_LABEL,
+		screenAvailable,
+		shell,
+		type Screen
+	} from '#lib/shell.svelte.js';
 	import CommandPalette from '#lib/components/command-palette.svelte';
 
 	let { children }: { children: Snippet } = $props();
@@ -58,16 +65,19 @@
 		{ id: 'cluster', label: 'Health', keys: 'g c' },
 		{ id: 'queries', label: 'Query insights', keys: 'g q' },
 		{ id: 'sql', label: 'SQL editor', keys: 'g s' },
-		{ id: 'ha', label: 'HA topology', keys: 'g h' },
-		{ id: 'backups', label: 'Backups', keys: 'g b' },
 		{ id: 'migrations', label: 'Migrations', keys: 'g m' },
 		{ id: 'advisor', label: 'Config advisor', keys: 'g v' }
 	];
-	const setup: { id: Screen; label: string; keys: string }[] = [
-		{ id: 'setup', label: 'Overview', keys: 'g u' },
+	const clusterNav: { id: Screen; label: string; keys: string }[] = [
+		{ id: 'ha', label: 'HA topology', keys: 'g h' },
+		{ id: 'backups', label: 'Backups', keys: 'g b' },
 		{ id: 'deploy', label: 'Deploy cluster', keys: 'g d' },
 		{ id: 'deployments', label: 'Deployments', keys: 'g l' }
 	];
+	const setup: { id: Screen; label: string; keys: string }[] = [
+		{ id: 'setup', label: 'Overview', keys: 'g u' }
+	];
+	const lifecycle = $derived(showsClusterLifecycle(shell.cluster));
 
 	const kinds: EnvKind[] = ['prod', 'staging', 'dev'];
 	let chord = '';
@@ -82,6 +92,10 @@
 
 	onMount(() => {
 		void shell.refresh();
+	});
+
+	$effect(() => {
+		if (!lifecycle && CLUSTER_SCREENS.includes(shell.screen)) shell.go('cluster');
 	});
 
 	function onKey(event: KeyboardEvent) {
@@ -134,7 +148,8 @@
 				u: 'setup',
 				l: 'deployments'
 			};
-			if (next[event.key]) shell.go(next[event.key]!);
+			const dest = next[event.key];
+			if (dest && screenAvailable(dest, showsClusterLifecycle(shell.cluster))) shell.go(dest);
 			chord = '';
 		}
 	}
@@ -227,7 +242,7 @@
 			<div
 				class="section-label px-4 pt-2 pb-1.5 text-[10.5px] font-medium tracking-wider text-tl-fg3 uppercase"
 			>
-				Setup & deploy
+				Setup
 			</div>
 			<div class="space-y-0.5 px-2">
 				{#each setup as item (item.id)}
@@ -247,7 +262,7 @@
 				{/each}
 			</div>
 			<div class="section-label flex items-center justify-between px-4 pt-3 pb-1.5">
-				<span class="text-[10.5px] font-medium tracking-wider text-tl-fg3 uppercase">Cluster</span>
+				<span class="text-[10.5px] font-medium tracking-wider text-tl-fg3 uppercase">Database</span>
 				<span
 					class="rounded px-1.5 py-0.5 text-[10px] font-medium text-tl-bg {envRailClass(shell.env)}"
 					>{shell.env}</span
@@ -283,6 +298,30 @@
 					{/each}
 				</div>
 			</div>
+			{#if lifecycle}
+				<div
+					class="section-label px-4 pt-3 pb-1.5 text-[10.5px] font-medium tracking-wider text-tl-fg3 uppercase"
+				>
+					Cluster
+				</div>
+				<div class="space-y-0.5 px-2">
+					{#each clusterNav as item (item.id)}
+						{@const Icon = iconFor(item.id)}
+						<button
+							class="nav"
+							title={item.label}
+							class:active={shell.screen === item.id}
+							onclick={() => shell.go(item.id)}
+						>
+							<Icon size={15} />
+							<span class="nav-label flex-1 text-left">{item.label}</span>
+							<span class="keys"
+								>{#each item.keys.split(' ') as k (k)}<kbd>{k}</kbd>{/each}</span
+							>
+						</button>
+					{/each}
+				</div>
+			{/if}
 			<div class="mt-auto space-y-2 p-3">
 				<div class="extra-collapsed rounded-lg border border-tl-line bg-tl-subtle p-3">
 					<div class="mb-1.5 flex items-center gap-1.5 text-[11.5px] text-tl-fg2">
