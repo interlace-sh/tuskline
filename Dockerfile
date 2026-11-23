@@ -10,7 +10,7 @@
 # Base image versions follow .prototools (Node.js, Go); Dependabot bumps them.
 
 # --- web: SvelteKit static build -------------------------------------------
-FROM node:26.13.0-alpine AS web
+FROM node:26.13.1-alpine AS web
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json web/.npmrc ./
 RUN npm ci --no-audit --no-fund
@@ -18,7 +18,7 @@ COPY web/ ./
 RUN npm run build
 
 # --- go: static tuskline binary with the UI embedded ------------------------
-FROM golang:1.27.3-alpine AS go
+FROM golang:1.27.4-alpine AS go
 ENV CGO_ENABLED=0 GOFLAGS=-trimpath GOTOOLCHAIN=local
 WORKDIR /src
 # Every module named in go.work must exist; cli and agent only need go.mod.
